@@ -193,8 +193,8 @@ function ownersInput(host, initial) {
     vals.forEach((v, i) => {
       const hit = findMember(v), c = document.createElement('span');
       c.className = 'atc' + (hit ? '' : ' out') + (i === 0 ? ' main' : '');
-      c.title = hit ? [hit.name, hit.company, hit.dept].filter(Boolean).join(' · ') : '등록되지 않은 사람입니다';
-      c.innerHTML = `${i === 0 ? '<em>주 담당</em>' : ''}<span>${esc(v)}</span>${hit && (hit.company || hit.dept) ? `<small>${esc([hit.company, hit.dept].filter(Boolean).join(' · '))}</small>` : ''}<button type="button" aria-label="${esc(v)} 지우기">×</button>`;
+      c.title = hit ? [...new Set([hit.name, hit.company, hit.dept].filter(Boolean))].join(' · ') : '등록되지 않은 사람입니다';
+      c.innerHTML = `${i === 0 ? '<em>주 담당</em>' : ''}<span>${esc(v)}</span>${hit && (hit.company || hit.dept) ? `<small>${esc([...new Set([hit.company, hit.dept].filter(Boolean))].join(' · '))}</small>` : ''}<button type="button" aria-label="${esc(v)} 지우기">×</button>`;
       c.querySelector('button').onclick = ev => { ev.stopPropagation(); vals.splice(i, 1); draw(); };
       c.onclick = () => { if (i) { vals.unshift(vals.splice(i, 1)[0]); draw(); } };
       box.insertBefore(c, inp);
@@ -391,11 +391,12 @@ const whoName = (id, fallback) => id ? (admin.people[id]?.name || fallback || '�
 function adminView() {
   if (!isAdmin) return '<div class="notice">DB 관리는 DB 관리자만 볼 수 있습니다.</div>';
   if (!admin.changes && !admin.loading && !admin.err) setTimeout(loadAdmin);
-  const tabs = `<div class="tabs" style="margin-bottom:16px">${[['log', '변경 기록'], ['asks', '질문 기록'], ['quality', '데이터 점검']].map(([k, t]) => `<button class="tab ${admin.tab === k ? 'active' : ''}" data-admin-tab="${k}">${t}</button>`).join('')}</div>`;
+  const tabs = `<div class="tabs" style="margin-bottom:16px">${[['log', '변경 기록'], ['asks', '질문 기록'], ['quality', '데이터 점검'], ['bot', '판테온 봇']].map(([k, t]) => `<button class="tab ${admin.tab === k ? 'active' : ''}" data-admin-tab="${k}">${t}</button>`).join('')}</div>`;
   if (admin.err) return tabs + `<div class="notice">${esc(admin.err)}</div>`;
   if (!admin.changes) return tabs + '<div class="empty"><p>기록을 불러오는 중입니다…</p></div>';
   if (admin.tab === 'asks') return tabs + asksPanel();
   if (admin.tab === 'quality') return tabs + qualityPanel();
+  if (admin.tab === 'bot') return tabs + botPanel();
   const people = [...new Set(admin.changes.map(x => x.actor || '(화면 밖)'))];
   const list = admin.changes.filter(x => (!admin.who || (x.actor || '(화면 밖)') === admin.who) && (!admin.q || String(x.entity_name).toLowerCase().includes(admin.q.toLowerCase()))).slice(0, 300);
   return tabs + `
@@ -405,7 +406,44 @@ function adminView() {
 }
 function asksPanel() {
   const list = admin.asks.slice(0, 300);
-  return `<section class="panel"><div class="panel-head"><div class="panel-title">질문 기록 <small>웹·슬랙</small> <span class="nav-count">${admin.asks.length}</span></div></div><div class="table-wrap"><table><thead><tr><th>언제</th><th>누가</th><th>어디서</th><th>무엇</th><th>상태</th></tr></thead><tbody>${list.map(a => `<tr><td style="white-space:nowrap">${esc(kst(a.at))}</td><td>${esc(whoName(a.asker) || '—')}</td><td>${a.via === 'slack' ? '슬랙' : '웹'}</td><td>${a.kind === 'ocr' ? '<span class="pill">명함 읽기</span>' : esc(a.question)}</td><td>${{done: '답함', fail: '실패', wait: '대기', work: '처리 중'}[a.status] || a.status}</td></tr>`).join('') || '<tr><td colspan="5"><div class="empty">아직 질문이 없습니다.</div></td></tr>'}</tbody></table></div></section>`;
+  return `<section class="panel"><div class="panel-head"><div class="panel-title">질문 기록 <small>웹·슬랙</small> <span class="nav-count">${admin.asks.length}</span></div></div><div class="table-wrap"><table><thead><tr><th>언제</th><th>누가</th><th>어디서</th><th>무엇</th><th>상태</th></tr></thead><tbody>${list.map(a => `<tr><td style="white-space:nowrap">${esc(kst(a.at))}</td><td>${esc(whoName(a.asker) || '—')}</td><td>${a.via === 'slack' ? '슬랙' : '웹'}</td><td>${a.kind === 'ocr' ? '<span class="pill">명함 읽기</span>' : a.kind === 'restart' ? '<span class="pill">봇 다시 시작</span>' : esc(a.question)}</td><td>${{done: '답함', fail: '실패', wait: '대기', work: '처리 중'}[a.status] || a.status}</td></tr>`).join('') || '<tr><td colspan="5"><div class="empty">아직 질문이 없습니다.</div></td></tr>'}</tbody></table></div></section>`;
+}
+/* 판테온 봇 — 상태 보기 · 다시 시작 (헤임달 「처리 서버 → 다시 시작」과 같은 방식, DB 관리자만) */
+async function loadBot() {
+  const { data, error } = await SB.from('pt_bot').select('*').maybeSingle();
+  admin.bot = error ? {err: error.message} : (data || {});
+  if (page === 'admin' && admin.tab === 'bot') render();
+  return admin.bot;
+}
+const agoText = sec => sec < 60 ? `${sec}초 전` : sec < 3600 ? `${Math.floor(sec / 60)}분 전` : `${Math.floor(sec / 3600)}시간 전`;
+function botPanel() {
+  if (!admin.bot) { setTimeout(loadBot); return '<div class="empty"><p>상태를 불러오는 중입니다…</p></div>'; }
+  const b = admin.bot;
+  if (b.err) return `<div class="notice">상태를 불러오지 못했습니다: ${esc(b.err)}</div>`;
+  const age = b.beat_at ? Math.max(0, Math.round((Date.now() - new Date(b.beat_at)) / 1000)) : null;
+  const alive = age !== null && age < 180;
+  const stateText = !b.beat_at ? '기록 없음' : !alive ? '응답 없음' : b.connected ? '정상' : '슬랙 연결 끊김';
+  return `<div class="quality-grid"><div class="stat ${alive && b.connected ? 'highlight' : ''}"><div class="stat-label">상태</div><div class="stat-value">${stateText}</div><div class="stat-bottom">${age === null ? '—' : '마지막 신호 ' + agoText(age)}</div></div><div class="stat"><div class="stat-label">켜진 시각</div><div class="stat-value" style="font-size:17px">${b.started_at ? esc(kst(b.started_at)) : '—'}</div><div class="stat-bottom">${b.model ? '답변 모델 ' + esc(b.model) : ''}</div></div><div class="stat"><div class="stat-label">처리한 웹 요청</div><div class="stat-value">${Number(b.handled || 0)}<small>건</small></div><div class="stat-bottom">켜진 뒤부터</div></div></div>
+  <section class="panel"><div class="panel-head"><div><div class="panel-title">판테온 봇 <small>슬랙 질문 · 웹 질문 · 명함 읽기</small></div><p class="panel-caption">답이 오지 않거나 상태가 「응답 없음」이면 다시 시작해 보세요. 다시 시작하는 20초쯤 동안은 답하지 않습니다.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="button" id="bot-reload">${icon('clock')} 새로 고침</button><button class="button primary" id="bot-restart">다시 시작</button></div></div>
+  <div id="bot-msg" class="panel-caption" style="padding:0 23px 18px" role="status">${b.last_error ? '최근 오류: ' + esc(b.last_error) : ''}</div></section>`;
+}
+async function restartBot() {
+  const msg = t => { const el = $('#bot-msg'); if (el) el.textContent = t; };
+  const before = admin.bot?.started_at || '';
+  $('#bot-restart').disabled = true;
+  const { data, error } = await SB.from('pt_ask').insert({kind: 'restart', question: '판테온 봇 다시 시작'}).select('id').single();
+  if (error) { $('#bot-restart').disabled = false; return msg('다시 시작하지 못했습니다: ' + error.message); }
+  const res = await waitAsk(data.id, s => msg(`판테온 봇에 요청을 보냈습니다… ${s}초`), 60);
+  if (!res) { $('#bot-restart').disabled = false; return msg('판테온 봇이 요청을 받지 않습니다. 서버 PC가 켜져 있는지 확인해 주세요. 꺼져 있던 봇은 5분 안에 저절로 다시 올라옵니다.'); }
+  if (res.status === 'fail') { $('#bot-restart').disabled = false; return msg(res.answer || '다시 시작하지 못했습니다.'); }
+  const t0 = Date.now();
+  while (Date.now() - t0 < 90000) {
+    await new Promise(r => setTimeout(r, 3000));
+    msg(`판테온 봇이 다시 켜지는 중입니다… ${Math.round((Date.now() - t0) / 1000)}초`);
+    const b = await SB.from('pt_bot').select('*').maybeSingle();
+    if (b.data?.started_at && b.data.started_at !== before) { admin.bot = b.data; render(); toast('판테온 봇이 다시 켜졌습니다.'); return; }
+  }
+  admin.bot = null; render(); toast('판테온 봇이 아직 돌아오지 않았습니다. 잠시 뒤 새로 고침해 주세요.');
 }
 function qualityPanel() {
   const es = entities(), hidden = all.filter(e => e.hidden);
@@ -414,6 +452,11 @@ function qualityPanel() {
 function bindAdmin() {
   $$('[data-admin-tab]').forEach(b => b.onclick = () => { admin.tab = b.dataset.adminTab; render(); });
   $('#log-reload')?.addEventListener('click', () => { admin.changes = null; loadAdmin(); });
+  $('#bot-reload')?.addEventListener('click', () => { admin.bot = null; render(); });
+  $('#bot-restart')?.addEventListener('click', () => {
+    modal(`<h2>판테온 봇 다시 시작</h2><p>판테온 봇을 껐다가 다시 켭니다. 20초쯤 동안 슬랙·웹 질문에 답하지 않습니다.</p><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="button" id="restart-go">다시 시작</button></div>`);
+    $('#restart-go').onclick = () => { $('#modal').close(); restartBot(); };
+  });
   $('#log-who')?.addEventListener('change', e => { admin.who = e.target.value; render(); });
   const q = $('#log-q'); if (q) q.onchange = e => { admin.q = e.target.value; render(); };
   $('#log-export')?.addEventListener('click', () => { const rows = [['언제(KST)', '누가', '어디서', '엔티티', '무엇을', '바뀐 칸', '전', '후', '메모'], ...admin.changes.flatMap(x => (x.op === 'insert' ? ['(새로 등록)'] : x.fields || []).map(k => [kst(x.at), whoName(x.actor, x.actor_name), VIA_KO[x.via] || x.via, x.entity_name, OP_KO[x.op] || x.op, FIELD_KO[k] || k, x.op === 'insert' ? '' : showVal(k, x.before?.[k]), x.op === 'insert' ? '' : showVal(k, x.after?.[k]), x.reason]))]; download('pantheon-change-log.csv', rows); });
