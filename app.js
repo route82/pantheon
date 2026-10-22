@@ -154,18 +154,74 @@ function openDetail(id, keep) {
   const e = byId(id); if (!e) return; activeDetail = id;
   if (isContact(e)) return openContact(e, keep);
   const cs = contactsOf(e), parent = e.parentId && byId(e.parentId);
-  showDrawer(`${avatar(e)}<h2>${esc(e.name)}</h2><span class="detail-sub">${esc(e.en ? e.en + ' · ' : '')}${esc(e.type)}</span><div class="drawer-actions"><button class="button" id="edit-entity">정보 수정</button>${adminTools(e)}</div><div class="detail-block"><h3>기본 정보 및 관계</h3><div class="detail-row"><span>소속 / 권리 관계</span><b>${parent ? `<button class="ref" type="button" data-open="${parent.id}">${esc(parent.name)}</button>` : esc(e.agencyText || '—')}</b></div><div class="detail-row"><span>관계 근거</span><b>${esc(e.rel || '추가 확인 필요')}</b></div><div class="detail-row"><span>보유 컨택</span><b>${cs.length}명${e.owners.length ? ' · 우리 쪽 담당 ' + esc(e.owners.join(', ')) : ''}</b></div>${cs.length ? linkList(cs) : ''}${pointsBlock(e)}<p>실제 권리 검증 및 담당자 확인 전에는 G1 통과로 처리하지 않습니다.</p></div><div class="detail-block"><h3>별칭</h3>${[e.name, ...e.aliases].map(a => `<span class="tag">${esc(a)}</span>`).join('')}</div>${noteBlock(e)}`, keep);
+  showDrawer(`${avatar(e)}<h2>${esc(e.name)}</h2><span class="detail-sub">${esc(e.en ? e.en + ' · ' : '')}${esc(e.type)}</span><div class="drawer-actions"><button class="button" id="edit-entity">정보 수정</button>${adminTools(e)}</div><div class="detail-block"><h3>기본 정보 및 관계</h3><div class="detail-row"><span>소속 / 권리 관계</span><b>${parent ? `<button class="ref" type="button" data-open="${parent.id}">${esc(parent.name)}</button>` : esc(e.agencyText || '—')}</b></div><div class="detail-row"><span>관계 근거</span><b>${esc(e.rel || '추가 확인 필요')}</b></div><div class="detail-row"><span>우리 쪽 담당</span><b>${ownersLine(e.owners)}</b></div><div class="detail-row"><span>보유 컨택</span><b>${cs.length}명</b></div>${cs.length ? linkList(cs) : ''}${pointsBlock(e)}<p>실제 권리 검증 및 담당자 확인 전에는 G1 통과로 처리하지 않습니다.</p></div><div class="detail-block"><h3>별칭</h3>${[e.name, ...e.aliases].map(a => `<span class="tag">${esc(a)}</span>`).join('')}</div>${noteBlock(e)}`, keep);
   $('#edit-entity').onclick = () => entityModal(e); bindNote(e); bindAdminTools(e);
 }
 function openContact(c, keep) {
   const org = c.parentId && byId(c.parentId), card = imgSrc(c.cardImg);
-  showDrawer(`<span class="entity-avatar">${esc(c.name.slice(0, 2))}</span><h2>${esc(c.name)}</h2><span class="detail-sub">${esc(c.role ? c.role + ' · ' : '')}거래처 담당자</span><div class="drawer-actions"><button class="button" id="edit-contact">정보 수정</button>${adminTools(c)}</div><div class="detail-block"><h3>기본 정보 및 관계</h3><div class="detail-row"><span>회사 연결</span><b>${org ? `<button class="ref" type="button" data-open="${org.id}">${esc(org.name)}</button> <button class="text-btn" type="button" id="link-company">변경</button>` : `<button class="button" type="button" id="link-company">${icon('link')} 회사 미연결 · 연결하기</button>`}</b></div><div class="detail-row"><span>관계 근거</span><b>${esc(c.rel || '추가 확인 필요')}</b></div><div class="detail-row"><span>우리 쪽 담당</span><b>${esc(c.owners.join(', ') || '—')}</b></div>${pointsBlock(c) || '<p>기록된 업무 연락처가 없습니다.</p>'}</div><div class="detail-block"><h3>명함</h3>${c.cardImg ? (card ? `<button type="button" id="card-view" style="border:0;padding:0;background:none;width:100%"><img src="${card}" alt="${esc(c.name)} 명함" style="width:100%;border:1px solid #e4eae4;border-radius:7px;display:block"></button><p>누르면 크게 봅니다.</p>` : '<p>명함을 불러오는 중입니다…</p>') : '<p>올린 명함이 없습니다.</p>'}<label class="button" style="display:inline-flex;margin-top:6px;cursor:pointer">${c.cardImg ? '명함 바꾸기' : '명함 이미지 올리기'}<input id="card-replace" type="file" accept="image/*" hidden></label></div>${noteBlock(c)}`, keep);
+  showDrawer(`<span class="entity-avatar">${esc(c.name.slice(0, 2))}</span><h2>${esc(c.name)}</h2><span class="detail-sub">${esc(c.role ? c.role + ' · ' : '')}거래처 담당자</span><div class="drawer-actions"><button class="button" id="edit-contact">정보 수정</button>${adminTools(c)}</div><div class="detail-block"><h3>기본 정보 및 관계</h3><div class="detail-row"><span>회사 연결</span><b>${org ? `<button class="ref" type="button" data-open="${org.id}">${esc(org.name)}</button> <button class="text-btn" type="button" id="link-company">변경</button>` : `<button class="button" type="button" id="link-company">${icon('link')} 회사 미연결 · 연결하기</button>`}</b></div><div class="detail-row"><span>관계 근거</span><b>${esc(c.rel || '추가 확인 필요')}</b></div><div class="detail-row"><span>우리 쪽 담당</span><b>${ownersLine(c.owners)}</b></div>${pointsBlock(c) || '<p>기록된 업무 연락처가 없습니다.</p>'}</div><div class="detail-block"><h3>명함</h3>${c.cardImg ? (card ? `<button type="button" id="card-view" style="border:0;padding:0;background:none;width:100%"><img src="${card}" alt="${esc(c.name)} 명함" style="width:100%;border:1px solid #e4eae4;border-radius:7px;display:block"></button><p>누르면 크게 봅니다.</p>` : '<p>명함을 불러오는 중입니다…</p>') : '<p>올린 명함이 없습니다.</p>'}<label class="button" style="display:inline-flex;margin-top:6px;cursor:pointer">${c.cardImg ? '명함 바꾸기' : '명함 이미지 올리기'}<input id="card-replace" type="file" accept="image/*" hidden></label></div>${noteBlock(c)}`, keep);
   bindNote(c); bindAdminTools(c);
   $('#link-company').onclick = () => linkModal(c);
   $('#edit-contact').onclick = () => contactEditModal(c);
   $('#card-view')?.addEventListener('click', () => modal(`<h2>${esc(c.name)} 명함</h2><img src="${card}" alt="${esc(c.name)} 명함" style="width:100%;border-radius:7px;margin-top:10px"><div class="modal-actions"><button class="button primary" data-cancel>닫기</button></div>`));
   $('#card-replace').onchange = async ev => { const f = ev.target.files[0]; if (!f) return; try { const r = await resize(f, 1600, .82); const path = await upload(r.blob, 'cards'); if (await save(c.id, {cardImg: path})) { openDetail(c.id); toast('명함 이미지를 저장했습니다.'); } } catch { toast('이미지를 올리지 못했습니다.'); } };
 }
+
+/* ---------- 우리 쪽 담당 입력 (헤임달 참석자 입력과 같은 방식) ----------
+   이름을 적고 Enter · 헤임달 승인 직원이면 정식 이름으로 맞추고 소속을 보여 줌 · 없는 이름은 빨갛게 · 맨 앞 = 주 담당 */
+let MEMBERS = null;
+async function loadMembers() {
+  if (MEMBERS) return MEMBERS;
+  const { data } = await SB.from('hd_member').select('id,name,company,dept').eq('approved', true).order('name');
+  MEMBERS = (data || []).filter(m => (m.name || '').trim());
+  let dl = document.getElementById('pt-mnames');
+  if (!dl) { dl = document.createElement('datalist'); dl.id = 'pt-mnames'; document.body.appendChild(dl); }
+  dl.innerHTML = MEMBERS.map(m => `<option value="${esc(m.name)}">`).join('');
+  return MEMBERS;
+}
+const flatName = t => (t || '').replace(/\s/g, '');
+function findMember(nm) {
+  const t = flatName(nm); if (t.length < 2) return null;
+  return (MEMBERS || []).find(m => { const x = flatName(m.name); return x && (t.includes(x) || x.includes(t)); }) || null;
+}
+function ownersInput(host, initial) {
+  host.innerHTML = `<div class="atin"><input type="text" list="pt-mnames" placeholder="이름을 적고 Enter"></div><small class="atnote">맨 앞 사람이 <b>주 담당</b>입니다. 이름을 누르면 주 담당으로 바뀝니다. <span class="err">빨간 이름</span>은 등록되지 않은 사람입니다.</small>`;
+  const box = host.querySelector('.atin'), inp = host.querySelector('input');
+  let vals = (initial || []).map(x => (x || '').trim()).filter(Boolean);
+  const draw = () => {
+    [...box.querySelectorAll('.atc')].forEach(x => x.remove());
+    vals.forEach((v, i) => {
+      const hit = findMember(v), c = document.createElement('span');
+      c.className = 'atc' + (hit ? '' : ' out') + (i === 0 ? ' main' : '');
+      c.title = hit ? [hit.name, hit.company, hit.dept].filter(Boolean).join(' · ') : '등록되지 않은 사람입니다';
+      c.innerHTML = `${i === 0 ? '<em>주 담당</em>' : ''}<span>${esc(v)}</span>${hit && (hit.company || hit.dept) ? `<small>${esc([hit.company, hit.dept].filter(Boolean).join(' · '))}</small>` : ''}<button type="button" aria-label="${esc(v)} 지우기">×</button>`;
+      c.querySelector('button').onclick = ev => { ev.stopPropagation(); vals.splice(i, 1); draw(); };
+      c.onclick = () => { if (i) { vals.unshift(vals.splice(i, 1)[0]); draw(); } };
+      box.insertBefore(c, inp);
+    });
+  };
+  const add = t => {
+    t = (t || '').replace(/,+$/, '').trim(); if (!t) return;
+    const hit = findMember(t); if (hit) t = hit.name;          // 정식 이름으로 맞춤 (「김성효 팀장」 → 「김성효」)
+    if (!vals.some(v => flatName(v) === flatName(t))) vals.push(t);
+    inp.value = ''; draw();
+  };
+  // 한글 조합 중 Enter 는 조합이 끝난 뒤에 넣음 (헤임달과 같은 처리)
+  let composing = false, wantAdd = false;
+  inp.addEventListener('compositionstart', () => { composing = true; });
+  inp.addEventListener('compositionend', () => { composing = false; if (wantAdd) { wantAdd = false; add(inp.value); } });
+  inp.onkeydown = e => {
+    const ime = composing || e.isComposing || e.keyCode === 229;
+    if (e.key === 'Enter') { e.preventDefault(); if (ime) { wantAdd = true; return; } add(inp.value); }
+    else if (e.key === ',') { if (ime) return; e.preventDefault(); add(inp.value); }
+    else if (e.key === 'Backspace' && !ime && !inp.value && vals.length) { vals.pop(); draw(); }
+  };
+  inp.onblur = () => { if (!composing) add(inp.value); };
+  inp.onpaste = e => { const t = (e.clipboardData || window.clipboardData).getData('text') || ''; if (/[,\n]/.test(t)) { e.preventDefault(); t.split(/[,\n]/).forEach(add); } };
+  draw(); loadMembers().then(draw).catch(() => {});
+  return { value() { add(inp.value); return vals.slice(); } };
+}
+const ownersLine = owners => owners.length ? owners.map((o, i) => `${i === 0 ? '<span class="main-badge">주 담당</span> ' : ''}${esc(o)}`).join(' · ') : '—';
 
 /* ---------- 창 ---------- */
 function modal(content) { $('#modal').innerHTML = content; $('#modal').showModal(); $('#modal').querySelector('[data-cancel]')?.addEventListener('click', () => $('#modal').close()); }
@@ -178,12 +234,14 @@ function linkModal(c) {
   $('#link-form').onsubmit = ev => { ev.preventDefault(); const org = byId($('#link-select').value); if (!org) { $('#link-error').textContent = '연결할 회사를 골라 주세요.'; return; } go(org); };
 }
 function contactEditModal(c) {
-  modal(`<form id="ce-form"><h2>연락처 수정</h2><p>저장하면 모두에게 보이고, 누가 언제 무엇을 바꿨는지 기록이 남습니다.</p><label>이름 *<input id="ce-name" required maxlength="50" value="${esc(c.name)}"></label><label>직함 · 부서<input id="ce-role" maxlength="100" value="${esc(c.role)}"></label><label>연락처 (한 줄에 하나)<textarea id="ce-points" rows="5" style="display:block;width:100%;border:1px solid #dde4d9;border-radius:5px;padding:10px;margin-top:8px;font:inherit">${esc(c.points.join('\n'))}</textarea></label><label>관계 근거<input id="ce-rel" maxlength="200" value="${esc(c.rel)}"></label><div id="ce-error" style="color:#ba775e;margin-top:14px;font-size:11px" role="alert"></div><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="submit">변경 저장</button></div></form>`);
-  $('#ce-form').onsubmit = async ev => { ev.preventDefault(); const name = $('#ce-name').value.trim(); if (!name) { $('#ce-error').textContent = '이름을 적어 주세요.'; return; } if (!await save(c.id, {name, role: $('#ce-role').value.trim(), points: $('#ce-points').value.split('\n').map(s => s.trim()).filter(Boolean), rel: $('#ce-rel').value.trim()})) return; $('#modal').close(); render(); openDetail(c.id); toast('연락처를 수정했습니다.'); };
+  modal(`<form id="ce-form"><h2>연락처 수정</h2><p>저장하면 모두에게 보이고, 누가 언제 무엇을 바꿨는지 기록이 남습니다.</p><label>이름 *<input id="ce-name" required maxlength="50" value="${esc(c.name)}"></label><label>직함 · 부서<input id="ce-role" maxlength="100" value="${esc(c.role)}"></label><label>연락처 (한 줄에 하나)<textarea id="ce-points" rows="5" style="display:block;width:100%;border:1px solid #dde4d9;border-radius:5px;padding:10px;margin-top:8px;font:inherit">${esc(c.points.join('\n'))}</textarea></label><label>관계 근거<input id="ce-rel" maxlength="200" value="${esc(c.rel)}"></label><div class="field"><span class="flabel">우리 쪽 담당</span><div id="ce-owners"></div></div><div id="ce-error" style="color:#ba775e;margin-top:14px;font-size:11px" role="alert"></div><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="submit">변경 저장</button></div></form>`);
+  const owners = ownersInput($('#ce-owners'), c.owners);
+  $('#ce-form').onsubmit = async ev => { ev.preventDefault(); const name = $('#ce-name').value.trim(); if (!name) { $('#ce-error').textContent = '이름을 적어 주세요.'; return; } if (!await save(c.id, {name, role: $('#ce-role').value.trim(), points: $('#ce-points').value.split('\n').map(s => s.trim()).filter(Boolean), rel: $('#ce-rel').value.trim(), owners: owners.value()})) return; $('#modal').close(); render(); openDetail(c.id); toast('연락처를 수정했습니다.'); };
 }
 function entityModal(e) {
-  modal(`<form id="entity-form"><h2>${e ? '엔티티 수정' : '새 엔티티 등록'}</h2><p>저장하면 모두에게 보이고, 누가 언제 무엇을 바꿨는지 기록이 남습니다.</p><div class="img-field"><span id="img-preview">${avatar(e || {initial: '+', color: 'gray'})}</span><div><label for="entity-img" style="margin-top:0">프로필 이미지</label><input id="entity-img" type="file" accept="image/png,image/jpeg,image/webp"><button class="text-btn" type="button" id="img-clear" ${e?.img ? '' : 'hidden'}>이미지 지우기</button><small><b>권장 크기: 정사각형 500×500px 이상</b> (PNG·JPG, 15MB 이하)<br>로고나 얼굴 사진. 정사각형이 아니면 가운데를 잘라 쓰고, 240×240px로 줄여 저장합니다.</small></div></div><label>한글 이름 *<input id="entity-name" required maxlength="50" value="${esc(e?.name || '')}" placeholder="예: 분데스리가"></label><label>영문 이름<input id="entity-en" maxlength="80" value="${esc(e?.en || '')}" placeholder="예: BUNDESLIGA"></label><label>타입<select id="entity-type">${TYPES.map(t => `<option ${e?.type === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label><label>별칭 <input id="entity-alias" maxlength="200" value="${esc(e?.aliases.join(', ') || '')}" placeholder="쉼표로 구분해 주세요"></label><label>관계 근거 <input id="entity-rel" maxlength="200" value="${esc(e?.rel || '')}" placeholder="예: 골포스트 공식 미디어 파트너"></label><div id="form-error" style="color:#ba775e;margin-top:15px;font-size:11px" role="alert"></div><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="submit">${e ? '변경 저장' : '엔티티 등록'}</button></div></form>`);
+  modal(`<form id="entity-form"><h2>${e ? '엔티티 수정' : '새 엔티티 등록'}</h2><p>저장하면 모두에게 보이고, 누가 언제 무엇을 바꿨는지 기록이 남습니다.</p><div class="img-field"><span id="img-preview">${avatar(e || {initial: '+', color: 'gray'})}</span><div><label for="entity-img" style="margin-top:0">프로필 이미지</label><input id="entity-img" type="file" accept="image/png,image/jpeg,image/webp"><button class="text-btn" type="button" id="img-clear" ${e?.img ? '' : 'hidden'}>이미지 지우기</button><small><b>권장 크기: 정사각형 500×500px 이상</b> (PNG·JPG, 15MB 이하)<br>로고나 얼굴 사진. 정사각형이 아니면 가운데를 잘라 쓰고, 240×240px로 줄여 저장합니다.</small></div></div><label>한글 이름 *<input id="entity-name" required maxlength="50" value="${esc(e?.name || '')}" placeholder="예: 분데스리가"></label><label>영문 이름<input id="entity-en" maxlength="80" value="${esc(e?.en || '')}" placeholder="예: BUNDESLIGA"></label><label>타입<select id="entity-type">${TYPES.map(t => `<option ${e?.type === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label><label>별칭 <input id="entity-alias" maxlength="200" value="${esc(e?.aliases.join(', ') || '')}" placeholder="쉼표로 구분해 주세요"></label><label>관계 근거 <input id="entity-rel" maxlength="200" value="${esc(e?.rel || '')}" placeholder="예: 골포스트 공식 미디어 파트너"></label><div class="field"><span class="flabel">우리 쪽 담당</span><div id="entity-owners"></div></div><div id="form-error" style="color:#ba775e;margin-top:15px;font-size:11px" role="alert"></div><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="submit">${e ? '변경 저장' : '엔티티 등록'}</button></div></form>`);
   let pending; // undefined = 그대로 · null = 지움 · Blob = 새 이미지
+  const owners = ownersInput($('#entity-owners'), e?.owners || []);
   const show = src => { $('#img-preview').innerHTML = avatar({...(e || {initial: '+', color: 'gray'}), img: src || ''}); $('#img-clear').hidden = !src; };
   $('#entity-img').onchange = async ev => { const f = ev.target.files[0]; if (!f) return; if (f.size > 15e6) { $('#form-error').textContent = '15MB보다 작은 이미지를 골라 주세요.'; return; } try { const r = await resize(f, 240, .85, true); pending = r.blob; show(r.url); $('#form-error').textContent = ''; } catch { $('#form-error').textContent = '이미지를 읽지 못했습니다. PNG·JPG 파일을 골라 주세요.'; } };
   $('#img-clear').onclick = () => { pending = null; $('#entity-img').value = ''; show(''); };
@@ -195,7 +253,7 @@ function entityModal(e) {
     if (all.some(x => x.id !== e?.id && [x.name, x.en, ...x.aliases].filter(Boolean).some(s => terms.includes(s.toLowerCase())))) { $('#form-error').textContent = '이름 또는 별칭이 겹치는 엔티티가 있습니다. 기존 엔티티를 확인해 주세요.'; return; }
     const btn = $('#entity-form [type=submit]'); btn.disabled = true;
     try {
-      const patch = {name, en: en.toUpperCase(), type, aliases, rel};
+      const patch = {name, en: en.toUpperCase(), type, aliases, rel, owners: owners.value()};
       if (pending === null) patch.img = '';
       else if (pending) patch.img = await upload(pending, 'profiles');
       const id = e ? e.id : 'e-' + uid().slice(0, 12);
