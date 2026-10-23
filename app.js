@@ -370,7 +370,7 @@ async function ask() {
 
 /* ---------- DB 관리 (관리자) — 변경 기록 · 질문 기록 ---------- */
 const FIELD_KO = {name:'이름', en:'영문 이름', kind:'타입', aliases:'별칭', parent_id:'회사 연결', agency:'소속 / 회사', role:'직함', rel:'관계 근거', points:'연락처', facts:'기록', note:'리서치 노트', sides:'우리 쪽 회사', owners:'우리 쪽 담당', img:'프로필 이미지', card_img:'명함 이미지', first_seen:'처음 기록', last_seen:'마지막 기록', hidden:'숨김', id:'아이디'};
-const VIA_KO = {web: '웹', server: '시스템 입력', sql: '시스템 입력'};
+const VIA_KO = {web: '웹', slack: '슬랙', server: '시스템 입력', sql: '시스템 입력'};
 const OP_KO = {insert: '등록', update: '수정', delete: '삭제'};
 const showVal = (k, v) => { if (v === null || v === undefined || v === '' || (Array.isArray(v) && !v.length)) return '(없음)'; if (k === 'img' || k === 'card_img') return '(이미지)'; if (k === 'parent_id') return byId(v)?.name || v; if (k === 'hidden') return v ? '숨김' : '보임'; if (Array.isArray(v)) return v.join(' / '); return String(v); };
 let admin = {tab: 'log', changes: null, asks: null, people: {}, who: '', q: '', err: '', loading: false};
