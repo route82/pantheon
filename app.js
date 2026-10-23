@@ -112,7 +112,7 @@ function alerts() { const es = entities(); const noC = es.filter(e => !contactsO
 function filters() { const types = TYPES.filter(t => entities().some(e => e.type === t)); return `<div class="tabs">${['전체', ...types].map(t => `<button class="tab ${filter === t ? 'active' : ''}" data-filter="${t}">${t}</button>`).join('')}</div>`; }
 const hay = e => [e.name, e.en, agencyOf(e), e.role, e.rel, e.note, ...e.aliases, ...e.sides, ...e.owners, ...e.facts, ...e.points].join(' ').toLowerCase();
 const match = e => (filter === '전체' || e.type === filter) && hay(e).includes(query.toLowerCase());
-function contactTable(arr) { return `<div class="table-wrap"><table><thead><tr><th>이름</th><th>회사 연결</th><th>직함</th><th>연락처(업무)</th><th>명함</th></tr></thead><tbody>${arr.map(c => `<tr class="clickable" data-detail="${c.id}" tabindex="0"><td>${esc(c.name)}</td><td>${c.parentId ? `<span class="pill good">${esc(agencyOf(c))}</span>` : esc(c.agencyText || '회사 미연결')}</td><td>${esc(c.role || '—')}</td><td>${esc(c.points[0] || '—')}</td><td>${c.cardImg ? '<span class="pill good">있음</span>' : '—'}</td></tr>`).join('') || '<tr><td colspan="5"><div class="empty">검색 결과가 없습니다.</div></td></tr>'}</tbody></table></div>`; }
+function contactTable(arr) { return `<div class="table-wrap"><table class="ct"><thead><tr><th>이름</th><th>회사 연결</th><th>직함</th><th>연락처(업무)</th><th>명함</th></tr></thead><tbody>${arr.map(c => `<tr class="clickable" data-detail="${c.id}" tabindex="0"><td data-label="이름">${esc(c.name)}</td><td data-label="회사">${c.parentId ? `<span class="pill good">${esc(agencyOf(c))}</span>` : esc(c.agencyText || '회사 미연결')}</td><td data-label="직함">${esc(c.role || '—')}</td><td data-label="연락처">${esc(c.points[0] || '—')}</td><td data-label="명함">${c.cardImg ? '<span class="pill good">있음</span>' : '—'}</td></tr>`).join('') || '<tr><td colspan="5"><div class="empty">검색 결과가 없습니다.</div></td></tr>'}</tbody></table></div>`; }
 
 function render() {
   if (!navMenus().some(m => m[0] === page)) page = 'home';
@@ -523,6 +523,7 @@ $('#global-search').oninput = e => { query = e.target.value; if (!['entities', '
 $('#add-btn').onclick = () => page === 'contacts' ? contactModal() : entityModal();
 $('#export-btn').onclick = exportCSV;
 $('#notification').onclick = () => go('home');
+$('.top-avatar').onclick = () => $('#profile').click();      // 폰에서는 왼쪽 메뉴가 아래 막대가 되어 프로필이 위 오른쪽 사진으로
 $('#profile').onclick = async () => { if (!me) return; modal(`<h2>로그아웃</h2><p>${esc(myName)} 님, 판테온에서 로그아웃합니다. 같은 주소의 헤임달도 함께 로그아웃됩니다.</p><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="button" id="logout-go">로그아웃</button></div>`); $('#logout-go').onclick = async () => { await SB.auth.signOut(); location.reload(); }; };
 $('#overlay').onclick = closeDrawer;
 window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (me && h && h !== page) { page = h; filter = '전체'; render(); } });

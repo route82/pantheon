@@ -43,3 +43,81 @@ body{word-break:keep-all;overflow-wrap:break-word}
 .login-box p{color:#89918f;font-size:12px;line-height:1.7}
 .login-box label{display:block;font-size:11px;color:#71816b;margin-top:14px}
 .login-box input{display:block;width:100%;border:1px solid #dde4d9;border-radius:6px;padding:11px;margin-top:6px;font-size:13px}
+.top-avatar{cursor:pointer;overflow:hidden}
+/* ── 폰 (10-23 김현우 「모바일 최적화가 전혀 안 돼 있다」) — 왼쪽 메뉴 → 아래 탭 막대 · 한 줄 카드 · 연락처 카드 · 상세·창 꽉 차게 */
+@media(max-width:600px){
+html,body{overflow-x:hidden}
+.sidebar{inset:auto 0 0 0;width:100%;height:auto;flex-direction:row;padding:0 0 env(safe-area-inset-bottom);border-right:0;border-top:1px solid var(--border);background:#fffffff5;backdrop-filter:blur(10px);z-index:40}
+.sidebar .brand,.sidebar .workspace,.sidebar .nav-caption,.sidebar .sidebar-bottom{display:none}
+.sidebar nav{flex-direction:row;margin:0;width:100%;gap:0}
+.nav-item{flex:1;flex-direction:column;justify-content:center;gap:3px;padding:9px 0 8px;border-radius:0;font-size:10px;position:relative}
+.nav-item>span:not(.nav-count){display:block!important;font-size:10px;letter-spacing:-.3px}
+.nav-item svg{width:20px;height:20px}
+.nav-item.active{background:transparent}
+.nav-item.active:before{content:'';position:absolute;top:0;left:28%;right:28%;height:2px;border-radius:2px;background:var(--green)}
+.nav-item .nav-count{display:none}
+main{margin-left:0;width:100%;padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+.topbar{position:sticky;top:0;z-index:30;height:56px;padding:0 16px;gap:10px}
+.topbar:before{content:'Π';font-family:Georgia,serif;font-weight:900;font-size:26px;color:var(--green);line-height:1}
+.breadcrumb,.searchbox kbd{display:none}
+.top-actions{flex:1;gap:8px;min-width:0}
+.searchbox{flex:1;min-width:0;background:#f4f6f5;border-radius:8px;padding:8px 10px}
+.searchbox input{width:100%;font-size:14px}
+.top-avatar{display:grid;width:32px;height:32px;flex:none}
+.page{padding:20px 16px 0}
+.page-heading{gap:12px;margin-bottom:16px}
+.eyebrow{display:none}
+.page-heading h1{font-size:23px}
+.page-heading p{font-size:12px;margin-top:6px}
+.heading-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+.heading-actions .button,.page-heading .button{font-size:12px;padding:11px 10px}
+.notice{font-size:11px;padding:10px 13px;margin-bottom:14px}
+.panel-head{padding:16px 14px 12px}
+.panel-title{font-size:14px}
+.watch-toolbar{padding:0 14px 12px}
+.tabs{flex-wrap:nowrap;overflow-x:auto;width:100%;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;font-size:12px;padding:7px 11px}
+.watch-toolbar .text-btn{display:none}
+.entity-grid{grid-template-columns:1fr;gap:10px;padding:0 14px 14px}
+.entity-card{padding:14px}
+.entity-card:hover{transform:none}
+.entity-top b{font-size:14px}.entity-top small{font-size:10px}
+.entity-avatar{width:40px;height:40px;font-size:13px}
+.entity-category{font-size:10px;margin-top:10px}
+.entity-rel{font-size:12px;min-height:0;margin-top:8px}
+.card-bottom{font-size:10px}
+.stats{grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.stat{min-height:0;padding:14px}
+.stat-value{font-size:24px;margin:8px 0 4px}
+.main-grid{gap:14px}
+.ask-panel .ask-body{padding:0 14px 16px}
+.ask-row input{font-size:16px}
+.ask-answer{font-size:13px}
+table.ct thead{display:none}
+table.ct,table.ct tbody,table.ct tr,table.ct td{display:block;width:100%;white-space:normal}
+table.ct tr{border-top:1px solid #edf0eb;padding:12px 14px}
+table.ct td{border:0;padding:2px 0;font-size:12px;display:flex;gap:10px}
+table.ct td:before{content:attr(data-label);flex:none;width:52px;color:#a3aaa5;font-size:11px;font-weight:400}
+table.ct td:first-child{font-size:15px;font-weight:600;padding-bottom:5px}
+table.ct td:first-child:before{display:none}
+table.ct td[colspan]{display:block}table.ct td[colspan]:before{display:none}
+th,td{padding-left:14px;padding-right:14px}
+.drawer{width:100%;padding:18px 16px calc(24px + env(safe-area-inset-bottom))}
+.drawer-header{margin-bottom:12px}
+.drawer h2{font-size:22px}
+.drawer-actions{flex-wrap:wrap}
+.detail-row{gap:14px;font-size:12px}
+.detail-row b{text-align:right;min-width:0;overflow-wrap:anywhere}
+.detail-block p,.point,.point code,.link-list button{font-size:12px}
+.point button{padding:6px 10px;font-size:11px}
+dialog{width:100%;max-width:100%;max-height:calc(100dvh - 16px);margin:auto auto 0;border-radius:14px 14px 0 0;padding:22px 18px calc(18px + env(safe-area-inset-bottom));overflow:auto}
+dialog input,dialog select,dialog textarea,.atin input,.login-box input{font-size:16px!important}
+dialog p,dialog label{font-size:12px}
+dialog .modal-actions{position:sticky;bottom:calc(-18px - env(safe-area-inset-bottom));background:#fff;padding:12px 0 4px;margin-top:18px}
+dialog .modal-actions .button{flex:1;padding:12px}
+.img-field{align-items:flex-start}
+.toast{bottom:calc(76px + env(safe-area-inset-bottom));width:max-content;max-width:calc(100% - 32px);text-align:center}
+footer{display:none}
+.quality-grid{grid-template-columns:1fr;gap:10px}
+}
