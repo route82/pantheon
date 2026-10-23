@@ -46,6 +46,10 @@ body{word-break:keep-all;overflow-wrap:break-word}
 .login-box label{display:block;font-size:11px;color:#71816b;margin-top:14px}
 .login-box input{display:block;width:100%;border:1px solid #dde4d9;border-radius:6px;padding:11px;margin-top:6px;font-size:13px}
 .top-avatar{cursor:pointer;overflow:hidden}
+.stat[data-stat]{cursor:pointer;transition:border-color .15s,transform .15s}
+.stat[data-stat]:hover{border-color:#9fb6a3;transform:translateY(-2px)}
+.stat.highlight[data-stat]:hover{border-color:#234c3c}
+.stat[data-stat]:focus-visible{outline:3px solid #82bca4;outline-offset:3px}
 /* ── 폰 (10-23 김현우 「모바일 최적화가 전혀 안 돼 있다」) — 왼쪽 메뉴 → 아래 탭 막대 · 한 줄 카드 · 연락처 카드 · 상세·창 꽉 차게 */
 @media(max-width:600px){
 html,body{overflow-x:hidden}
