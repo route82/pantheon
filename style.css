@@ -27,6 +27,8 @@ body{word-break:keep-all;overflow-wrap:break-word}
 .point{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed #e8ece9;font-size:11px}
 .point code{font-family:ui-monospace,Consolas,monospace;font-size:11px;user-select:all;overflow-wrap:anywhere}
 .point button{border:1px solid var(--border);background:#fff;border-radius:5px;padding:3px 8px;font-size:10px;flex:none}
+.point-acts{display:flex;gap:6px;flex:none}
+.point-go{border:1px solid #cfe0d4;background:#edf4ef;color:#285541;border-radius:5px;padding:3px 8px;font-size:10px;font-weight:600}
 .field{margin-top:18px}.flabel{display:block;font-size:11px;color:#71816b}
 .atin{display:flex;flex-wrap:wrap;gap:6px;align-items:center;border:1px solid #dde4d9;border-radius:5px;padding:7px 8px;margin-top:8px;background:#fff}
 .atin:focus-within{border-color:#82bca4;box-shadow:0 0 0 3px #edf4ef}
@@ -110,7 +112,9 @@ th,td{padding-left:14px;padding-right:14px}
 .detail-row{gap:14px;font-size:12px}
 .detail-row b{text-align:right;min-width:0;overflow-wrap:anywhere}
 .detail-block p,.point,.point code,.link-list button{font-size:12px}
-.point button{padding:6px 10px;font-size:11px}
+.point button,.point-go{padding:7px 11px;font-size:12px}
+.pill{font-size:11px;padding:3px 7px}
+.drawer-actions .button{font-size:12px;padding:10px 14px}
 dialog{width:100%;max-width:100%;max-height:calc(100dvh - 16px);margin:auto auto 0;border-radius:14px 14px 0 0;padding:22px 18px calc(18px + env(safe-area-inset-bottom));overflow:auto}
 dialog input,dialog select,dialog textarea,.atin input,.login-box input{font-size:16px!important}
 dialog p,dialog label{font-size:12px}
