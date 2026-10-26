@@ -284,11 +284,18 @@ function entityModal(e) {
 function kidsInput(host, e) {
   const orig = e ? kidsOf(e).map(k => k.id) : [];
   let rows = e ? kidsOf(e).map(k => ({id: k.id, name: k.name, en: k.en, type: k.type})) : [];
-  host.innerHTML = `<div class="atin kid-list"></div><div class="kid-add"><select id="kid-type" aria-label="유형">${KID_TYPES.map(t => `<option>${t}</option>`).join('')}</select><input id="kid-name" maxlength="50" placeholder="한글 이름"><input id="kid-en" maxlength="80" placeholder="영문 이름"><button type="button" class="button" id="kid-add">추가</button></div><small class="atnote">예) 브랜드 · 내셔널지오그래픽 어패럴 · NATIONAL GEOGRAPHIC APPAREL — 이미 등록된 엔티티는 그대로 연결하고, 없으면 저장할 때 새로 등록합니다.</small>`;
+  host.innerHTML = `<div class="kid-list"></div><div class="kid-add"><select id="kid-type" aria-label="유형">${KID_TYPES.map(t => `<option>${t}</option>`).join('')}</select><input id="kid-name" maxlength="50" placeholder="한글 이름"><input id="kid-en" maxlength="80" placeholder="영문 이름"><button type="button" class="button" id="kid-add">추가</button></div><small class="atnote">예) 브랜드 · 내셔널지오그래픽 어패럴 · NATIONAL GEOGRAPHIC APPAREL — 이미 등록된 엔티티는 그대로 연결하고, 없으면 저장할 때 새로 등록합니다. 왼쪽 상자를 누르면 로고 이미지를 등록할 수 있습니다(정사각형 500×500px 이상 권장).</small>`;
   const list = host.querySelector('.kid-list');
   const draw = () => {
-    list.innerHTML = rows.map((r, i) => `<span class="atc${r.id ? '' : ' new'}" title="${r.id ? (r.moveFrom ? esc(r.moveFrom) + '에서 이 회사로 소속이 변경됩니다' : '등록된 엔티티') : '저장하면 새로 등록됩니다'}"><em>${esc(r.type)}</em><span>${esc(r.name)}</span>${r.en ? `<small>${esc(r.en)}</small>` : ''}${r.id ? (r.moveFrom ? '<small>소속 변경</small>' : '') : '<small>새로 등록</small>'}<button type="button" data-i="${i}" aria-label="${esc(r.name)} 연결 해제">×</button></span>`).join('') || '<small class="atnote" style="margin:0 4px">연결된 엔티티가 없습니다.</small>';
+    list.innerHTML = rows.map((r, i) => { const cur = r.id && byId(r.id);
+      const logo = r.logo ? `<span class="entity-avatar has-img"><img src="${r.logo.url}" alt=""></span>` : cur && cur.img ? avatar(cur) : '<span class="kid-logo-empty">로고<br>등록</span>';
+      return `<div class="kid-row${r.id ? '' : ' new'}"><label class="kid-logo" title="${esc(r.name)} 로고 이미지 등록 (정사각형 권장)">${logo}<input type="file" accept="image/png,image/jpeg,image/webp" data-logo="${i}" hidden></label><div class="kid-name"><b>${esc(r.name)}</b><small>${esc(r.type)}${r.en ? ' · ' + esc(r.en) : ''}</small></div>${r.id ? (r.moveFrom ? `<span class="kid-tag" title="${esc(r.moveFrom)}에서 이 회사로 소속이 변경됩니다">소속 변경</span>` : '') : '<span class="kid-tag">새로 등록</span>'}<button type="button" class="kid-x" data-i="${i}" aria-label="${esc(r.name)} 연결 해제">×</button></div>`; }).join('') || '<p class="atnote" style="margin:4px 0">연결된 엔티티가 없습니다.</p>';
     list.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { rows.splice(+b.dataset.i, 1); draw(); });
+    list.querySelectorAll('[data-logo]').forEach(inp => inp.onchange = async ev => {      // 로고 — 프로필 이미지와 같이 240px 정사각형으로
+      const f = ev.target.files[0]; if (!f) return;
+      if (f.size > 15e6) return toast('15MB 이하 이미지를 선택해 주세요.');
+      try { rows[+inp.dataset.logo].logo = await resize(f, 240, .85, true); draw(); } catch { toast('이미지를 열 수 없습니다. PNG·JPG 파일을 선택해 주세요.'); }
+    });
   };
   const same = (a, b) => !!a && !!b && normCo(a) === normCo(b);
   const add = () => {
@@ -310,8 +317,10 @@ function kidsInput(host, e) {
     async apply(p) {         // 회사를 저장한 뒤 — 새로 등록 · 소속 변경 · 연결 해제 (하나하나 변경 기록에 남음)
       add();
       for (const r of rows) {
-        if (!r.id) { if (!await save('e-' + uid().slice(0, 12), {name: r.name, en: r.en, type: r.type, parentId: p.id, agencyText: p.name, owners: p.owners, facts: [`${p.name} 연결 엔티티로 등록 ${today()}`], first: today(), last: today()}, true)) return false; }
-        else if (byId(r.id)?.parentId !== p.id) { if (!await save(r.id, {parentId: p.id, agencyText: p.name})) return false; }
+        const img = r.logo ? await upload(r.logo.blob, 'profiles') : null;
+        if (!r.id) { if (!await save('e-' + uid().slice(0, 12), {name: r.name, en: r.en, type: r.type, parentId: p.id, agencyText: p.name, owners: p.owners, facts: [`${p.name} 연결 엔티티로 등록 ${today()}`], first: today(), last: today(), ...(img ? {img} : {})}, true)) return false; }
+        else { const patch = {...(byId(r.id)?.parentId !== p.id ? {parentId: p.id, agencyText: p.name} : {}), ...(img ? {img} : {})};
+          if (Object.keys(patch).length && !await save(r.id, patch)) return false; }
       }
       for (const id of orig) if (!rows.some(r => r.id === id)) { if (!await save(id, {parentId: null, agencyText: ''})) return false; }
       return true;
