@@ -46,6 +46,12 @@ body{word-break:keep-all;overflow-wrap:break-word}
 .login-box label{display:block;font-size:11px;color:#71816b;margin-top:14px}
 .login-box input{display:block;width:100%;border:1px solid #dde4d9;border-radius:6px;padding:11px;margin-top:6px;font-size:13px}
 .top-avatar{cursor:pointer;overflow:hidden}
+.kid-list{min-height:44px}
+.kid-add{display:grid;grid-template-columns:120px 1fr 1fr auto;gap:6px;margin-top:8px}
+.kid-add select,.kid-add input{margin-top:0!important;padding:9px!important;font-size:12px}
+.kid-add .button{padding:9px 14px}
+.atc.new{background:#fff;border:1px dashed #82bca4}
+@media(max-width:600px){.kid-add{grid-template-columns:1fr 1fr}.kid-add select{grid-column:1/-1}.kid-add .button{grid-column:1/-1}}
 .stat[data-stat]{cursor:pointer;transition:border-color .15s,transform .15s}
 .stat[data-stat]:hover{border-color:#9fb6a3;transform:translateY(-2px)}
 .stat.highlight[data-stat]:hover{border-color:#234c3c}
