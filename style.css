@@ -53,6 +53,12 @@ body{word-break:keep-all;overflow-wrap:break-word}
 .local-form .button{padding:9px 13px}
 .watch-toolbar{flex-wrap:wrap}
 @media(max-width:600px){.local-form{width:100%}.local-form .local-search{flex:1;min-width:0;font-size:16px}}
+.owner-hist{list-style:none;margin:0;padding:0 0 0 14px;border-left:2px solid #e1ece3}
+.owner-hist li{position:relative;padding:0 0 14px 4px;font-size:11px;color:#5f6b63;line-height:1.7}
+.owner-hist li:before{content:'';position:absolute;left:-21px;top:5px;width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid #82bca4}
+.owner-hist li:last-child:before{background:#285541;border-color:#285541}
+.owner-hist time{display:block;font-size:10px;color:#9aa29d}
+.owner-hist b{color:#283a2f;font-weight:600}
 .kid-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 .kid-row{display:flex;align-items:center;gap:10px;border:1px solid #dde4d9;border-radius:7px;padding:7px 8px;background:#fff}
 .kid-row.new{border-style:dashed;border-color:#82bca4}
