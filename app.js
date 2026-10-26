@@ -25,7 +25,7 @@ const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) 
 let me = null, myName = '', isAdmin = false;
 let all = [];
 let page = 'home', filter = '전체', query = '', activeDetail = null, lastAnswer = '';
-const menus = [['home','오버뷰'],['entities','엔티티 DB'],['contacts','연락처'],['admin','DB 관리']];
+const menus = [['home','대시보드'],['entities','엔티티 DB'],['contacts','연락처'],['admin','DB 관리']];
 const navMenus = () => menus.filter(m => m[0] !== 'admin' || isAdmin);
 const byId = id => all.find(e => e.id === id);
 const isContact = e => e.type === '거래처 담당자';
@@ -106,11 +106,11 @@ async function load() {
 
 /* ---------- 화면 조각 ---------- */
 const avatar = e => { const s = imgSrc(e.img); return `<span class="entity-avatar ${s ? 'has-img' : e.color || ''}">${s ? `<img src="${s}" alt="">` : esc(e.initial)}</span>`; };
-function entityCard(e) { const c = contactsOf(e).length; return `<article class="entity-card" data-detail="${e.id}" tabindex="0" role="button" aria-label="${esc(e.name)} 상세 보기"><div class="entity-top">${avatar(e)}<div><b>${esc(e.name)}</b><small>${esc(e.en || agencyOf(e))}</small></div></div><span class="entity-category">${esc(e.type)}</span>${e.hidden ? ' <span class="entity-category">숨김</span>' : ''}<p class="entity-rel ${e.rel ? '' : 'none'}">${esc(e.rel || '관계 근거 미기재 — 우리 쪽 담당에게 확인이 필요합니다.')}</p><div class="card-bottom"><span>${c ? '보유 컨택 ' + c + '명' : '컨택 경로 미확보'}</span><span>상세 보기 ↗</span></div></article>`; }
-function stats() { const es = entities(), cs = contacts(); return `<div class="stats"><div class="stat" data-stat="전체" role="button" tabindex="0" aria-label="엔티티 전체 보기"><div class="stat-label">${icon('entities')} 등록 엔티티</div><div class="stat-value">${es.length}<small>개</small></div><div class="stat-bottom"><span class="positive">판테온 DB</span> · 모두가 같이 보는 자료</div></div><div class="stat" data-stat="contacts" role="button" tabindex="0" aria-label="연락처 보기"><div class="stat-label">${icon('contacts')} 보유 컨택</div><div class="stat-value">${cs.length}<small>명</small></div><div class="stat-bottom">거래처 담당자 · 회사와 연결</div></div><div class="stat" data-stat="IP·유명인" role="button" tabindex="0" aria-label="IP·유명인 보기"><div class="stat-label">${icon('up')} IP·유명인</div><div class="stat-value">${es.filter(e => e.type === 'IP·유명인').length}<small>명</small></div><div class="stat-bottom">우리가 계약·활용하는 인물</div></div><div class="stat highlight" data-stat="담당자 연결" role="button" tabindex="0" aria-label="담당자 연결 회사 보기"><div class="stat-label">${icon('link')} 담당자 연결 회사</div><div class="stat-value">${es.filter(e => contactsOf(e).length).length}<small>곳</small></div><div class="stat-bottom">같은 회사 담당자는 한 회사로 묶입니다</div></div></div>`; }
+function entityCard(e) { const c = contactsOf(e).length; return `<article class="entity-card" data-detail="${e.id}" tabindex="0" role="button" aria-label="${esc(e.name)} 상세 보기"><div class="entity-top">${avatar(e)}<div><b>${esc(e.name)}</b><small>${esc(e.en || agencyOf(e))}</small></div></div><span class="entity-category">${esc(e.type)}</span>${e.hidden ? ' <span class="entity-category">숨김</span>' : ''}<p class="entity-rel ${e.rel ? '' : 'none'}">${esc(e.rel || '관계 근거 미입력 — 내부 담당자 확인이 필요합니다.')}</p><div class="card-bottom"><span>${c ? '등록된 담당자 ' + c + '명' : '담당자 미등록'}</span><span>상세 보기 ↗</span></div></article>`; }
+function stats() { const es = entities(), cs = contacts(); return `<div class="stats"><div class="stat" data-stat="전체" role="button" tabindex="0" aria-label="엔티티 전체 보기"><div class="stat-label">${icon('entities')} 등록 엔티티</div><div class="stat-value">${es.length}<small>개</small></div><div class="stat-bottom"><span class="positive">판테온 DB</span> · 전 직원 공유</div></div><div class="stat" data-stat="contacts" role="button" tabindex="0" aria-label="연락처 보기"><div class="stat-label">${icon('contacts')} 거래처 담당자</div><div class="stat-value">${cs.length}<small>명</small></div><div class="stat-bottom">회사별로 연결해 관리</div></div><div class="stat" data-stat="IP·유명인" role="button" tabindex="0" aria-label="IP·유명인 보기"><div class="stat-label">${icon('up')} IP·유명인</div><div class="stat-value">${es.filter(e => e.type === 'IP·유명인').length}<small>명</small></div><div class="stat-bottom">계약·협업 중인 인물</div></div><div class="stat highlight" data-stat="담당자 연결" role="button" tabindex="0" aria-label="담당자 연결 회사 보기"><div class="stat-label">${icon('link')} 담당자 연결 회사</div><div class="stat-value">${es.filter(e => contactsOf(e).length).length}<small>곳</small></div><div class="stat-bottom">거래처 담당자가 등록된 회사</div></div></div>`; }
 const EXAMPLES = ['골포스트가 협업한 리그·매체는?', '사운드스루 제작지원 브랜드 목록', '브이티코스메틱 담당자 누구야?', '포켓몬이랑 지금 뭐 하고 있어?'];
-function askPanel() { return `<section class="panel ask-panel"><div class="panel-head"><div><div class="panel-title">무엇이든 물어보세요 <small>ASK PANTHEON</small></div><p class="panel-caption">판테온 DB에서 찾아 Claude가 답합니다. 슬랙 「Pantheon」 봇에 물어도 같은 답이 나옵니다.</p></div></div><div class="ask-body"><div class="ask-row"><input id="ask-input" type="search" autocomplete="off" placeholder="예: 게티이미지 담당자 누구야?"><button class="button primary" id="ask-btn" type="button">질문하기</button></div><div class="ask-examples">${EXAMPLES.map(x => `<button type="button" data-ask="${esc(x)}">${esc(x)}</button>`).join('')}</div><div class="ask-answer" id="ask-answer" ${lastAnswer ? '' : 'hidden'}>${lastAnswer}</div></div></section>`; }
-function alerts() { const es = entities(); const noC = es.filter(e => !contactsOf(e).length && !['기관','IP·유명인'].includes(e.type)).length, noRel = es.filter(e => !e.rel).length, ip = es.filter(e => e.type === 'IP·유명인').length; return `<section class="panel"><div class="panel-head"><div class="panel-title">오늘의 체크포인트</div><span class="alert-count">3건</span></div><div class="alert-list"><button class="alert-row" data-page="contacts"><span class="alert-symbol green">${icon('link')}</span><span class="alert-text">컨택 경로가 아직 연결되지 않았어요<small>엔티티 ${noC}개 · 명함을 등록하면 연결됩니다</small></span></button><button class="alert-row" data-filter-go="전체"><span class="alert-symbol red">${icon('warning')}</span><span class="alert-text">관계 근거가 비어 있는 엔티티<small>${noRel}개 · 우리 쪽 담당 확인 필요</small></span></button><button class="alert-row" data-filter-go="IP·유명인"><span class="alert-symbol">${icon('up')}</span><span class="alert-text">활용할 수 있는 IP·유명인<small>${ip}명 · 엔티티 DB에서 보기</small></span></button></div></section>`; }
+function askPanel() { return `<section class="panel ask-panel"><div class="panel-head"><div><div class="panel-title">무엇이든 물어보세요 <small>ASK PANTHEON</small></div><p class="panel-caption">판테온 DB를 검색해 Claude가 답변합니다. 슬랙 「Pantheon」 봇에서도 같은 답변을 받을 수 있습니다.</p></div></div><div class="ask-body"><div class="ask-row"><input id="ask-input" type="search" autocomplete="off" placeholder="예: 게티이미지 담당자 누구야?"><button class="button primary" id="ask-btn" type="button">질문하기</button></div><div class="ask-examples">${EXAMPLES.map(x => `<button type="button" data-ask="${esc(x)}">${esc(x)}</button>`).join('')}</div><div class="ask-answer" id="ask-answer" ${lastAnswer ? '' : 'hidden'}>${lastAnswer}</div></div></section>`; }
+function alerts() { const es = entities(); const noC = es.filter(e => !contactsOf(e).length && !['기관','IP·유명인'].includes(e.type)).length, noRel = es.filter(e => !e.rel).length, ip = es.filter(e => e.type === 'IP·유명인').length; return `<section class="panel"><div class="panel-head"><div class="panel-title">확인이 필요한 항목</div><span class="alert-count">3건</span></div><div class="alert-list"><button class="alert-row" data-page="contacts"><span class="alert-symbol green">${icon('link')}</span><span class="alert-text">담당자가 등록되지 않은 곳<small>엔티티 ${noC}개 · 명함을 등록하면 연결됩니다</small></span></button><button class="alert-row" data-filter-go="전체"><span class="alert-symbol red">${icon('warning')}</span><span class="alert-text">관계 근거 미입력 엔티티<small>${noRel}개 · 내부 담당자 확인 필요</small></span></button><button class="alert-row" data-filter-go="IP·유명인"><span class="alert-symbol">${icon('up')}</span><span class="alert-text">활용 가능한 IP·유명인<small>${ip}명 · 엔티티 DB에서 보기</small></span></button></div></section>`; }
 function filters() { const types = TYPES.filter(t => entities().some(e => e.type === t)); return `<div class="tabs">${['전체', ...types, LINKED].map(t => `<button class="tab ${filter === t ? 'active' : ''}" data-filter="${t}">${t}</button>`).join('')}</div>`; }
 const hay = e => [e.name, e.en, agencyOf(e), e.role, e.rel, e.note, ...e.aliases, ...e.sides, ...e.owners, ...e.facts, ...e.points].join(' ').toLowerCase();
 const LINKED = '담당자 연결';   // 오버뷰 「담당자 연결 회사」 — 거래처 담당자가 연결된 회사만
@@ -120,7 +120,7 @@ function contactTable(arr) { return `<div class="table-wrap"><table class="ct"><
 function render() {
   if (!navMenus().some(m => m[0] === page)) page = 'home';
   $('#nav').innerHTML = navMenus().map(([key, title]) => `<button class="nav-item ${page === key ? 'active' : ''}" data-page="${key}">${icon(key)}<span>${title}</span>${key === 'contacts' ? `<span class="nav-count">${contacts().length}</span>` : ''}</button>`).join('');
-  const title = {home:['워크스페이스 오버뷰','가능성을 발견하고, 관계를 연결하고, 다음 기회를 준비하세요.'], entities:['엔티티 DB','더올마이티·골포스트·사운드스루가 만나 온 연결을 한곳에.'], contacts:['연락처','사람과 조직을 연결하고, 다음 대화를 준비하세요.'], admin:['DB 관리','누가 언제 무엇을 바꿨는지 확인하고, 필요하면 되돌리세요.']}[page];
+  const title = {home:['대시보드','거래처·IP·담당자 정보를 한곳에서 확인하세요.'], entities:['엔티티 DB','더올마이티·골포스트·사운드스루의 거래처·브랜드·기관·IP 목록입니다.'], contacts:['연락처','거래처 담당자의 연락처를 확인하고 바로 연락할 수 있습니다.'], admin:['DB 관리','누가 언제 무엇을 수정했는지 확인하고, 필요하면 이전 내용으로 복원할 수 있습니다.']}[page];
   $('#crumb').textContent = menus.find(m => m[0] === page)?.[1];
   $('#page-title').innerHTML = title[0] + '<span class="title-dot">.</span>';
   $('#page-subtitle').textContent = title[1];
@@ -128,8 +128,8 @@ function render() {
   $('#add-btn').innerHTML = icon('plus') + (page === 'contacts' ? '연락처 등록' : '엔티티 등록');
   let html = '';
   if (page === 'home') html = stats() + `<div class="main-grid">${askPanel()}${alerts()}</div>`;
-  if (page === 'entities') { const arr = entities().filter(match); html = `<div class="notice">판테온 DB 엔티티 ${entities().length}개. 등록·수정하면 모두에게 보이고, 누가 언제 무엇을 바꿨는지 기록이 남습니다.</div><section class="panel"><div class="panel-head"><div class="panel-title">엔티티 목록 <small>${arr.length} ENTITIES</small></div></div><div class="watch-toolbar">${filters()}<span class="text-btn">이름·영문명·별칭·관계 검색 지원</span></div><div class="entity-grid">${arr.map(entityCard).join('') || '<div class="empty">검색 결과가 없습니다.</div>'}</div></section>`; }
-  if (page === 'contacts') { const arr = contacts().filter(c => hay(c).includes(query.toLowerCase())); html = `<div class="notice">「연락처 등록」에서 명함 사진을 올리면 판테온 봇이 읽어 칸을 채우고, 명함 이미지도 함께 남깁니다. 거래처 담당자는 회사와 연결되어 회사 상세의 「보유 컨택」에도 나옵니다.</div><section class="panel"><div class="panel-head"><div class="panel-title">연락처 <small>CONTACTS</small></div><span class="nav-count">${contacts().length}</span></div>${contactTable(arr)}</section>`; }
+  if (page === 'entities') { const arr = entities().filter(match); html = `<div class="notice">엔티티 ${entities().length}개가 등록되어 있습니다. 등록·수정한 내용은 전 직원에게 공유되며 변경 이력이 기록됩니다.</div><section class="panel"><div class="panel-head"><div class="panel-title">엔티티 목록 <small>${arr.length} ENTITIES</small></div></div><div class="watch-toolbar">${filters()}<span class="text-btn">이름·영문명·별칭·관계 근거로 검색할 수 있습니다</span></div><div class="entity-grid">${arr.map(entityCard).join('') || '<div class="empty">검색 결과가 없습니다.</div>'}</div></section>`; }
+  if (page === 'contacts') { const arr = contacts().filter(c => hay(c).includes(query.toLowerCase())); html = `<div class="notice">「연락처 등록」에서 명함 사진을 업로드하면 판테온 봇이 내용을 자동으로 입력하고, 명함 이미지도 함께 저장합니다. 거래처 담당자는 회사에 연결되어 회사 상세의 「등록된 담당자」에도 표시됩니다.</div><section class="panel"><div class="panel-head"><div class="panel-title">연락처 <small>CONTACTS</small></div><span class="nav-count">${contacts().length}</span></div>${contactTable(arr)}</section>`; }
   if (page === 'admin') html = adminView();
   $('#content').innerHTML = html;
   bindContent();
@@ -150,30 +150,30 @@ const linkList = arr => `<div class="link-list">${arr.map(m => `<button type="bu
 const contactLink = p => { const m = String(p).match(/[\w.+-]+@[\w-]+(\.[\w-]+)+/); if (m) return `<a class="point-go" href="mailto:${esc(m[0])}">메일</a>`; const t = String(p).match(/\+?\d[\d\s().-]{7,}\d/); return t && t[0].replace(/\D/g, '').length >= 8 ? `<a class="point-go" href="tel:${t[0].replace(/[^\d+]/g, '')}">전화</a>` : ''; };
 const pointsBlock = e => e.points.map((p, i) => `<div class="point"><code id="pt-${e.id}-${i}">${esc(p)}</code><span class="point-acts">${contactLink(p)}<button type="button" data-copy="pt-${e.id}-${i}">복사</button></span></div>`).join('');
 const noteOf = e => e.note ?? e.facts.join('\n');
-const noteBlock = e => `<div class="detail-block"><h3>리서치 노트</h3><textarea id="research-note" placeholder="확인한 내용과 출처를 기록하세요." aria-label="리서치 노트">${esc(noteOf(e))}</textarea><button class="button primary" id="save-note">노트 저장</button><p>업무 기록에서 옮긴 내용으로 시작합니다. 저장한 노트는 모두에게 보이고 변경 기록이 남습니다.</p></div>`;
+const noteBlock = e => `<div class="detail-block"><h3>리서치 노트</h3><textarea id="research-note" placeholder="확인한 내용과 출처를 기록하세요." aria-label="리서치 노트">${esc(noteOf(e))}</textarea><button class="button primary" id="save-note">노트 저장</button><p>업무 기록의 내용으로 시작합니다. 저장한 노트는 전 직원에게 공유되며 변경 이력이 기록됩니다.</p></div>`;
 function bindNote(e) { $('#save-note').onclick = async () => { const b = $('#save-note'); b.disabled = true; const ok = await save(e.id, {note: $('#research-note').value}); b.disabled = false; if (ok) toast('리서치 노트를 저장했습니다.'); }; }
-const adminTools = e => isAdmin ? `<button class="button" id="hide-entity">${e.hidden ? '되살리기' : '숨기기'}</button>` : '';
-function bindAdminTools(e) { $('#hide-entity')?.addEventListener('click', async () => { const { error } = await SB.rpc('pt_set_hidden', {entity: e.id, value: !e.hidden}); if (error) return toast('바꾸지 못했습니다: ' + error.message); await load(); render(); openDetail(e.id); toast(e.hidden ? '되살렸습니다.' : '숨겼습니다. DB 관리자만 볼 수 있습니다.'); }); }
+const adminTools = e => isAdmin ? `<button class="button" id="hide-entity">${e.hidden ? '숨김 해제' : '숨기기'}</button>` : '';
+function bindAdminTools(e) { $('#hide-entity')?.addEventListener('click', async () => { const { error } = await SB.rpc('pt_set_hidden', {entity: e.id, value: !e.hidden}); if (error) return toast('변경하지 못했습니다: ' + error.message); await load(); render(); openDetail(e.id); toast(e.hidden ? '숨김을 해제했습니다.' : '숨김 처리했습니다. DB 관리자만 볼 수 있습니다.'); }); }
 
 function openDetail(id, keep) {
   const e = byId(id); if (!e) return; activeDetail = id;
   if (isContact(e)) return openContact(e, keep);
   const cs = contactsOf(e), parent = e.parentId && byId(e.parentId);
-  showDrawer(`${avatar(e)}<h2>${esc(e.name)}</h2><span class="detail-sub">${esc(e.en ? e.en + ' · ' : '')}${esc(e.type)}</span><div class="drawer-actions"><button class="button" id="edit-entity">정보 수정</button>${adminTools(e)}</div><div class="detail-block"><h3>기본 정보 및 관계</h3><div class="detail-row"><span>소속 / 권리 관계</span><b>${parent ? `<button class="ref" type="button" data-open="${parent.id}">${esc(parent.name)}</button>` : esc(e.agencyText || '—')}</b></div><div class="detail-row"><span>관계 근거</span><b>${esc(e.rel || '추가 확인 필요')}</b></div><div class="detail-row"><span>우리 쪽 담당</span><b>${ownersLine(e.owners)}</b></div><div class="detail-row"><span>보유 컨택</span><b>${cs.length}명</b></div>${cs.length ? linkList(cs) : ''}${pointsBlock(e)}<p>실제 권리 검증 및 담당자 확인 전에는 G1 통과로 처리하지 않습니다.</p></div><div class="detail-block"><h3>별칭</h3>${[e.name, ...e.aliases].map(a => `<span class="tag">${esc(a)}</span>`).join('')}</div>${noteBlock(e)}`, keep);
+  showDrawer(`${avatar(e)}<h2>${esc(e.name)}</h2><span class="detail-sub">${esc(e.en ? e.en + ' · ' : '')}${esc(e.type)}</span><div class="drawer-actions"><button class="button" id="edit-entity">정보 수정</button>${adminTools(e)}</div><div class="detail-block"><h3>기본 정보 및 관계</h3><div class="detail-row"><span>소속 / 권리 관계</span><b>${parent ? `<button class="ref" type="button" data-open="${parent.id}">${esc(parent.name)}</button>` : esc(e.agencyText || '—')}</b></div><div class="detail-row"><span>관계 근거</span><b>${esc(e.rel || '추가 확인 필요')}</b></div><div class="detail-row"><span>내부 담당자</span><b>${ownersLine(e.owners)}</b></div><div class="detail-row"><span>등록된 담당자</span><b>${cs.length}명</b></div>${cs.length ? linkList(cs) : ''}${pointsBlock(e)}</div><div class="detail-block"><h3>별칭</h3>${[e.name, ...e.aliases].map(a => `<span class="tag">${esc(a)}</span>`).join('')}</div>${noteBlock(e)}`, keep);
   $('#edit-entity').onclick = () => entityModal(e); bindNote(e); bindAdminTools(e);
 }
 function openContact(c, keep) {
   const org = c.parentId && byId(c.parentId), card = imgSrc(c.cardImg);
-  showDrawer(`<span class="entity-avatar">${esc(c.name.slice(0, 2))}</span><h2>${esc(c.name)}</h2><span class="detail-sub">${esc(c.role ? c.role + ' · ' : '')}거래처 담당자</span><div class="drawer-actions"><button class="button" id="edit-contact">정보 수정</button>${adminTools(c)}</div><div class="detail-block"><h3>기본 정보 및 관계</h3><div class="detail-row"><span>회사 연결</span><b>${org ? `<button class="ref" type="button" data-open="${org.id}">${esc(org.name)}</button> <button class="text-btn" type="button" id="link-company">변경</button>` : `<button class="button" type="button" id="link-company">${icon('link')} 회사 미연결 · 연결하기</button>`}</b></div><div class="detail-row"><span>관계 근거</span><b>${esc(c.rel || '추가 확인 필요')}</b></div><div class="detail-row"><span>우리 쪽 담당</span><b>${ownersLine(c.owners)}</b></div>${pointsBlock(c) || '<p>기록된 업무 연락처가 없습니다.</p>'}</div><div class="detail-block"><h3>명함</h3>${c.cardImg ? (card ? `<button type="button" id="card-view" style="border:0;padding:0;background:none;width:100%"><img src="${card}" alt="${esc(c.name)} 명함" style="width:100%;border:1px solid #e4eae4;border-radius:7px;display:block"></button><p>누르면 크게 봅니다.</p>` : '<p>명함을 불러오는 중입니다…</p>') : '<p>올린 명함이 없습니다.</p>'}<label class="button" style="display:inline-flex;margin-top:6px;cursor:pointer">${c.cardImg ? '명함 바꾸기' : '명함 이미지 올리기'}<input id="card-replace" type="file" accept="image/*" hidden></label></div>${noteBlock(c)}`, keep);
+  showDrawer(`<span class="entity-avatar">${esc(c.name.slice(0, 2))}</span><h2>${esc(c.name)}</h2><span class="detail-sub">${esc(c.role ? c.role + ' · ' : '')}거래처 담당자</span><div class="drawer-actions"><button class="button" id="edit-contact">정보 수정</button>${adminTools(c)}</div><div class="detail-block"><h3>기본 정보 및 관계</h3><div class="detail-row"><span>회사 연결</span><b>${org ? `<button class="ref" type="button" data-open="${org.id}">${esc(org.name)}</button> <button class="text-btn" type="button" id="link-company">변경</button>` : `<button class="button" type="button" id="link-company">${icon('link')} 회사 미연결 · 연결하기</button>`}</b></div><div class="detail-row"><span>관계 근거</span><b>${esc(c.rel || '추가 확인 필요')}</b></div><div class="detail-row"><span>내부 담당자</span><b>${ownersLine(c.owners)}</b></div>${pointsBlock(c) || '<p>기록된 업무 연락처가 없습니다.</p>'}</div><div class="detail-block"><h3>명함</h3>${c.cardImg ? (card ? `<button type="button" id="card-view" style="border:0;padding:0;background:none;width:100%"><img src="${card}" alt="${esc(c.name)} 명함" style="width:100%;border:1px solid #e4eae4;border-radius:7px;display:block"></button><p>클릭하면 크게 볼 수 있습니다.</p>` : '<p>명함을 불러오는 중입니다…</p>') : '<p>등록된 명함이 없습니다.</p>'}<label class="button" style="display:inline-flex;margin-top:6px;cursor:pointer">${c.cardImg ? '명함 변경' : '명함 이미지 업로드'}<input id="card-replace" type="file" accept="image/*" hidden></label></div>${noteBlock(c)}`, keep);
   bindNote(c); bindAdminTools(c);
   $('#link-company').onclick = () => linkModal(c);
   $('#edit-contact').onclick = () => contactEditModal(c);
   $('#card-view')?.addEventListener('click', () => modal(`<h2>${esc(c.name)} 명함</h2><img src="${card}" alt="${esc(c.name)} 명함" style="width:100%;border-radius:7px;margin-top:10px"><div class="modal-actions"><button class="button primary" data-cancel>닫기</button></div>`));
-  $('#card-replace').onchange = async ev => { const f = ev.target.files[0]; if (!f) return; try { const r = await resize(f, 1600, .82); const path = await upload(r.blob, 'cards'); if (await save(c.id, {cardImg: path})) { openDetail(c.id); toast('명함 이미지를 저장했습니다.'); } } catch { toast('이미지를 올리지 못했습니다.'); } };
+  $('#card-replace').onchange = async ev => { const f = ev.target.files[0]; if (!f) return; try { const r = await resize(f, 1600, .82); const path = await upload(r.blob, 'cards'); if (await save(c.id, {cardImg: path})) { openDetail(c.id); toast('명함 이미지를 저장했습니다.'); } } catch { toast('이미지를 업로드하지 못했습니다.'); } };
 }
 
-/* ---------- 우리 쪽 담당 입력 (헤임달 참석자 입력과 같은 방식) ----------
-   이름을 적고 Enter · 헤임달 승인 직원이면 정식 이름으로 맞추고 소속을 보여 줌 · 없는 이름은 빨갛게 · 맨 앞 = 주 담당 */
+/* ---------- 내부 담당자 입력 (헤임달 참석자 입력과 같은 방식) ----------
+   이름 입력 후 Enter · 헤임달 승인 직원이면 정식 이름으로 맞추고 소속을 보여 줌 · 없는 이름은 빨갛게 · 맨 앞 = 주 담당자 */
 let MEMBERS = null;
 async function loadMembers() {
   if (MEMBERS) return MEMBERS;
@@ -190,7 +190,7 @@ function findMember(nm) {
   return (MEMBERS || []).find(m => { const x = flatName(m.name); return x && (t.includes(x) || x.includes(t)); }) || null;
 }
 function ownersInput(host, initial) {
-  host.innerHTML = `<div class="atin"><input type="text" list="pt-mnames" placeholder="이름을 적고 Enter"></div><small class="atnote">맨 앞 사람이 <b>주 담당</b>입니다. 이름을 누르면 주 담당으로 바뀝니다. <span class="err">빨간 이름</span>은 등록되지 않은 사람입니다.</small>`;
+  host.innerHTML = `<div class="atin"><input type="text" list="pt-mnames" placeholder="이름 입력 후 Enter"></div><small class="atnote">맨 앞 사람이 <b>주 담당자</b>입니다. 이름을 클릭하면 주 담당자로 지정됩니다. <span class="err">빨간 이름</span>은 헤임달에 등록되지 않은 사람입니다.</small>`;
   const box = host.querySelector('.atin'), inp = host.querySelector('input');
   let vals = (initial || []).map(x => (x || '').trim()).filter(Boolean);
   const draw = () => {
@@ -198,8 +198,8 @@ function ownersInput(host, initial) {
     vals.forEach((v, i) => {
       const hit = findMember(v), c = document.createElement('span');
       c.className = 'atc' + (hit ? '' : ' out') + (i === 0 ? ' main' : '');
-      c.title = hit ? [...new Set([hit.name, hit.company, hit.dept].filter(Boolean))].join(' · ') : '등록되지 않은 사람입니다';
-      c.innerHTML = `${i === 0 ? '<em>주 담당</em>' : ''}<span>${esc(v)}</span>${hit && (hit.company || hit.dept) ? `<small>${esc([...new Set([hit.company, hit.dept].filter(Boolean))].join(' · '))}</small>` : ''}<button type="button" aria-label="${esc(v)} 지우기">×</button>`;
+      c.title = hit ? [...new Set([hit.name, hit.company, hit.dept].filter(Boolean))].join(' · ') : '헤임달에 등록되지 않은 사람입니다';
+      c.innerHTML = `${i === 0 ? '<em>주 담당자</em>' : ''}<span>${esc(v)}</span>${hit && (hit.company || hit.dept) ? `<small>${esc([...new Set([hit.company, hit.dept].filter(Boolean))].join(' · '))}</small>` : ''}<button type="button" aria-label="${esc(v)} 삭제">×</button>`;
       c.querySelector('button').onclick = ev => { ev.stopPropagation(); vals.splice(i, 1); draw(); };
       c.onclick = () => { if (i) { vals.unshift(vals.splice(i, 1)[0]); draw(); } };
       box.insertBefore(c, inp);
@@ -226,36 +226,36 @@ function ownersInput(host, initial) {
   draw(); loadMembers().then(draw).catch(() => {});
   return { value() { add(inp.value); return vals.slice(); } };
 }
-const ownersLine = owners => owners.length ? owners.map((o, i) => `${i === 0 ? '<span class="main-badge">주 담당</span> ' : ''}${esc(o)}`).join(' · ') : '—';
+const ownersLine = owners => owners.length ? owners.map((o, i) => `${i === 0 ? '<span class="main-badge">주 담당자</span> ' : ''}${esc(o)}`).join(' · ') : '—';
 
 /* ---------- 창 ---------- */
 function modal(content) { $('#modal').innerHTML = content; $('#modal').showModal(); $('#modal').querySelector('[data-cancel]')?.addEventListener('click', () => $('#modal').close()); }
 function companyOptions(selected) { const es = entities().filter(e => e.type !== 'IP·유명인').sort((a, b) => a.name.localeCompare(b.name, 'ko')); return es.map(e => `<option value="${e.id}" ${e.id === selected ? 'selected' : ''}>${esc(e.name)}${e.en ? ' · ' + esc(e.en) : ''} (${esc(e.type)})</option>`).join(''); }
 function linkModal(c) {
-  modal(`<form id="link-form"><h2>회사 연결</h2><p>${esc(c.name)} 님이 속한 회사를 고르세요. 연결하면 그 회사 상세의 「보유 컨택」에도 나옵니다.</p><label>회사 찾기<input id="link-find" type="search" autocomplete="off" placeholder="이름·영문명·별칭"></label><label>회사<select id="link-select" size="8" required>${companyOptions(c.parentId)}</select></label><div id="link-error" style="color:#ba775e;margin-top:12px;font-size:11px" role="alert"></div><p style="font-size:10px">목록에 없으면 「엔티티 등록」으로 회사를 먼저 등록한 뒤 연결하세요.</p><div class="modal-actions">${c.parentId ? '<button class="button" type="button" id="link-clear">연결 해제</button>' : ''}<button class="button" type="button" data-cancel>취소</button><button class="button primary" type="submit">이 회사로 연결</button></div></form>`);
+  modal(`<form id="link-form"><h2>회사 연결</h2><p>${esc(c.name)} 님의 소속 회사를 선택하세요. 연결하면 회사 상세의 「등록된 담당자」에도 표시됩니다.</p><label>회사 찾기<input id="link-find" type="search" autocomplete="off" placeholder="이름·영문명·별칭"></label><label>회사<select id="link-select" size="8" required>${companyOptions(c.parentId)}</select></label><div id="link-error" style="color:#ba775e;margin-top:12px;font-size:11px" role="alert"></div><p style="font-size:10px">목록에 없으면 「엔티티 등록」으로 회사를 먼저 등록한 뒤 연결하세요.</p><div class="modal-actions">${c.parentId ? '<button class="button" type="button" id="link-clear">연결 해제</button>' : ''}<button class="button" type="button" data-cancel>취소</button><button class="button primary" type="submit">이 회사로 연결</button></div></form>`);
   $('#link-find').oninput = ev => { const q = ev.target.value.toLowerCase(); [...$('#link-select').options].forEach(o => { const e = byId(o.value); o.hidden = !!q && ![e.name, e.en, ...e.aliases].filter(Boolean).join(' ').toLowerCase().includes(q); }); $('#link-error').textContent = [...$('#link-select').options].some(o => !o.hidden) ? '' : '찾는 회사가 없습니다. 「엔티티 등록」으로 먼저 등록해 주세요.'; };
   const go = async org => { if (!await save(c.id, {parentId: org ? org.id : null, agencyText: org ? org.name : ''})) return; $('#modal').close(); render(); openDetail(c.id); toast(org ? `${c.name} 님을 ${org.name}에 연결했습니다.` : `${c.name} 님의 회사 연결을 해제했습니다.`); };
   $('#link-clear')?.addEventListener('click', () => go(null));
-  $('#link-form').onsubmit = ev => { ev.preventDefault(); const org = byId($('#link-select').value); if (!org) { $('#link-error').textContent = '연결할 회사를 골라 주세요.'; return; } go(org); };
+  $('#link-form').onsubmit = ev => { ev.preventDefault(); const org = byId($('#link-select').value); if (!org) { $('#link-error').textContent = '연결할 회사를 선택해 주세요.'; return; } go(org); };
 }
 function contactEditModal(c) {
-  modal(`<form id="ce-form"><h2>연락처 수정</h2><p>저장하면 모두에게 보이고, 누가 언제 무엇을 바꿨는지 기록이 남습니다.</p><label>이름 *<input id="ce-name" required maxlength="50" value="${esc(c.name)}"></label><label>직함 · 부서<input id="ce-role" maxlength="100" value="${esc(c.role)}"></label><label>연락처 (한 줄에 하나)<textarea id="ce-points" rows="5" style="display:block;width:100%;border:1px solid #dde4d9;border-radius:5px;padding:10px;margin-top:8px;font:inherit">${esc(c.points.join('\n'))}</textarea></label><label>관계 근거<input id="ce-rel" maxlength="200" value="${esc(c.rel)}"></label><div class="field"><span class="flabel">우리 쪽 담당</span><div id="ce-owners"></div></div><div id="ce-error" style="color:#ba775e;margin-top:14px;font-size:11px" role="alert"></div><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="submit">변경 저장</button></div></form>`);
+  modal(`<form id="ce-form"><h2>연락처 수정</h2><p>저장한 내용은 전 직원에게 공유되며, 변경 이력이 기록됩니다.</p><label>이름 *<input id="ce-name" required maxlength="50" value="${esc(c.name)}"></label><label>직함 · 부서<input id="ce-role" maxlength="100" value="${esc(c.role)}"></label><label>연락처 (한 줄에 하나씩 입력)<textarea id="ce-points" rows="5" style="display:block;width:100%;border:1px solid #dde4d9;border-radius:5px;padding:10px;margin-top:8px;font:inherit">${esc(c.points.join('\n'))}</textarea></label><label>관계 근거<input id="ce-rel" maxlength="200" value="${esc(c.rel)}"></label><div class="field"><span class="flabel">내부 담당자</span><div id="ce-owners"></div></div><div id="ce-error" style="color:#ba775e;margin-top:14px;font-size:11px" role="alert"></div><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="submit">변경 저장</button></div></form>`);
   const owners = ownersInput($('#ce-owners'), c.owners);
-  $('#ce-form').onsubmit = async ev => { ev.preventDefault(); const name = $('#ce-name').value.trim(); if (!name) { $('#ce-error').textContent = '이름을 적어 주세요.'; return; } if (!await save(c.id, {name, role: $('#ce-role').value.trim(), points: $('#ce-points').value.split('\n').map(s => s.trim()).filter(Boolean), rel: $('#ce-rel').value.trim(), owners: owners.value()})) return; $('#modal').close(); render(); openDetail(c.id); toast('연락처를 수정했습니다.'); };
+  $('#ce-form').onsubmit = async ev => { ev.preventDefault(); const name = $('#ce-name').value.trim(); if (!name) { $('#ce-error').textContent = '이름을 입력해 주세요.'; return; } if (!await save(c.id, {name, role: $('#ce-role').value.trim(), points: $('#ce-points').value.split('\n').map(s => s.trim()).filter(Boolean), rel: $('#ce-rel').value.trim(), owners: owners.value()})) return; $('#modal').close(); render(); openDetail(c.id); toast('연락처를 수정했습니다.'); };
 }
 function entityModal(e) {
-  modal(`<form id="entity-form"><h2>${e ? '엔티티 수정' : '새 엔티티 등록'}</h2><p>저장하면 모두에게 보이고, 누가 언제 무엇을 바꿨는지 기록이 남습니다.</p><div class="img-field"><span id="img-preview">${avatar(e || {initial: '+', color: 'gray'})}</span><div><label for="entity-img" style="margin-top:0">프로필 이미지</label><input id="entity-img" type="file" accept="image/png,image/jpeg,image/webp"><button class="text-btn" type="button" id="img-clear" ${e?.img ? '' : 'hidden'}>이미지 지우기</button><small><b>권장 크기: 정사각형 500×500px 이상</b> (PNG·JPG, 15MB 이하)<br>로고나 얼굴 사진. 정사각형이 아니면 가운데를 잘라 쓰고, 240×240px로 줄여 저장합니다.</small></div></div><label>한글 이름 *<input id="entity-name" required maxlength="50" value="${esc(e?.name || '')}" placeholder="예: 분데스리가"></label><label>영문 이름<input id="entity-en" maxlength="80" value="${esc(e?.en || '')}" placeholder="예: BUNDESLIGA"></label><label>타입<select id="entity-type">${TYPES.map(t => `<option ${e?.type === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label><label>별칭 <input id="entity-alias" maxlength="200" value="${esc(e?.aliases.join(', ') || '')}" placeholder="쉼표로 구분해 주세요"></label><label>관계 근거 <input id="entity-rel" maxlength="200" value="${esc(e?.rel || '')}" placeholder="예: 골포스트 공식 미디어 파트너"></label><div class="field"><span class="flabel">우리 쪽 담당</span><div id="entity-owners"></div></div><div id="form-error" style="color:#ba775e;margin-top:15px;font-size:11px" role="alert"></div><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="submit">${e ? '변경 저장' : '엔티티 등록'}</button></div></form>`);
+  modal(`<form id="entity-form"><h2>${e ? '엔티티 수정' : '새 엔티티 등록'}</h2><p>저장한 내용은 전 직원에게 공유되며, 변경 이력이 기록됩니다.</p><div class="img-field"><span id="img-preview">${avatar(e || {initial: '+', color: 'gray'})}</span><div><label for="entity-img" style="margin-top:0">프로필 이미지</label><input id="entity-img" type="file" accept="image/png,image/jpeg,image/webp"><button class="text-btn" type="button" id="img-clear" ${e?.img ? '' : 'hidden'}>이미지 삭제</button><small><b>권장 크기: 정사각형 500×500px 이상</b> (PNG·JPG, 15MB 이하)<br>로고 또는 인물 사진을 사용해 주세요. 정사각형이 아니면 가운데 부분을 잘라 240×240px로 저장합니다.</small></div></div><label>한글 이름 *<input id="entity-name" required maxlength="50" value="${esc(e?.name || '')}" placeholder="예: 분데스리가"></label><label>영문 이름<input id="entity-en" maxlength="80" value="${esc(e?.en || '')}" placeholder="예: BUNDESLIGA"></label><label>유형<select id="entity-type">${TYPES.map(t => `<option ${e?.type === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label><label>별칭 <input id="entity-alias" maxlength="200" value="${esc(e?.aliases.join(', ') || '')}" placeholder="쉼표로 구분해 주세요"></label><label>관계 근거 <input id="entity-rel" maxlength="200" value="${esc(e?.rel || '')}" placeholder="예: 골포스트 공식 미디어 파트너"></label><div class="field"><span class="flabel">내부 담당자</span><div id="entity-owners"></div></div><div id="form-error" style="color:#ba775e;margin-top:15px;font-size:11px" role="alert"></div><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="submit">${e ? '변경 저장' : '엔티티 등록'}</button></div></form>`);
   let pending; // undefined = 그대로 · null = 지움 · Blob = 새 이미지
   const owners = ownersInput($('#entity-owners'), e?.owners || []);
   const show = src => { $('#img-preview').innerHTML = avatar({...(e || {initial: '+', color: 'gray'}), img: src || ''}); $('#img-clear').hidden = !src; };
-  $('#entity-img').onchange = async ev => { const f = ev.target.files[0]; if (!f) return; if (f.size > 15e6) { $('#form-error').textContent = '15MB보다 작은 이미지를 골라 주세요.'; return; } try { const r = await resize(f, 240, .85, true); pending = r.blob; show(r.url); $('#form-error').textContent = ''; } catch { $('#form-error').textContent = '이미지를 읽지 못했습니다. PNG·JPG 파일을 골라 주세요.'; } };
+  $('#entity-img').onchange = async ev => { const f = ev.target.files[0]; if (!f) return; if (f.size > 15e6) { $('#form-error').textContent = '15MB 이하 이미지를 선택해 주세요.'; return; } try { const r = await resize(f, 240, .85, true); pending = r.blob; show(r.url); $('#form-error').textContent = ''; } catch { $('#form-error').textContent = '이미지를 열 수 없습니다. PNG·JPG 파일을 선택해 주세요.'; } };
   $('#img-clear').onclick = () => { pending = null; $('#entity-img').value = ''; show(''); };
   $('#entity-form').onsubmit = async ev => {
     ev.preventDefault();
     const name = $('#entity-name').value.trim(), en = $('#entity-en').value.trim(), aliases = $('#entity-alias').value.split(',').map(s => s.trim()).filter(Boolean), rel = $('#entity-rel').value.trim(), type = $('#entity-type').value;
     if (!name) { $('#form-error').textContent = '한글 이름을 입력해 주세요.'; return; }
     const terms = [name, en, ...aliases].filter(Boolean).map(s => s.toLowerCase());
-    if (all.some(x => x.id !== e?.id && [x.name, x.en, ...x.aliases].filter(Boolean).some(s => terms.includes(s.toLowerCase())))) { $('#form-error').textContent = '이름 또는 별칭이 겹치는 엔티티가 있습니다. 기존 엔티티를 확인해 주세요.'; return; }
+    if (all.some(x => x.id !== e?.id && [x.name, x.en, ...x.aliases].filter(Boolean).some(s => terms.includes(s.toLowerCase())))) { $('#form-error').textContent = '이름 또는 별칭이 같은 엔티티가 이미 있습니다. 기존 엔티티를 확인해 주세요.'; return; }
     const btn = $('#entity-form [type=submit]'); btn.disabled = true;
     try {
       const patch = {name, en: en.toUpperCase(), type, aliases, rel, owners: owners.value()};
@@ -265,7 +265,7 @@ function entityModal(e) {
       const done = await save(id, e ? patch : {...patch, first: today(), last: today()}, !e);
       if (!done) return;
       $('#modal').close(); render(); openDetail(id); toast(e ? '엔티티 정보를 수정했습니다.' : '엔티티를 등록했습니다.');
-    } catch { $('#form-error').textContent = '이미지를 올리지 못했습니다. 다시 해 주세요.'; }
+    } catch { $('#form-error').textContent = '이미지를 업로드하지 못했습니다. 다시 시도해 주세요.'; }
     finally { btn.disabled = false; }
   };
 }
@@ -296,41 +296,41 @@ async function waitAsk(id, onTick, limitSec = 120) {
 }
 function contactModal() {
   const F = [['c-name','이름 *','명함에서 읽은 이름'],['c-title','직함 · 부서',''],['c-company','회사명 (명함 표기)',''],['c-email','이메일',''],['c-phone','사무실 전화',''],['c-mobile','휴대전화',''],['c-address','주소',''],['c-web','웹사이트','']];
-  modal(`<form id="contact-form"><h2>연락처 등록</h2><p>명함 사진을 올리면 판테온 봇이 읽어 칸을 채웁니다(보통 20~40초). 저장하기 전에 맞는지 확인해 주세요. 명함 이미지도 함께 남깁니다.</p><label>명함 이미지<input id="c-card" type="file" accept="image/*" capture="environment"></label><div id="c-preview" hidden><img id="c-img" alt="올린 명함" style="width:100%;max-height:220px;object-fit:contain;border:1px solid #e4eae4;border-radius:7px;margin-top:10px;background:#fafbfa"></div><p id="c-status" class="ask-note" role="status" style="margin-top:8px"></p>${F.map(([id, l, ph]) => `<label>${l}<input id="${id}" maxlength="200" ${id === 'c-name' ? 'required' : ''} placeholder="${ph}"></label>`).join('')}<label>회사 연결<select id="c-org"><option value="">연결 안 함</option><option value="__new">새 엔티티로 등록 (회사명 칸 이름으로)</option>${companyOptions('')}</select></label><label>메모<input id="c-memo" maxlength="300" placeholder="예: 10/22 KREAM 미팅에서 받음"></label><div id="c-error" style="color:#ba775e;margin-top:14px;font-size:11px" role="alert"></div><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="submit" id="c-save">연락처 등록</button></div></form>`);
+  modal(`<form id="contact-form"><h2>연락처 등록</h2><p>명함 사진을 업로드하면 판테온 봇이 내용을 자동으로 입력합니다(약 20~40초). 저장 전에 내용을 확인해 주세요. 명함 이미지도 함께 저장됩니다.</p><label>명함 이미지<input id="c-card" type="file" accept="image/*" capture="environment"></label><div id="c-preview" hidden><img id="c-img" alt="업로드한 명함" style="width:100%;max-height:220px;object-fit:contain;border:1px solid #e4eae4;border-radius:7px;margin-top:10px;background:#fafbfa"></div><p id="c-status" class="ask-note" role="status" style="margin-top:8px"></p>${F.map(([id, l, ph]) => `<label>${l}<input id="${id}" maxlength="200" ${id === 'c-name' ? 'required' : ''} placeholder="${ph}"></label>`).join('')}<label>회사 연결<select id="c-org"><option value="">연결 안 함</option><option value="__new">새 회사로 등록 (입력한 회사명으로)</option>${companyOptions('')}</select></label><label>메모<input id="c-memo" maxlength="300" placeholder="예: 10/22 KREAM 미팅에서 받음"></label><div id="c-error" style="color:#ba775e;margin-top:14px;font-size:11px" role="alert"></div><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="submit" id="c-save">연락처 등록</button></div></form>`);
   let cardPath = '';
   const setStatus = s => $('#c-status').textContent = s;
   const autoLink = (email, ...n) => { const m = matchCompany(...n) || matchByDomain(email); if (m) { $('#c-org').value = m.id; return m; } if (n.some(x => x && x.trim())) $('#c-org').value = '__new'; return null; };
   $('#c-company').onchange = () => autoLink($('#c-email').value, $('#c-company').value);
   $('#c-card').onchange = async ev => {
     const f = ev.target.files[0]; if (!f) return; $('#c-error').textContent = '';
-    let r; try { r = await resize(f, 1600, .82); } catch { $('#c-error').textContent = '이미지를 읽지 못했습니다. JPG·PNG 사진을 골라 주세요.'; return; }
+    let r; try { r = await resize(f, 1600, .82); } catch { $('#c-error').textContent = '이미지를 열 수 없습니다. JPG·PNG 사진을 선택해 주세요.'; return; }
     $('#c-img').src = r.url; $('#c-preview').hidden = false; $('#c-save').disabled = true;
     try {
-      setStatus('명함 이미지를 올리는 중입니다…');
+      setStatus('명함 이미지를 업로드하는 중입니다…');
       cardPath = await upload(r.blob, 'cards');
       const { data, error } = await SB.from('pt_ask').insert({kind: 'ocr', image_path: cardPath}).select('id').single();
       if (error) throw error;
       const res = await waitAsk(data.id, s => setStatus(`판테온 봇이 명함을 읽는 중입니다… ${s}초`));
-      if (!res) { setStatus(''); $('#c-error').textContent = '판테온 봇(사무실 PC)이 2분 안에 답하지 않았습니다. 명함을 보고 직접 적어 주세요. 이미지는 그대로 남깁니다.'; return; }
-      if (res.status !== 'done' || !res.result) { setStatus(''); $('#c-error').textContent = '명함을 읽지 못했습니다. 직접 적어 주세요. 이미지는 그대로 남깁니다.'; return; }
+      if (!res) { setStatus(''); $('#c-error').textContent = '판테온 봇이 2분 안에 응답하지 않았습니다. 명함을 보고 직접 입력해 주세요. 명함 이미지는 저장됩니다.'; return; }
+      if (res.status !== 'done' || !res.result) { setStatus(''); $('#c-error').textContent = '명함을 인식하지 못했습니다. 직접 입력해 주세요. 명함 이미지는 저장됩니다.'; return; }
       const v = k => String(res.result[k] || '').trim();
       [['c-name', v('name') || v('name_en')], ['c-title', v('title')], ['c-company', v('company') || v('company_en')], ['c-email', v('email')], ['c-phone', v('phone')], ['c-mobile', v('mobile')], ['c-address', v('address')], ['c-web', v('website')]].forEach(([id, val]) => { if (val && !$('#' + id).value) $('#' + id).value = val; });
       if (v('name_en') && v('name') && !$('#c-memo').value) $('#c-memo').value = '영문 이름: ' + v('name_en');
       const m = autoLink(v('email'), v('company'), v('company_en'));
-      setStatus(`명함을 읽었습니다. 칸을 확인해 주세요.${m ? ` 회사는 「${m.name}」로 자동 연결했습니다.` : v('company') ? ' 기존 엔티티에 없는 회사라 새 엔티티로 등록하도록 골라 두었습니다.' : ''}`);
-    } catch (e) { setStatus(''); $('#c-error').textContent = '명함을 올리거나 읽지 못했습니다: ' + (e?.message || '') + ' — 직접 적어 주세요.'; }
+      setStatus(`명함 내용을 입력했습니다. 내용을 확인해 주세요.${m ? ` 회사는 「${m.name}」로 자동 연결했습니다.` : v('company') ? ' 등록되지 않은 회사여서 새 회사로 등록하도록 선택해 두었습니다.' : ''}`);
+    } catch (e) { setStatus(''); $('#c-error').textContent = '명함을 처리하지 못했습니다: ' + (e?.message || '') + ' — 직접 입력해 주세요.'; }
     finally { $('#c-save').disabled = false; }
   };
   $('#contact-form').onsubmit = async ev => {
     ev.preventDefault(); const g = id => $('#' + id).value.trim(); const name = g('c-name'), email = g('c-email');
-    if (!name) { $('#c-error').textContent = '이름을 적어 주세요.'; return; }
+    if (!name) { $('#c-error').textContent = '이름을 입력해 주세요.'; return; }
     let orgId = $('#c-org').value, org = orgId && orgId !== '__new' ? byId(orgId) : null;
     const dup = contacts().find(x => (email && x.points.some(p => p.toLowerCase() === email.toLowerCase())) || (x.name === name && (!org || x.parentId === org.id)));
-    if (dup && !$('#contact-form').dataset.dupOk) { $('#c-error').innerHTML = `같은 사람으로 보이는 연락처가 이미 있습니다: <b>${esc(dup.name)}</b>${agencyOf(dup) ? ' (' + esc(agencyOf(dup)) + ')' : ''}. 그래도 등록하려면 「연락처 등록」을 한 번 더 누르세요.`; $('#contact-form').dataset.dupOk = '1'; return; }
+    if (dup && !$('#contact-form').dataset.dupOk) { $('#c-error').innerHTML = `동일 인물로 보이는 연락처가 이미 있습니다: <b>${esc(dup.name)}</b>${agencyOf(dup) ? ' (' + esc(agencyOf(dup)) + ')' : ''}. 그래도 등록하려면 「연락처 등록」을 한 번 더 눌러 주세요.`; $('#contact-form').dataset.dupOk = '1'; return; }
     $('#c-save').disabled = true;
     try {
       if (orgId === '__new') {
-        const co = g('c-company'); if (!co) { $('#c-error').textContent = '새 엔티티로 등록하려면 회사명을 적어 주세요.'; return; }
+        const co = g('c-company'); if (!co) { $('#c-error').textContent = '새 회사로 등록하려면 회사명을 입력해 주세요.'; return; }
         org = matchCompany(co) || await save('e-' + uid().slice(0, 12), {name: co, type: '회사', points: [g('c-web'), g('c-address')].filter(Boolean), facts: ['명함 등록으로 생성 ' + today()], first: today(), last: today()}, true);
         if (!org) return;
       }
@@ -362,19 +362,19 @@ function bindAsk() {
 async function ask() {
   const q = $('#ask-input').value.trim(); if (!q) return;
   const out = $('#ask-answer'), head = `<p class="muted">질문: ${esc(q)}</p>`;
-  out.hidden = false; out.innerHTML = head + '<p class="muted">판테온 봇이 DB에서 찾아 답을 쓰는 중입니다…</p>'; $('#ask-btn').disabled = true;
+  out.hidden = false; out.innerHTML = head + '<p class="muted">판테온 봇이 답변을 작성하는 중입니다…</p>'; $('#ask-btn').disabled = true;
   try {
     const { data, error } = await SB.from('pt_ask').insert({kind: 'ask', question: q}).select('id').single();
     if (error) throw error;
-    const res = await waitAsk(data.id, s => { const p = out.querySelector('.muted:last-child'); if (p) p.textContent = `판테온 봇이 DB에서 찾아 답을 쓰는 중입니다… ${s}초`; }, 150);
-    out.innerHTML = head + (!res ? '<div class="warn">판테온 봇(사무실 PC)이 답하지 않았습니다. 잠시 뒤 다시 물어봐 주세요. 계속되면 AX팀에 알려 주세요.</div>'
-      : res.status === 'done' ? renderAnswer(res.answer) : '<div class="warn">답을 만들지 못했습니다. 잠시 뒤 다시 물어봐 주세요.</div>');
-  } catch (e) { out.innerHTML = head + `<div class="warn">질문을 보내지 못했습니다: ${esc(e?.message || '')}</div>`; }
+    const res = await waitAsk(data.id, s => { const p = out.querySelector('.muted:last-child'); if (p) p.textContent = `판테온 봇이 답변을 작성하는 중입니다… ${s}초`; }, 150);
+    out.innerHTML = head + (!res ? '<div class="warn">판테온 봇이 응답하지 않습니다. 잠시 후 다시 질문해 주세요. 계속되면 AX팀에 알려 주세요.</div>'
+      : res.status === 'done' ? renderAnswer(res.answer) : '<div class="warn">답변을 작성하지 못했습니다. 잠시 후 다시 질문해 주세요.</div>');
+  } catch (e) { out.innerHTML = head + `<div class="warn">질문을 전송하지 못했습니다: ${esc(e?.message || '')}</div>`; }
   finally { lastAnswer = out.innerHTML; $('#ask-btn').disabled = false; bindAsk(); }
 }
 
 /* ---------- DB 관리 (관리자) — 변경 기록 · 질문 기록 ---------- */
-const FIELD_KO = {name:'이름', en:'영문 이름', kind:'타입', aliases:'별칭', parent_id:'회사 연결', agency:'소속 / 회사', role:'직함', rel:'관계 근거', points:'연락처', facts:'기록', note:'리서치 노트', sides:'우리 쪽 회사', owners:'우리 쪽 담당', img:'프로필 이미지', card_img:'명함 이미지', first_seen:'처음 기록', last_seen:'마지막 기록', hidden:'숨김', id:'아이디'};
+const FIELD_KO = {name:'이름', en:'영문 이름', kind:'유형', aliases:'별칭', parent_id:'회사 연결', agency:'소속 / 회사', role:'직함', rel:'관계 근거', points:'연락처', facts:'업무 기록', note:'리서치 노트', sides:'관련 계열사', owners:'내부 담당자', img:'프로필 이미지', card_img:'명함 이미지', first_seen:'최초 확인일', last_seen:'최근 확인일', hidden:'숨김', id:'ID'};
 const VIA_KO = {web: '웹', slack: '슬랙', server: '시스템 입력', sql: '시스템 입력'};
 const OP_KO = {insert: '등록', update: '수정', delete: '삭제'};
 const showVal = (k, v) => { if (v === null || v === undefined || v === '' || (Array.isArray(v) && !v.length)) return '(없음)'; if (k === 'img' || k === 'card_img') return '(이미지)'; if (k === 'parent_id') return byId(v)?.name || v; if (k === 'hidden') return v ? '숨김' : '보임'; if (Array.isArray(v)) return v.join(' / '); return String(v); };
@@ -405,13 +405,13 @@ function adminView() {
   const people = [...new Set(admin.changes.map(x => x.actor || '(화면 밖)'))];
   const list = admin.changes.filter(x => (!admin.who || (x.actor || '(화면 밖)') === admin.who) && (!admin.q || String(x.entity_name).toLowerCase().includes(admin.q.toLowerCase()))).slice(0, 300);
   return tabs + `
-  <section class="panel"><div class="panel-head"><div class="panel-title">변경 기록 <small>AUDIT LOG</small> <span class="nav-count">${admin.changes.length}</span></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="button" type="button" id="log-reload">${icon('clock')} 새로 불러오기</button><button class="button" type="button" id="log-export">${icon('download')} 기록 CSV</button></div></div>
-  <div class="watch-toolbar"><div style="display:flex;gap:8px;flex-wrap:wrap"><select class="table-select" id="log-who" aria-label="사람으로 거르기"><option value="">모든 사람</option>${people.map(p => `<option value="${esc(p)}" ${admin.who === p ? 'selected' : ''}>${esc(p === '(화면 밖)' ? '시스템 입력' : whoName(p))}</option>`).join('')}</select><input class="table-select" id="log-q" type="search" placeholder="엔티티 이름" value="${esc(admin.q)}" aria-label="엔티티 이름으로 거르기"></div></div>
-  <div class="table-wrap"><table><thead><tr><th>언제</th><th>누가</th><th>엔티티</th><th>무엇을</th><th>어떻게 바꿨나 (전 → 후)</th><th>조치</th></tr></thead><tbody>${list.map(x => `<tr><td style="white-space:nowrap">${esc(kst(x.at))}</td><td>${x.actor ? esc(whoName(x.actor, x.actor_name)) : `<span class="pill">${esc(VIA_KO[x.via] || x.via)}</span>`}${x.reason ? `<small style="display:block;color:#9aa29d">${esc(x.reason)}</small>` : ''}</td><td><button class="text-btn" data-detail="${esc(x.entity_id)}">${esc(x.entity_name)}</button></td><td><span class="pill">${esc(OP_KO[x.op] || x.op)}</span></td><td style="font-size:10px;line-height:1.6">${x.op === 'insert' ? '<span style="color:#285541">새로 등록</span>' : (x.fields || []).map(k => `<div><b>${esc(FIELD_KO[k] || k)}</b>: <span style="color:#a0563a;text-decoration:line-through">${esc(showVal(k, x.before?.[k]))}</span> → <span style="color:#285541">${esc(showVal(k, x.after?.[k]))}</span></div>`).join('')}</td><td>${x.op === 'update' ? `<button class="text-btn" type="button" data-restore="${x.id}">바꾸기 전으로 되돌리기</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="6"><div class="empty">기록이 없습니다.</div></td></tr>'}</tbody></table></div></section>`;
+  <section class="panel"><div class="panel-head"><div class="panel-title">변경 기록 <small>AUDIT LOG</small> <span class="nav-count">${admin.changes.length}</span></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="button" type="button" id="log-reload">${icon('clock')} 새로고침</button><button class="button" type="button" id="log-export">${icon('download')} 기록 CSV</button></div></div>
+  <div class="watch-toolbar"><div style="display:flex;gap:8px;flex-wrap:wrap"><select class="table-select" id="log-who" aria-label="사람으로 거르기"><option value="">전체 사용자</option>${people.map(p => `<option value="${esc(p)}" ${admin.who === p ? 'selected' : ''}>${esc(p === '(화면 밖)' ? '시스템 입력' : whoName(p))}</option>`).join('')}</select><input class="table-select" id="log-q" type="search" placeholder="엔티티 이름" value="${esc(admin.q)}" aria-label="엔티티 이름으로 거르기"></div></div>
+  <div class="table-wrap"><table><thead><tr><th>언제</th><th>누가</th><th>엔티티</th><th>무엇을</th><th>변경 내용 (이전 → 이후)</th><th>조치</th></tr></thead><tbody>${list.map(x => `<tr><td style="white-space:nowrap">${esc(kst(x.at))}</td><td>${x.actor ? esc(whoName(x.actor, x.actor_name)) : `<span class="pill">${esc(VIA_KO[x.via] || x.via)}</span>`}${x.reason ? `<small style="display:block;color:#9aa29d">${esc(x.reason)}</small>` : ''}</td><td><button class="text-btn" data-detail="${esc(x.entity_id)}">${esc(x.entity_name)}</button></td><td><span class="pill">${esc(OP_KO[x.op] || x.op)}</span></td><td style="font-size:10px;line-height:1.6">${x.op === 'insert' ? '<span style="color:#285541">새로 등록</span>' : (x.fields || []).map(k => `<div><b>${esc(FIELD_KO[k] || k)}</b>: <span style="color:#a0563a;text-decoration:line-through">${esc(showVal(k, x.before?.[k]))}</span> → <span style="color:#285541">${esc(showVal(k, x.after?.[k]))}</span></div>`).join('')}</td><td>${x.op === 'update' ? `<button class="text-btn" type="button" data-restore="${x.id}">이전 내용으로 복원</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="6"><div class="empty">기록이 없습니다.</div></td></tr>'}</tbody></table></div></section>`;
 }
 function asksPanel() {
   const list = admin.asks.slice(0, 300);
-  return `<section class="panel"><div class="panel-head"><div class="panel-title">질문 기록 <small>웹·슬랙</small> <span class="nav-count">${admin.asks.length}</span></div></div><div class="table-wrap"><table><thead><tr><th>언제</th><th>누가</th><th>어디서</th><th>무엇</th><th>상태</th></tr></thead><tbody>${list.map(a => `<tr><td style="white-space:nowrap">${esc(kst(a.at))}</td><td>${esc(whoName(a.asker) || '—')}</td><td>${a.via === 'slack' ? '슬랙' : '웹'}</td><td>${a.kind === 'ocr' ? '<span class="pill">명함 읽기</span>' : a.kind === 'restart' ? '<span class="pill">봇 다시 시작</span>' : esc(a.question)}</td><td>${{done: '답함', fail: '실패', wait: '대기', work: '처리 중'}[a.status] || a.status}</td></tr>`).join('') || '<tr><td colspan="5"><div class="empty">아직 질문이 없습니다.</div></td></tr>'}</tbody></table></div></section>`;
+  return `<section class="panel"><div class="panel-head"><div class="panel-title">질문 기록 <small>웹·슬랙</small> <span class="nav-count">${admin.asks.length}</span></div></div><div class="table-wrap"><table><thead><tr><th>언제</th><th>누가</th><th>어디서</th><th>무엇</th><th>상태</th></tr></thead><tbody>${list.map(a => `<tr><td style="white-space:nowrap">${esc(kst(a.at))}</td><td>${esc(whoName(a.asker) || '—')}</td><td>${a.via === 'slack' ? '슬랙' : '웹'}</td><td>${a.kind === 'ocr' ? '<span class="pill">명함 읽기</span>' : a.kind === 'restart' ? '<span class="pill">봇 재시작</span>' : esc(a.question)}</td><td>${{done: '답변 완료', fail: '실패', wait: '대기', work: '처리 중'}[a.status] || a.status}</td></tr>`).join('') || '<tr><td colspan="5"><div class="empty">아직 질문이 없습니다.</div></td></tr>'}</tbody></table></div></section>`;
 }
 /* 판테온 봇 — 상태 보기 · 다시 시작 (헤임달 「처리 서버 → 다시 시작」과 같은 방식, DB 관리자만) */
 async function loadBot() {
@@ -428,47 +428,47 @@ function botPanel() {
   const age = b.beat_at ? Math.max(0, Math.round((Date.now() - new Date(b.beat_at)) / 1000)) : null;
   const alive = age !== null && age < 180;
   const stateText = !b.beat_at ? '기록 없음' : !alive ? '응답 없음' : b.connected ? '정상' : '슬랙 연결 끊김';
-  return `<div class="quality-grid"><div class="stat ${alive && b.connected ? 'highlight' : ''}"><div class="stat-label">상태</div><div class="stat-value">${stateText}</div><div class="stat-bottom">${age === null ? '—' : '마지막 신호 ' + agoText(age)}</div></div><div class="stat"><div class="stat-label">켜진 시각</div><div class="stat-value" style="font-size:17px">${b.started_at ? esc(kst(b.started_at)) : '—'}</div><div class="stat-bottom">${b.model ? '답변 모델 ' + esc(b.model) : ''}</div></div><div class="stat"><div class="stat-label">처리한 웹 요청</div><div class="stat-value">${Number(b.handled || 0)}<small>건</small></div><div class="stat-bottom">켜진 뒤부터</div></div></div>
-  <section class="panel"><div class="panel-head"><div><div class="panel-title">판테온 봇 <small>슬랙 질문 · 웹 질문 · 명함 읽기</small></div><p class="panel-caption">답이 오지 않거나 상태가 「응답 없음」이면 다시 시작해 보세요. 다시 시작하는 20초쯤 동안은 답하지 않습니다.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="button" id="bot-reload">${icon('clock')} 새로 고침</button><button class="button primary" id="bot-restart">다시 시작</button></div></div>
+  return `<div class="quality-grid"><div class="stat ${alive && b.connected ? 'highlight' : ''}"><div class="stat-label">상태</div><div class="stat-value">${stateText}</div><div class="stat-bottom">${age === null ? '—' : '마지막 신호 ' + agoText(age)}</div></div><div class="stat"><div class="stat-label">시작 시각</div><div class="stat-value" style="font-size:17px">${b.started_at ? esc(kst(b.started_at)) : '—'}</div><div class="stat-bottom">${b.model ? '답변 모델 ' + esc(b.model) : ''}</div></div><div class="stat"><div class="stat-label">웹 요청 처리</div><div class="stat-value">${Number(b.handled || 0)}<small>건</small></div><div class="stat-bottom">시작 이후</div></div></div>
+  <section class="panel"><div class="panel-head"><div><div class="panel-title">판테온 봇 <small>슬랙 질문 · 웹 질문 · 명함 읽기</small></div><p class="panel-caption">답변이 오지 않거나 상태가 「응답 없음」이면 재시작해 주세요. 재시작하는 약 20초 동안은 답변하지 않습니다.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="button" id="bot-reload">${icon('clock')} 새로고침</button><button class="button primary" id="bot-restart">재시작</button></div></div>
   <div id="bot-msg" class="panel-caption" style="padding:0 23px 18px" role="status">${b.last_error ? '최근 오류: ' + esc(b.last_error) : ''}</div></section>`;
 }
 async function restartBot() {
   const msg = t => { const el = $('#bot-msg'); if (el) el.textContent = t; };
   const before = admin.bot?.started_at || '';
   $('#bot-restart').disabled = true;
-  const { data, error } = await SB.from('pt_ask').insert({kind: 'restart', question: '판테온 봇 다시 시작'}).select('id').single();
-  if (error) { $('#bot-restart').disabled = false; return msg('다시 시작하지 못했습니다: ' + error.message); }
-  const res = await waitAsk(data.id, s => msg(`판테온 봇에 요청을 보냈습니다… ${s}초`), 60);
-  if (!res) { $('#bot-restart').disabled = false; return msg('판테온 봇이 요청을 받지 않습니다. 서버 PC가 켜져 있는지 확인해 주세요. 꺼져 있던 봇은 5분 안에 저절로 다시 올라옵니다.'); }
-  if (res.status === 'fail') { $('#bot-restart').disabled = false; return msg(res.answer || '다시 시작하지 못했습니다.'); }
+  const { data, error } = await SB.from('pt_ask').insert({kind: 'restart', question: '판테온 봇 재시작'}).select('id').single();
+  if (error) { $('#bot-restart').disabled = false; return msg('재시작하지 못했습니다: ' + error.message); }
+  const res = await waitAsk(data.id, s => msg(`판테온 봇에 재시작을 요청했습니다… ${s}초`), 60);
+  if (!res) { $('#bot-restart').disabled = false; return msg('판테온 봇이 응답하지 않습니다. 서버 PC가 켜져 있는지 확인해 주세요. 봇이 꺼져 있으면 5분 이내에 자동으로 재시작됩니다.'); }
+  if (res.status === 'fail') { $('#bot-restart').disabled = false; return msg(res.answer || '재시작하지 못했습니다.'); }
   const t0 = Date.now();
   while (Date.now() - t0 < 90000) {
     await new Promise(r => setTimeout(r, 3000));
-    msg(`판테온 봇이 다시 켜지는 중입니다… ${Math.round((Date.now() - t0) / 1000)}초`);
+    msg(`판테온 봇을 재시작하는 중입니다… ${Math.round((Date.now() - t0) / 1000)}초`);
     const b = await SB.from('pt_bot').select('*').maybeSingle();
-    if (b.data?.started_at && b.data.started_at !== before) { admin.bot = b.data; render(); toast('판테온 봇이 다시 켜졌습니다.'); return; }
+    if (b.data?.started_at && b.data.started_at !== before) { admin.bot = b.data; render(); toast('판테온 봇이 재시작되었습니다.'); return; }
   }
-  admin.bot = null; render(); toast('판테온 봇이 아직 돌아오지 않았습니다. 잠시 뒤 새로 고침해 주세요.');
+  admin.bot = null; render(); toast('판테온 봇이 아직 재시작되지 않았습니다. 잠시 후 새로고침해 주세요.');
 }
 function qualityPanel() {
   const es = entities(), hidden = all.filter(e => e.hidden);
-  return `<div class="quality-grid"><div class="stat"><div class="stat-label">컨택 미확보</div><div class="stat-value">${es.filter(e => !contactsOf(e).length).length}<small>개</small></div><div class="stat-bottom">담당자·연락 경로 확인 필요</div></div><div class="stat"><div class="stat-label">관계 확인 필요</div><div class="stat-value">${es.filter(e => !e.rel).length}<small>개</small></div><div class="stat-bottom">관계 근거 미기재</div></div><div class="stat"><div class="stat-label">숨긴 항목</div><div class="stat-value">${hidden.length}<small>개</small></div><div class="stat-bottom">상세에서 되살리기</div></div></div><section class="panel"><div class="panel-head"><div class="panel-title">데이터 점검</div><button class="button" id="admin-export">${icon('download')} 엔티티 CSV</button></div><div class="table-wrap"><table><thead><tr><th>엔티티</th><th>유형</th><th>관계 상태</th><th>컨택 경로</th><th>조치</th></tr></thead><tbody>${[...es, ...hidden.filter(isContact)].map(e => `<tr><td>${esc(e.name)}${e.hidden ? ' <span class="pill">숨김</span>' : ''}</td><td>${esc(e.type)}</td><td><span class="pill ${e.rel ? 'good' : ''}">${e.rel ? '기록에 기재' : '확인 필요'}</span></td><td>${contactsOf(e).length ? contactsOf(e).length + '명' : '미확보'}</td><td><button class="text-btn" data-detail="${e.id}">상세 확인 ↗</button></td></tr>`).join('')}</tbody></table></div></section>`;
+  return `<div class="quality-grid"><div class="stat"><div class="stat-label">담당자 미등록</div><div class="stat-value">${es.filter(e => !contactsOf(e).length).length}<small>개</small></div><div class="stat-bottom">담당자·연락처 확인 필요</div></div><div class="stat"><div class="stat-label">관계 근거 미입력</div><div class="stat-value">${es.filter(e => !e.rel).length}<small>개</small></div><div class="stat-bottom">내부 담당자 확인 필요</div></div><div class="stat"><div class="stat-label">숨긴 항목</div><div class="stat-value">${hidden.length}<small>개</small></div><div class="stat-bottom">상세 화면에서 숨김 해제</div></div></div><section class="panel"><div class="panel-head"><div class="panel-title">데이터 점검</div><button class="button" id="admin-export">${icon('download')} 엔티티 CSV</button></div><div class="table-wrap"><table><thead><tr><th>엔티티</th><th>유형</th><th>관계 근거</th><th>등록된 담당자</th><th>조치</th></tr></thead><tbody>${[...es, ...hidden.filter(isContact)].map(e => `<tr><td>${esc(e.name)}${e.hidden ? ' <span class="pill">숨김</span>' : ''}</td><td>${esc(e.type)}</td><td><span class="pill ${e.rel ? 'good' : ''}">${e.rel ? '입력됨' : '확인 필요'}</span></td><td>${contactsOf(e).length ? contactsOf(e).length + '명' : '미등록'}</td><td><button class="text-btn" data-detail="${e.id}">상세 확인 ↗</button></td></tr>`).join('')}</tbody></table></div></section>`;
 }
 function bindAdmin() {
   $$('[data-admin-tab]').forEach(b => b.onclick = () => { admin.tab = b.dataset.adminTab; render(); });
   $('#log-reload')?.addEventListener('click', () => { admin.changes = null; loadAdmin(); });
   $('#bot-reload')?.addEventListener('click', () => { admin.bot = null; render(); });
   $('#bot-restart')?.addEventListener('click', () => {
-    modal(`<h2>판테온 봇 다시 시작</h2><p>판테온 봇을 껐다가 다시 켭니다. 20초쯤 동안 슬랙·웹 질문에 답하지 않습니다.</p><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="button" id="restart-go">다시 시작</button></div>`);
+    modal(`<h2>판테온 봇 재시작</h2><p>판테온 봇을 재시작합니다. 약 20초 동안 슬랙·웹 질문에 답변하지 않습니다.</p><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="button" id="restart-go">재시작</button></div>`);
     $('#restart-go').onclick = () => { $('#modal').close(); restartBot(); };
   });
   $('#log-who')?.addEventListener('change', e => { admin.who = e.target.value; render(); });
   const q = $('#log-q'); if (q) q.onchange = e => { admin.q = e.target.value; render(); };
-  $('#log-export')?.addEventListener('click', () => { const rows = [['언제(KST)', '누가', '어디서', '엔티티', '무엇을', '바뀐 칸', '전', '후', '메모'], ...admin.changes.flatMap(x => (x.op === 'insert' ? ['(새로 등록)'] : x.fields || []).map(k => [kst(x.at), whoName(x.actor, x.actor_name), VIA_KO[x.via] || x.via, x.entity_name, OP_KO[x.op] || x.op, FIELD_KO[k] || k, x.op === 'insert' ? '' : showVal(k, x.before?.[k]), x.op === 'insert' ? '' : showVal(k, x.after?.[k]), x.reason]))]; download('pantheon-change-log.csv', rows); });
+  $('#log-export')?.addEventListener('click', () => { const rows = [['언제(KST)', '누가', '어디서', '엔티티', '무엇을', '변경 항목', '이전', '이후', '메모'], ...admin.changes.flatMap(x => (x.op === 'insert' ? ['(새로 등록)'] : x.fields || []).map(k => [kst(x.at), whoName(x.actor, x.actor_name), VIA_KO[x.via] || x.via, x.entity_name, OP_KO[x.op] || x.op, FIELD_KO[k] || k, x.op === 'insert' ? '' : showVal(k, x.before?.[k]), x.op === 'insert' ? '' : showVal(k, x.after?.[k]), x.reason]))]; download('pantheon-change-log.csv', rows); });
   $$('[data-restore]').forEach(b => b.onclick = () => {
     const x = admin.changes.find(c => String(c.id) === b.dataset.restore); if (!x) return;
-    modal(`<h2>되돌리기 확인</h2><p><b>${esc(x.entity_name)}</b>을(를) ${esc(kst(x.at))}에 바뀌기 <b>전</b> 값으로 되돌립니다. 되돌린 것도 변경 기록에 남고, 필요하면 다시 되돌릴 수 있습니다.</p><div class="table-wrap" style="max-height:260px;overflow:auto"><table><thead><tr><th>칸</th><th>지금</th><th>되돌린 뒤</th></tr></thead><tbody>${(x.fields || []).map(k => { const cur = byId(x.entity_id); return `<tr><td>${esc(FIELD_KO[k] || k)}</td><td>${esc(showVal(k, cur ? toRow(cur)[k] ?? cur[k] : null))}</td><td>${esc(showVal(k, x.before?.[k]))}</td></tr>`; }).join('')}</tbody></table></div><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="button" id="restore-go">${esc(x.entity_name)} 되돌리기</button></div>`);
-    $('#restore-go').onclick = async () => { $('#restore-go').disabled = true; const { error } = await SB.rpc('pt_restore', {change_id: x.id, side: 'before'}); $('#modal').close(); if (error) return toast('되돌리지 못했습니다: ' + error.message); await load(); admin.changes = null; loadAdmin(); toast(`${x.entity_name}을(를) 되돌렸습니다.`); };
+    modal(`<h2>복원 확인</h2><p><b>${esc(x.entity_name)}</b>을(를) ${esc(kst(x.at))}에 변경되기 <b>이전</b> 내용으로 복원합니다. 복원한 내용도 변경 기록에 남으며, 필요하면 다시 복원할 수 있습니다.</p><div class="table-wrap" style="max-height:260px;overflow:auto"><table><thead><tr><th>항목</th><th>현재</th><th>복원 후</th></tr></thead><tbody>${(x.fields || []).map(k => { const cur = byId(x.entity_id); return `<tr><td>${esc(FIELD_KO[k] || k)}</td><td>${esc(showVal(k, cur ? toRow(cur)[k] ?? cur[k] : null))}</td><td>${esc(showVal(k, x.before?.[k]))}</td></tr>`; }).join('')}</tbody></table></div><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="button" id="restore-go">${esc(x.entity_name)} 복원</button></div>`);
+    $('#restore-go').onclick = async () => { $('#restore-go').disabled = true; const { error } = await SB.rpc('pt_restore', {change_id: x.id, side: 'before'}); $('#modal').close(); if (error) return toast('복원하지 못했습니다: ' + error.message); await load(); admin.changes = null; loadAdmin(); toast(`${x.entity_name}을(를) 복원했습니다.`); };
   });
 }
 
@@ -481,7 +481,7 @@ function download(name, rows) {
 }
 function exportCSV() {
   const arr = page === 'contacts' ? contacts() : entities().filter(match);
-  download(page === 'contacts' ? 'pantheon-contacts.csv' : 'pantheon-entities.csv', [['이름', '영문 이름', '타입', '소속 / 회사 연결', '직함', '관계 근거', '보유 컨택', '우리 쪽 담당', '연락처(업무)'], ...arr.map(e => [e.name, e.en, e.type, agencyOf(e), e.role, e.rel, contactsOf(e).map(c => c.name).join(' / '), e.owners.join(' / '), e.points.join(' / ')])]);
+  download(page === 'contacts' ? 'pantheon-contacts.csv' : 'pantheon-entities.csv', [['이름', '영문 이름', '유형', '소속 / 회사 연결', '직함', '관계 근거', '등록된 담당자', '내부 담당자', '연락처(업무)'], ...arr.map(e => [e.name, e.en, e.type, agencyOf(e), e.role, e.rel, contactsOf(e).map(c => c.name).join(' / '), e.owners.join(' / '), e.points.join(' / ')])]);
 }
 function go(p) { page = p; filter = '전체'; query = ''; $('#global-search').value = ''; try { history.replaceState(null, '', '#' + p); } catch {} render(); window.scrollTo(0, 0); }
 function bindContent() {
@@ -506,28 +506,28 @@ function loginScreen(msg) {
   };
   $('#lg-reset').onclick = async () => {
     const email = $('#lg-email').value.trim(), out = $('#lg-err');
-    if (!email) { out.textContent = '이메일을 먼저 적어 주세요. 그 주소로 비밀번호 재설정 메일을 보냅니다.'; $('#lg-email').focus(); return; }
+    if (!email) { out.textContent = '이메일을 먼저 입력해 주세요. 입력한 주소로 비밀번호 재설정 메일을 발송합니다.'; $('#lg-email').focus(); return; }
     $('#lg-reset').disabled = true;
     const { error } = await SB.auth.resetPasswordForEmail(email, {redirectTo: location.origin + location.pathname});
     $('#lg-reset').disabled = false;
     out.style.color = error ? '#ba775e' : '#38674d';
-    out.textContent = error ? '메일을 보내지 못했습니다. 잠시 뒤 다시 해 주세요.' : `${email} 로 비밀번호 재설정 메일을 보냈습니다. 메일의 링크를 누르면 새 비밀번호를 정할 수 있습니다.`;
+    out.textContent = error ? '메일을 발송하지 못했습니다. 잠시 후 다시 시도해 주세요.' : `${email}(으)로 비밀번호 재설정 메일을 발송했습니다. 메일의 링크를 클릭하면 새 비밀번호를 설정할 수 있습니다.`;
   };
 }
 // 메일 링크로 들어온 분 — 새 비밀번호. 헤임달과 같은 계정이라 헤임달 비밀번호도 이것으로 바뀐다
 function recoveryScreen(msg) {
   $('#login').hidden = false;
-  $('#login').innerHTML = `<form class="login-box" id="np-form"><div class="brand"><span class="brand-mark">Π</span>PANTHEON<span class="brand-dot">®</span></div><p><b>새 비밀번호를 정해 주세요.</b><br>헤임달과 같은 계정이라, 여기서 바꾸면 헤임달도 이 비밀번호로 로그인합니다.</p><label>새 비밀번호 (8자 이상)<input id="np1" type="password" autocomplete="new-password" required minlength="8"></label><label>새 비밀번호 다시 한 번<input id="np2" type="password" autocomplete="new-password" required minlength="8"></label><div id="np-err" role="alert" style="color:#ba775e;font-size:11px;margin-top:10px">${esc(msg || '')}</div><button class="button primary" type="submit" style="width:100%;justify-content:center;margin-top:16px">비밀번호 정하기</button></form>`;
+  $('#login').innerHTML = `<form class="login-box" id="np-form"><div class="brand"><span class="brand-mark">Π</span>PANTHEON<span class="brand-dot">®</span></div><p><b>새 비밀번호를 설정해 주세요.</b><br>헤임달과 같은 계정이므로, 여기서 변경하면 헤임달 비밀번호도 함께 변경됩니다.</p><label>새 비밀번호 (8자 이상)<input id="np1" type="password" autocomplete="new-password" required minlength="8"></label><label>새 비밀번호 다시 한 번<input id="np2" type="password" autocomplete="new-password" required minlength="8"></label><div id="np-err" role="alert" style="color:#ba775e;font-size:11px;margin-top:10px">${esc(msg || '')}</div><button class="button primary" type="submit" style="width:100%;justify-content:center;margin-top:16px">비밀번호 변경</button></form>`;
   $('#np1').focus();
   $('#np-form').onsubmit = async ev => {
     ev.preventDefault(); const a = $('#np1').value, b = $('#np2').value;
-    if (a.length < 8) return recoveryScreen('비밀번호는 8자 이상으로 정해 주세요.');
-    if (a !== b) return recoveryScreen('두 번 적은 비밀번호가 다릅니다.');
-    const btn = $('#np-form [type=submit]'); btn.disabled = true; btn.textContent = '바꾸는 중…';
+    if (a.length < 8) return recoveryScreen('비밀번호는 8자 이상으로 설정해 주세요.');
+    if (a !== b) return recoveryScreen('입력한 두 비밀번호가 일치하지 않습니다.');
+    const btn = $('#np-form [type=submit]'); btn.disabled = true; btn.textContent = '변경하는 중…';
     const { error } = await SB.auth.updateUser({password: a});
-    if (error) return recoveryScreen(/same|different/i.test(error.message) ? '지금 쓰는 비밀번호와 다른 비밀번호로 정해 주세요.' : '바꾸지 못했습니다. 메일 링크가 오래됐을 수 있습니다 — 비밀번호 찾기를 다시 해 주세요.');
+    if (error) return recoveryScreen(/same|different/i.test(error.message) ? '현재 비밀번호와 다른 비밀번호를 입력해 주세요.' : '비밀번호를 변경하지 못했습니다. 메일 링크가 만료되었을 수 있으니 비밀번호 찾기를 다시 진행해 주세요.');
     RECOVERY = false; try { history.replaceState(null, '', location.pathname); } catch {}
-    toast('비밀번호를 바꿨습니다. 헤임달도 이 비밀번호로 로그인합니다.'); start();
+    toast('비밀번호를 변경했습니다. 헤임달에서도 새 비밀번호로 로그인하세요.'); start();
   };
 }
 async function start() {
@@ -536,7 +536,7 @@ async function start() {
   if (RECOVERY) return recoveryScreen();
   me = session.user;
   const [can, adm, mem] = await Promise.all([SB.rpc('pt_can_use'), SB.rpc('pt_is_admin'), SB.from('hd_member').select('name,role').eq('id', me.id).maybeSingle()]);
-  if (!can.data) { await SB.auth.signOut(); return loginScreen('헤임달에서 아직 승인되지 않은 계정입니다. 승인 뒤 다시 로그인해 주세요.'); }
+  if (!can.data) { await SB.auth.signOut(); return loginScreen('헤임달에서 아직 승인되지 않은 계정입니다. 승인 후 다시 로그인해 주세요.'); }
   isAdmin = !!adm.data; myName = mem.data?.name || me.email;
   $('#login').hidden = true;
   $('#profile').innerHTML = `<span class="avatar">${esc(myName.slice(0, 1))}</span><span>${esc(myName)}<small>${isAdmin ? 'DB 관리자' : '구성원'} · 로그아웃</small></span>${isAdmin ? '<span class="admin">ADMIN</span>' : ''}`;
@@ -556,7 +556,7 @@ $('#add-btn').onclick = () => page === 'contacts' ? contactModal() : entityModal
 $('#export-btn').onclick = exportCSV;
 $('#notification').onclick = () => go('home');
 $('.top-avatar').onclick = () => $('#profile').click();      // 폰에서는 왼쪽 메뉴가 아래 막대가 되어 프로필이 위 오른쪽 사진으로
-$('#profile').onclick = async () => { if (!me) return; modal(`<h2>로그아웃</h2><p>${esc(myName)} 님, 판테온에서 로그아웃합니다. 같은 주소의 헤임달도 함께 로그아웃됩니다.</p><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="button" id="logout-go">로그아웃</button></div>`); $('#logout-go').onclick = async () => { await SB.auth.signOut(); location.reload(); }; };
+$('#profile').onclick = async () => { if (!me) return; modal(`<h2>로그아웃</h2><p>${esc(myName)}님, 판테온에서 로그아웃합니다. 헤임달에서도 함께 로그아웃됩니다.</p><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="button" id="logout-go">로그아웃</button></div>`); $('#logout-go').onclick = async () => { await SB.auth.signOut(); location.reload(); }; };
 $('#overlay').onclick = closeDrawer;
 SB.auth.onAuthStateChange(e => { if (e === 'PASSWORD_RECOVERY') { RECOVERY = true; recoveryScreen(); } });
 window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (me && h && !h.includes('=') && h !== page) { page = h; filter = '전체'; render(); } });
