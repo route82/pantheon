@@ -120,22 +120,33 @@ function filters() { const types = TYPES.filter(t => entities().some(e => e.type
 const hay = e => [e.name, e.en, agencyOf(e), e.role, e.rel, e.note, ...e.aliases, ...e.sides, ...e.owners, ...e.facts, ...e.points, ...kidsOf(e).flatMap(k => [k.name, k.en, ...k.aliases])].join(' ').toLowerCase();
 const LINKED = '담당자 연결';   // 오버뷰 「담당자 연결 회사」 — 거래처 담당자가 연결된 회사만
 const match = e => (filter === '전체' || e.type === filter || (filter === LINKED && contactsOf(e).length > 0)) && hay(e).includes(query.toLowerCase());
-function contactTable(arr) { return `<div class="table-wrap"><table class="ct"><thead><tr><th>이름</th><th>회사 연결</th><th>직함</th><th>연락처(업무)</th><th>명함</th></tr></thead><tbody>${arr.map(c => `<tr class="clickable" data-detail="${c.id}" tabindex="0"><td data-label="이름">${esc(c.name)}</td><td data-label="회사">${c.parentId ? `<span class="pill good">${esc(agencyOf(c))}</span>` : esc(c.agencyText || '회사 미연결')}</td><td data-label="직함">${esc(c.role || '—')}</td><td data-label="연락처">${esc(c.points[0] || '—')}</td><td data-label="명함">${c.cardImg ? '<span class="pill good">있음</span>' : '—'}</td></tr>`).join('') || '<tr><td colspan="5"><div class="empty">검색 결과가 없습니다.</div></td></tr>'}</tbody></table></div>`; }
+function contactTable(arr) { return `<div class="table-wrap"><table class="ct"><thead><tr><th>이름</th><th>회사 연결</th><th>직함</th><th>연락처(업무)</th><th>명함</th></tr></thead><tbody>${arr.map(c => `<tr class="clickable" data-detail="${c.id}" tabindex="0"><td data-label="이름">${esc(c.name)}</td><td data-label="회사">${c.parentId ? `<span class="pill good">${esc(agencyOf(c))}</span>` : esc(c.agencyText || '회사 미연결')}</td><td data-label="직함">${esc(c.role || '—')}</td><td data-label="연락처">${esc(c.points[0] || '—')}</td><td data-label="명함">${c.cardImg ? '<span class="pill good">있음</span>' : '—'}</td></tr>`).join('') || `<tr><td colspan="5"><div class="empty">${NOT_FOUND}</div></td></tr>`}</tbody></table></div>`; }
 
+// 통합 검색 (10-26) — 어느 메뉴에서든 엔티티·거래처 담당자 전체에서 찾는다. Enter: 하나면 바로 상세
+const NOT_FOUND = '등록되지 않은 정보입니다. 다시 한 번 확인해 주세요.';
+let backPage = 'home';
+const searchHits = q => { const t = q.trim().toLowerCase(); return t ? all.filter(e => hay(e).includes(t)) : []; };
+function searchView() {
+  const hits = searchHits(query), es = hits.filter(e => !isContact(e)), cs = hits.filter(isContact);
+  if (!hits.length) return `<section class="panel"><div class="empty"><p><b>${NOT_FOUND}</b></p><p>이름·영문 이름·별칭·브랜드명·연락처로 검색할 수 있습니다.</p></div></section>`;
+  return (es.length ? `<section class="panel"><div class="panel-head"><div class="panel-title">엔티티 <small>${es.length}건</small></div></div><div class="entity-grid">${es.map(entityCard).join('')}</div></section>` : '')
+       + (cs.length ? `<section class="panel" style="margin-top:16px"><div class="panel-head"><div class="panel-title">거래처 담당자 <small>${cs.length}명</small></div></div>${contactTable(cs)}</section>` : '');
+}
 function render() {
-  if (!navMenus().some(m => m[0] === page)) page = 'home';
+  if (page !== 'search' && !navMenus().some(m => m[0] === page)) page = 'home';
   $('#nav').innerHTML = navMenus().map(([key, title]) => `<button class="nav-item ${page === key ? 'active' : ''}" data-page="${key}">${icon(key)}<span>${title}</span>${key === 'contacts' ? `<span class="nav-count">${contacts().length}</span>` : ''}</button>`).join('');
-  const title = {home:['대시보드','거래처·IP·담당자 정보를 한곳에서 확인하세요.'], entities:['엔티티 DB','더올마이티·골포스트·사운드스루의 거래처·브랜드·기관·IP 목록입니다.'], contacts:['연락처','거래처 담당자의 연락처를 확인하고 바로 연락할 수 있습니다.'], admin:['DB 관리','누가 언제 무엇을 수정했는지 확인하고, 필요하면 이전 내용으로 복원할 수 있습니다.']}[page];
-  $('#crumb').textContent = menus.find(m => m[0] === page)?.[1];
+  const title = {home:['대시보드','거래처·IP·담당자 정보를 한곳에서 확인하세요.'], entities:['엔티티 DB','더올마이티·골포스트·사운드스루의 거래처·브랜드·기관·IP 목록입니다.'], contacts:['연락처','거래처 담당자의 연락처를 확인하고 바로 연락할 수 있습니다.'], search:['검색 결과', `「${query.trim()}」 검색 결과 ${searchHits(query).length}건입니다. 하나만 나오면 Enter로 바로 상세를 엽니다.`], admin:['DB 관리','누가 언제 무엇을 수정했는지 확인하고, 필요하면 이전 내용으로 복원할 수 있습니다.']}[page];
+  $('#crumb').textContent = page === 'search' ? '검색 결과' : menus.find(m => m[0] === page)?.[1];
   $('#page-title').innerHTML = title[0] + '<span class="title-dot">.</span>';
   $('#page-subtitle').textContent = title[1];
   $('#export-btn').innerHTML = icon('download') + '내보내기';
   $('#add-btn').innerHTML = icon('plus') + (page === 'contacts' ? '연락처 등록' : '엔티티 등록');
   let html = '';
   if (page === 'home') html = stats() + `<div class="main-grid">${askPanel()}${alerts()}</div>`;
-  if (page === 'entities') { const arr = entities().filter(match); html = `<div class="notice">엔티티 ${entities().length}개가 등록되어 있습니다. 등록·수정한 내용은 전 직원에게 공유되며 변경 이력이 기록됩니다.</div><section class="panel"><div class="panel-head"><div class="panel-title">엔티티 목록 <small>${arr.length} ENTITIES</small></div></div><div class="watch-toolbar">${filters()}<span class="text-btn">이름·영문명·별칭·관계 근거로 검색할 수 있습니다</span></div><div class="entity-grid">${arr.map(entityCard).join('') || '<div class="empty">검색 결과가 없습니다.</div>'}</div></section>`; }
+  if (page === 'entities') { const arr = entities().filter(match); html = `<div class="notice">엔티티 ${entities().length}개가 등록되어 있습니다. 등록·수정한 내용은 전 직원에게 공유되며 변경 이력이 기록됩니다.</div><section class="panel"><div class="panel-head"><div class="panel-title">엔티티 목록 <small>${arr.length} ENTITIES</small></div></div><div class="watch-toolbar">${filters()}<span class="text-btn">이름·영문명·별칭·관계 근거로 검색할 수 있습니다</span></div><div class="entity-grid">${arr.map(entityCard).join('') || `<div class="empty">${NOT_FOUND}</div>`}</div></section>`; }
   if (page === 'contacts') { const arr = contacts().filter(c => hay(c).includes(query.toLowerCase())); html = `<div class="notice">「연락처 등록」에서 명함 사진을 업로드하면 판테온 봇이 내용을 자동으로 입력하고, 명함 이미지도 함께 저장합니다. 거래처 담당자는 회사에 연결되어 회사 상세의 「등록된 담당자」에도 표시됩니다.</div><section class="panel"><div class="panel-head"><div class="panel-title">연락처 <small>CONTACTS</small></div><span class="nav-count">${contacts().length}</span></div>${contactTable(arr)}</section>`; }
   if (page === 'admin') html = adminView();
+  if (page === 'search') html = searchView();
   $('#content').innerHTML = html;
   bindContent();
 }
@@ -609,7 +620,23 @@ async function start() {
 }
 
 $('#search-icon').innerHTML = icon('search'); $('#bell-icon').innerHTML = icon('bell');
-$('#global-search').oninput = e => { query = e.target.value; if (!['entities', 'contacts'].includes(page)) { page = 'entities'; filter = '전체'; } render(); };
+$('#global-search').oninput = e => {
+  query = e.target.value;
+  if (!query.trim()) { if (page === 'search') page = backPage; query = ''; return render(); }       // 지우면 원래 화면으로
+  if (page !== 'search') { backPage = page; page = 'search'; }
+  render();
+};
+function searchGo() {          // Enter — 결과가 하나(또는 이름이 정확히 같은 것이 하나)면 바로 상세, 없으면 안내
+  const q = $('#global-search').value.trim(); if (!q) return;
+  query = q; if (page !== 'search') { backPage = page; page = 'search'; } render();
+  const hits = searchHits(q), exact = hits.filter(e => [e.name, e.en, ...e.aliases].some(x => x && normCo(x) === normCo(q)));
+  const one = exact.length === 1 ? exact[0] : hits.length === 1 ? hits[0] : null;
+  if (one) openDetail(one.id); else if (!hits.length) toast(NOT_FOUND);
+}
+{ let composing = false, want = false; const s = $('#global-search');      // 한글 조합 중 Enter 는 조합이 끝난 뒤에
+  s.addEventListener('compositionstart', () => { composing = true; });
+  s.addEventListener('compositionend', () => { composing = false; if (want) { want = false; searchGo(); } });
+  s.addEventListener('keydown', e => { if (e.key !== 'Enter') return; e.preventDefault(); if (composing || e.isComposing || e.keyCode === 229) { want = true; return; } searchGo(); }); }
 $('#add-btn').onclick = () => page === 'contacts' ? contactModal() : entityModal();
 $('#export-btn').onclick = exportCSV;
 $('#notification').onclick = () => go('home');
