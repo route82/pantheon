@@ -7,6 +7,8 @@
    · 이번 범위 = 10/21 회의 지시(엔티티 DB·등록·명함·회사 연결·연락) — 모니터링·딜은 숨김 */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+// 비밀번호 재설정 메일 링크로 들어왔는지 — supabase 가 주소를 읽어 지우기 전에 본다 (헤임달과 같은 방식)
+let RECOVERY = /type=recovery/.test(location.hash || '');
 const SB = createClient('https://dwoiobqucmikbtikfjwk.supabase.co', 'sb_publishable_K6BW26u2jRkTBDwuMqaaFA_3HkfnOc9');
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const icons = {home:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',entities:'<path d="M12 3 3 8l9 5 9-5-9-5Z M3 12l9 5 9-5 M3 16l9 5 9-5"/>',contacts:'<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="9" r="2.5"/><path d="M8 17c0-4 8-4 8 0 M2 7h3 M2 12h3 M2 17h3"/>',admin:'<path d="m10 3-1 3-3 1-3 3 2 2-1 4 3 3 3-1 2 3 4-1 1-3 3-1 1-4-3-2 1-3-3-3-3 1Z"/><circle cx="12" cy="12" r="3"/>',search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',bell:'<path d="M5 16h14l-2-3V8a5 5 0 0 0-10 0v5l-2 3Z M10 20h4"/>',plus:'<path d="M12 5v14 M5 12h14"/>',download:'<path d="M12 3v12 m-5-5 5 5 5-5 M4 16v5h16v-5"/>',arrow:'<path d="M4 12h16 m-5-5 5 5-5 5"/>',up:'<path d="m3 16 7-7 4 4 7-9 M15 4h6v6"/>',warning:'<path d="M12 3 2 21h20L12 3Z M12 9v5 M12 17v.2"/>',close:'<path d="m6 6 12 12 M6 18 18 6"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',link:'<path d="m9 15 6-6 M7 14l-2 2a3 3 0 0 0 4 4l4-4 M11 8l4-4a3 3 0 0 1 4 4l-2 2"/>'};
@@ -495,17 +497,43 @@ function bindContent() {
 /* ---------- 로그인 ---------- */
 function loginScreen(msg) {
   $('#login').hidden = false;
-  $('#login').innerHTML = `<form class="login-box" id="login-form"><div class="brand"><span class="brand-mark">Π</span>PANTHEON<span class="brand-dot">®</span></div><p>헤임달 계정으로 로그인합니다.<br>헤임달에서 승인된 직원만 쓸 수 있습니다.</p><label>이메일<input id="lg-email" type="email" autocomplete="username" required></label><label>비밀번호<input id="lg-pw" type="password" autocomplete="current-password" required></label><div id="lg-err" role="alert" style="color:#ba775e;font-size:11px;margin-top:10px">${esc(msg || '')}</div><button class="button primary" type="submit" style="width:100%;justify-content:center;margin-top:16px">로그인</button><p style="font-size:10px;margin-top:14px">비밀번호를 잊으셨으면 헤임달 로그인 화면의 「비밀번호 찾기」를 써 주세요.</p></form>`;
+  $('#login').innerHTML = `<form class="login-box" id="login-form"><div class="brand"><span class="brand-mark">Π</span>PANTHEON<span class="brand-dot">®</span></div><p>헤임달 계정으로 로그인합니다.<br>헤임달에 가입 완료된 더올마이티 임직원만 로그인이 가능합니다.</p><label>이메일<input id="lg-email" type="email" autocomplete="username" required></label><label>비밀번호<input id="lg-pw" type="password" autocomplete="current-password" required></label><div id="lg-err" role="alert" style="color:#ba775e;font-size:11px;margin-top:10px">${esc(msg || '')}</div><button class="button primary" type="submit" style="width:100%;justify-content:center;margin-top:16px">로그인</button><button class="text-btn" type="button" id="lg-reset" style="margin-top:14px;font-size:11px">비밀번호를 잊으셨나요? 비밀번호 찾기</button></form>`;
   $('#login-form').onsubmit = async ev => {
-    ev.preventDefault(); $('#lg-err').textContent = '';
+    ev.preventDefault(); $('#lg-err').textContent = ''; $('#lg-err').style.color = '#ba775e';
     const { error } = await SB.auth.signInWithPassword({email: $('#lg-email').value.trim(), password: $('#lg-pw').value});
     if (error) { $('#lg-err').textContent = '이메일 또는 비밀번호가 맞지 않습니다.'; return; }
     start();
+  };
+  $('#lg-reset').onclick = async () => {
+    const email = $('#lg-email').value.trim(), out = $('#lg-err');
+    if (!email) { out.textContent = '이메일을 먼저 적어 주세요. 그 주소로 비밀번호 재설정 메일을 보냅니다.'; $('#lg-email').focus(); return; }
+    $('#lg-reset').disabled = true;
+    const { error } = await SB.auth.resetPasswordForEmail(email, {redirectTo: location.origin + location.pathname});
+    $('#lg-reset').disabled = false;
+    out.style.color = error ? '#ba775e' : '#38674d';
+    out.textContent = error ? '메일을 보내지 못했습니다. 잠시 뒤 다시 해 주세요.' : `${email} 로 비밀번호 재설정 메일을 보냈습니다. 메일의 링크를 누르면 새 비밀번호를 정할 수 있습니다.`;
+  };
+}
+// 메일 링크로 들어온 분 — 새 비밀번호. 헤임달과 같은 계정이라 헤임달 비밀번호도 이것으로 바뀐다
+function recoveryScreen(msg) {
+  $('#login').hidden = false;
+  $('#login').innerHTML = `<form class="login-box" id="np-form"><div class="brand"><span class="brand-mark">Π</span>PANTHEON<span class="brand-dot">®</span></div><p><b>새 비밀번호를 정해 주세요.</b><br>헤임달과 같은 계정이라, 여기서 바꾸면 헤임달도 이 비밀번호로 로그인합니다.</p><label>새 비밀번호 (8자 이상)<input id="np1" type="password" autocomplete="new-password" required minlength="8"></label><label>새 비밀번호 다시 한 번<input id="np2" type="password" autocomplete="new-password" required minlength="8"></label><div id="np-err" role="alert" style="color:#ba775e;font-size:11px;margin-top:10px">${esc(msg || '')}</div><button class="button primary" type="submit" style="width:100%;justify-content:center;margin-top:16px">비밀번호 정하기</button></form>`;
+  $('#np1').focus();
+  $('#np-form').onsubmit = async ev => {
+    ev.preventDefault(); const a = $('#np1').value, b = $('#np2').value;
+    if (a.length < 8) return recoveryScreen('비밀번호는 8자 이상으로 정해 주세요.');
+    if (a !== b) return recoveryScreen('두 번 적은 비밀번호가 다릅니다.');
+    const btn = $('#np-form [type=submit]'); btn.disabled = true; btn.textContent = '바꾸는 중…';
+    const { error } = await SB.auth.updateUser({password: a});
+    if (error) return recoveryScreen(/same|different/i.test(error.message) ? '지금 쓰는 비밀번호와 다른 비밀번호로 정해 주세요.' : '바꾸지 못했습니다. 메일 링크가 오래됐을 수 있습니다 — 비밀번호 찾기를 다시 해 주세요.');
+    RECOVERY = false; try { history.replaceState(null, '', location.pathname); } catch {}
+    toast('비밀번호를 바꿨습니다. 헤임달도 이 비밀번호로 로그인합니다.'); start();
   };
 }
 async function start() {
   const { data: { session } } = await SB.auth.getSession();
   if (!session) return loginScreen();
+  if (RECOVERY) return recoveryScreen();
   me = session.user;
   const [can, adm, mem] = await Promise.all([SB.rpc('pt_can_use'), SB.rpc('pt_is_admin'), SB.from('hd_member').select('name,role').eq('id', me.id).maybeSingle()]);
   if (!can.data) { await SB.auth.signOut(); return loginScreen('헤임달에서 아직 승인되지 않은 계정입니다. 승인 뒤 다시 로그인해 주세요.'); }
@@ -519,7 +547,7 @@ async function start() {
     $('.top-avatar').innerHTML = img; const a = $('#profile .avatar'); if (a) { a.innerHTML = img; a.style.overflow = 'hidden'; }
   });
   try { await load(); } catch (e) { $('#content').innerHTML = `<div class="notice">판테온 DB를 불러오지 못했습니다: ${esc(e?.message || '')}</div>`; return; }
-  page = location.hash.slice(1) || 'home'; render();
+  const h = location.hash.slice(1); page = h && !h.includes('=') ? h : 'home'; render();
 }
 
 $('#search-icon').innerHTML = icon('search'); $('#bell-icon').innerHTML = icon('bell');
@@ -530,6 +558,7 @@ $('#notification').onclick = () => go('home');
 $('.top-avatar').onclick = () => $('#profile').click();      // 폰에서는 왼쪽 메뉴가 아래 막대가 되어 프로필이 위 오른쪽 사진으로
 $('#profile').onclick = async () => { if (!me) return; modal(`<h2>로그아웃</h2><p>${esc(myName)} 님, 판테온에서 로그아웃합니다. 같은 주소의 헤임달도 함께 로그아웃됩니다.</p><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="button" id="logout-go">로그아웃</button></div>`); $('#logout-go').onclick = async () => { await SB.auth.signOut(); location.reload(); }; };
 $('#overlay').onclick = closeDrawer;
-window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (me && h && h !== page) { page = h; filter = '전체'; render(); } });
+SB.auth.onAuthStateChange(e => { if (e === 'PASSWORD_RECOVERY') { RECOVERY = true; recoveryScreen(); } });
+window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (me && h && !h.includes('=') && h !== page) { page = h; filter = '전체'; render(); } });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); $('#global-search').focus(); } });
 start();
