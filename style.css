@@ -46,6 +46,13 @@ body{word-break:keep-all;overflow-wrap:break-word}
 .login-box label{display:block;font-size:11px;color:#71816b;margin-top:14px}
 .login-box input{display:block;width:100%;border:1px solid #dde4d9;border-radius:6px;padding:11px;margin-top:6px;font-size:13px}
 .top-avatar{cursor:pointer;overflow:hidden}
+.workspace-logo{width:38px!important;height:34px!important;background:#fff!important;border:1px solid var(--border);border-radius:6px;flex:none}
+.workspace-logo svg{width:28px;height:auto;fill:#1d1d1b;stroke:none}
+.local-form{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.local-form .local-search{min-width:240px;padding:9px 12px;font-size:12px}
+.local-form .button{padding:9px 13px}
+.watch-toolbar{flex-wrap:wrap}
+@media(max-width:600px){.local-form{width:100%}.local-form .local-search{flex:1;min-width:0;font-size:16px}}
 .kid-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 .kid-row{display:flex;align-items:center;gap:10px;border:1px solid #dde4d9;border-radius:7px;padding:7px 8px;background:#fff}
 .kid-row.new{border-style:dashed;border-color:#82bca4}
