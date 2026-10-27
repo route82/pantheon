@@ -614,7 +614,7 @@ function studioProjects() {
   const ps = studio.list, live = ps.filter(p => p.status !== 'done'), wait = ps.filter(p => p.status === 'waiting'), work = ps.filter(p => p.status === 'working');
   const stat = (label, n, unit, bottom, hi) => `<div class="stat${hi ? ' highlight' : ''}"><div class="stat-label">${label}</div><div class="stat-value">${n}<small>${unit}</small></div><div class="stat-bottom">${bottom}</div></div>`;
   const decide = wait.length ? wait.map(p => `<button class="alert-row" data-proposal="${p.id}"><span class="alert-symbol">${icon('warning')}</span><span class="alert-text">${esc(pTitle(p))}<small>${esc(GATES[p.stage] || '확인')} 대기 · ${esc(kst(p.updated_at))}</small></span></button>`).join('') : '<p class="panel-caption" style="padding:0 0 18px">지금 결정할 프로젝트가 없습니다.</p>';
-  const rows = ps.map(p => `<tr class="clickable" data-proposal="${p.id}" tabindex="0"><td>${esc(pTitle(p))}<small class="cell-sub">${esc(p.recipient || '수신사 미정')}</small></td><td>${p.stage}. ${esc(STAGES[p.stage - 1])}</td><td>${pPill(p)}</td><td style="white-space:nowrap">${esc(kst(p.updated_at))}</td></tr>`).join('');
+  const rows = ps.map(p => `<tr class="clickable" data-proposal="${p.id}" tabindex="0"><td>${esc(pTitle(p))}<small class="cell-sub">${esc(p.recipient || '수신사 미정')}</small></td><td>${p.stage}. ${esc(STAGES[p.stage - 1])}</td><td>${pPill(p)}${p.status === 'working' ? `<div data-prow="${p.id}">${rowProg(p)}</div>` : ''}</td><td style="white-space:nowrap">${esc(kst(p.updated_at))}</td></tr>`).join('');
   return `<div class="stats">${stat('진행 중', live.length, '건', `전체 ${ps.length}건`)}${stat('결정 대기', wait.length, '건', '게이트에서 사람이 결정할 것')}${stat('판테온 봇 처리 중', work.length, '건', '리서치·생성 등 자동 단계')}${stat('완료', ps.length - live.length, '건', '제안서 전달 완료', true)}</div>
   <div class="main-grid"><section class="panel"><div class="panel-head"><div class="panel-title">전체 프로젝트 <small>최근 업데이트 순</small></div></div>${ps.length ? `<div class="table-wrap"><table><thead><tr><th>프로젝트</th><th>현재 단계</th><th>상태</th><th>업데이트</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="empty"><p>아직 프로젝트가 없습니다.<br>오른쪽 위 「새 프로젝트」에서 IP 하나로 시작하세요.</p></div>`}</section>
   <section class="panel"><div class="panel-head"><div class="panel-title">지금 결정할 것</div>${wait.length ? `<span class="alert-count">${wait.length}건</span>` : ''}</div><div class="alert-list">${decide}</div></section></div>`;
@@ -628,7 +628,7 @@ function studioRefs() {
 
 // 레퍼런스 분석 진행률 — 판테온 봇이 pt_proposal_job.result 에 3초마다 적는 값(1~100% · 남은 초)을 읽어 막대로
 const refJob = r => studio.jobs.find(j => j.ref_id === r.id && j.kind === 'analyze_reference');
-const leftText = s => s >= 60 ? `약 ${Math.floor(s / 60)}분 ${String(Math.round(s % 60)).padStart(2, '0')}초 남음` : s > 0 ? `약 ${Math.round(s)}초 남음` : '곧 끝납니다';
+const leftText = t => { const s = Math.round(t); return s >= 60 ? `약 ${Math.floor(s / 60)}분 ${String(s % 60).padStart(2, '0')}초 남음` : s > 0 ? `약 ${s}초 남음` : '곧 끝납니다'; };
 function refProg(r) {
   const j = refJob(r), g = j?.result;
   if (!j || j.status === 'wait' || !g) {
@@ -650,8 +650,29 @@ async function pollRefJobs() {
   ids.forEach(id => { const el = document.querySelector(`[data-ref-prog="${id}"]`), r = studio.refs.find(x => x.id === id); if (el && r) el.outerHTML = refProg(r); });
   studioPoll = setTimeout(pollRefJobs, 3000);
 }
+// 목록에서도 진행이 보이게 — 작업 중인 프로젝트가 있으면 3초마다 진행률·상태를 다시 읽는다
+function rowProg(p) {
+  const j = studio.jobs.find(x => x.proposal_id === p.id), g = j?.result;
+  if (!j || j.status === 'wait' || !g) return `<small class="row-prog">판테온 봇 차례를 기다리는 중<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></small>`;
+  const left = Math.max(0, g.eta - (Date.now() - Date.parse(g.at)) / 1000);
+  return `<span class="ref-prog row-prog"><span class="row"><span class="bar"><i style="width:${g.progress}%"></i></span><b>${g.progress}%</b></span><small>${esc(g.step || '')} · ${leftText(left)}</small></span>`;
+}
+let listPoll;
+async function pollProjects() {
+  if (page !== 'studio' || studio.tab === 'refs') return;
+  const ids = (studio.list || []).filter(p => p.status === 'working').map(p => p.id);
+  if (!ids.length) return;
+  const [ps, js] = await Promise.all([SB.from('pt_proposal').select('id,status,stage').in('id', ids),
+    SB.from('pt_proposal_job').select('id,proposal_id,ref_id,kind,status,at,error,result').in('proposal_id', ids).in('status', ['wait', 'work'])]);
+  if (ps.error || js.error || page !== 'studio') return;
+  if (ps.data.some(x => { const o = studio.list.find(p => p.id === x.id); return o && (o.status !== x.status || o.stage !== x.stage); })) { studio.list = null; return loadStudio(); }
+  studio.jobs = [...studio.jobs.filter(j => !ids.includes(j.proposal_id)), ...js.data];
+  ids.forEach(id => { const el = document.querySelector(`[data-prow="${id}"]`), p = studio.list.find(x => x.id === id); if (el && p) el.innerHTML = rowProg(p); });
+  listPoll = setTimeout(pollProjects, 3000);
+}
 function bindStudio() {
-  clearTimeout(studioPoll); clearInterval(studioTick);
+  clearTimeout(studioPoll); clearInterval(studioTick); clearTimeout(listPoll);
+  if ((studio.list || []).some(p => p.status === 'working')) listPoll = setTimeout(pollProjects, 3000);
   if ((studio.refs || []).some(r => r.status === 'uploaded' || r.status === 'analyzing')) {
     studioPoll = setTimeout(pollRefJobs, 3000);
     studioTick = setInterval(() => {            // 남은 시간은 1초마다 줄여 보여 준다
@@ -854,7 +875,7 @@ async function openProposal(id, keep) {
     go({stage: 6, status: 'working', data: {...d, concept_selected: c}}, {kind: 'build', input: {}}, `컨셉 「${c.name}」을(를) 확정했습니다 → 제안서 생성`, '컨셉을 확정했습니다.');
   });
   clearTimeout(propPoll);
-  if (p.status === 'working' && p.stage < 7) propPoll = setTimeout(() => pollProposal(p.id), 3000);
+  if (p.status === 'working') propPoll = setTimeout(() => pollProposal(p.id), 3000);      // 작업 중이면 단계와 상관없이 항상
   const { data } = await SB.from('pt_proposal_event').select('at,actor_name,message').eq('proposal_id', id).order('at', {ascending: false}).limit(50);
   const box = $('#proposal-events'); if (!box || activeDetail !== 'p:' + id) return;
   box.innerHTML = data?.length ? `<ol class="owner-hist">${data.map(e => `<li><time>${esc(kst(e.at))}</time><span>${esc(e.message)}<br><small>${esc(e.actor_name || '판테온 봇')}</small></span></li>`).join('')}</ol>` : '<p>기록이 없습니다.</p>';
