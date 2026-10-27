@@ -596,7 +596,7 @@ async function loadStudio() {
     const [p, r, j] = await Promise.all([
       SB.from('pt_proposal').select('*').order('updated_at', {ascending: false}),
       SB.from('pt_proposal_ref').select('*').eq('hidden', false).order('created_at', {ascending: false}),
-      SB.from('pt_proposal_job').select('id,proposal_id,ref_id,kind,status,at,error').in('status', ['wait', 'work'])]);
+      SB.from('pt_proposal_job').select('id,proposal_id,ref_id,kind,status,at,error,result').in('status', ['wait', 'work'])]);
     if (p.error) throw p.error; if (r.error) throw r.error; if (j.error) throw j.error;
     studio.list = p.data; studio.refs = r.data; studio.jobs = j.data;
   } catch (e) { studio.err = '제안서 스튜디오를 불러오지 못했습니다: ' + (e?.message || ''); }
@@ -623,10 +623,48 @@ function studioProjects() {
 function studioRefs() {
   const rs = studio.refs, st = {uploaded: '분석 대기', analyzing: '분석 중', ready: '분석 완료', failed: '분석 실패'};
   return `<section class="panel"><div class="panel-head"><div><div class="panel-title">레퍼런스 라이브러리 <small>${rs.length}건</small></div><p class="panel-caption">팀이 만든 완성 제안서입니다. 새 제안서는 고른 레퍼런스의 구성과 이미지 배치를 그대로 따릅니다.</p></div></div>
-  ${rs.length ? `<div class="table-wrap"><table><thead><tr><th>제안서</th><th>IP</th><th>수신사</th><th>작성</th><th>분석</th><th>기본 포맷</th><th>파일</th></tr></thead><tbody>${rs.map(r => `<tr><td>${esc(r.title)}</td><td>${esc(r.ip_names || '—')}</td><td>${esc(r.recipient || '—')}</td><td>${esc(r.author || '—')}</td><td><span class="pill ${r.status === 'ready' ? 'good' : r.status === 'failed' ? 'bad' : ''}">${st[r.status] || r.status}</span></td><td>${r.is_default ? '<span class="pill good">기본</span>' : `<button class="text-btn" data-ref-default="${r.id}">기본으로 지정</button>`}</td><td><button class="text-btn" data-ref-open="${r.id}">열기 ↗</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty"><p>등록된 레퍼런스가 없습니다.<br>오른쪽 위 「레퍼런스 등록」에서 완성 제안서 PDF를 올려 주세요.</p></div>'}</section>`;
+  ${rs.length ? `<div class="table-wrap"><table><thead><tr><th>제안서</th><th>IP</th><th>수신사</th><th>작성</th><th>분석</th><th>기본 포맷</th><th>파일</th></tr></thead><tbody>${rs.map(r => `<tr${r.status === 'ready' ? ` class="clickable" data-ref-view="${r.id}"` : ''}><td>${esc(r.title)}</td><td>${esc(r.ip_names || '—')}</td><td>${esc(r.recipient || '—')}</td><td>${esc(r.author || '—')}</td><td>${r.status === 'ready' ? `<button class="text-btn" data-ref-view="${r.id}"><span class="pill good">분석 완료</span> 보기</button>` : r.status === 'failed' ? `<span class="pill bad" title="${esc(r.profile?.error || '')}">분석 실패</span> <button class="text-btn" data-ref-retry="${r.id}">다시 분석</button>` : refProg(r)}</td><td>${r.is_default ? '<span class="pill good">기본</span>' : `<button class="text-btn" data-ref-default="${r.id}">기본으로 지정</button>`}</td><td><button class="text-btn" data-ref-open="${r.id}">열기 ↗</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty"><p>등록된 레퍼런스가 없습니다.<br>오른쪽 위 「레퍼런스 등록」에서 완성 제안서 PDF를 올려 주세요.</p></div>'}</section>`;
 }
 
+// 레퍼런스 분석 진행률 — 판테온 봇이 pt_proposal_job.result 에 3초마다 적는 값(1~100% · 남은 초)을 읽어 막대로
+const refJob = r => studio.jobs.find(j => j.ref_id === r.id && j.kind === 'analyze_reference');
+const leftText = s => s >= 60 ? `약 ${Math.floor(s / 60)}분 ${String(Math.round(s % 60)).padStart(2, '0')}초 남음` : s > 0 ? `약 ${Math.round(s)}초 남음` : '곧 끝납니다';
+function refProg(r) {
+  const j = refJob(r), g = j?.result;
+  if (!j || j.status === 'wait' || !g) return `<span class="ref-prog" data-ref-prog="${r.id}"><span class="pill">분석 대기</span><small>판테온 봇 차례를 기다리는 중</small></span>`;
+  const left = Math.max(0, g.eta - (Date.now() - Date.parse(g.at)) / 1000);
+  return `<span class="ref-prog" data-ref-prog="${r.id}" data-eta="${g.eta}" data-at="${esc(g.at)}"><span class="bar" role="progressbar" aria-valuenow="${g.progress}" aria-valuemin="0" aria-valuemax="100"><i style="width:${g.progress}%"></i></span><b>${g.progress}%</b><small>${esc(g.step || '분석 중')} · <span class="eta">${leftText(left)}</span></small></span>`;
+}
+let studioPoll, studioTick;
+async function pollRefJobs() {
+  if (page !== 'studio') return;
+  const ids = (studio.refs || []).filter(r => r.status === 'uploaded' || r.status === 'analyzing').map(r => r.id);
+  if (!ids.length) return;
+  const { data, error } = await SB.from('pt_proposal_job').select('id,proposal_id,ref_id,kind,status,at,error,result').eq('kind', 'analyze_reference').in('ref_id', ids).order('at', {ascending: false});
+  if (error || page !== 'studio') return;
+  if (ids.some(id => { const j = data.find(x => x.ref_id === id); return j && (j.status === 'done' || j.status === 'fail'); })) return loadStudio();
+  studio.jobs = [...studio.jobs.filter(j => !ids.includes(j.ref_id)), ...data.filter(j => j.status === 'wait' || j.status === 'work')];
+  ids.forEach(id => { const el = document.querySelector(`[data-ref-prog="${id}"]`), r = studio.refs.find(x => x.id === id); if (el && r) el.outerHTML = refProg(r); });
+  studioPoll = setTimeout(pollRefJobs, 3000);
+}
 function bindStudio() {
+  clearTimeout(studioPoll); clearInterval(studioTick);
+  if ((studio.refs || []).some(r => r.status === 'uploaded' || r.status === 'analyzing')) {
+    studioPoll = setTimeout(pollRefJobs, 3000);
+    studioTick = setInterval(() => {            // 남은 시간은 1초마다 줄여 보여 준다
+      if (page !== 'studio') return clearInterval(studioTick);
+      $$('[data-ref-prog][data-eta]').forEach(el => { const left = Math.max(0, +el.dataset.eta - (Date.now() - Date.parse(el.dataset.at)) / 1000); const t = el.querySelector('.eta'); if (t) t.textContent = leftText(left); });
+    }, 1000);
+  }
+  $$('[data-ref-view]').forEach(b => b.onclick = ev => { ev.stopPropagation(); openRef(b.dataset.refView); });
+  $$('[data-ref-retry]').forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    const { error } = await SB.from('pt_proposal_ref').update({status: 'uploaded', profile: null}).eq('id', b.dataset.refRetry);
+    if (error) { b.disabled = false; return toast('다시 분석을 요청하지 못했습니다: ' + error.message); }
+    const r = studio.refs.find(x => x.id === b.dataset.refRetry);
+    await SB.from('pt_proposal_job').insert({ref_id: r.id, kind: 'analyze_reference', input: {file_path: r.file_path, retry: true}});
+    await loadStudio(); toast('다시 분석을 요청했습니다.');
+  });
   $$('[data-studio-tab]').forEach(b => b.onclick = () => { studio.tab = b.dataset.studioTab; render(); });
   $$('[data-proposal]').forEach(b => { b.onclick = () => openProposal(b.dataset.proposal); b.onkeydown = e => { if (e.key === 'Enter') openProposal(b.dataset.proposal); }; });
   $$('[data-ref-open]').forEach(b => b.onclick = async () => { const r = studio.refs.find(x => x.id === b.dataset.refOpen); const { data, error } = await SB.storage.from('pt-studio').createSignedUrl(r.file_path, 600); if (error) return toast('파일을 열지 못했습니다.'); window.open(data.signedUrl, '_blank', 'noopener'); });
@@ -638,6 +676,22 @@ function bindStudio() {
     if (error) { b.disabled = false; return toast('기본 포맷을 지정하지 못했습니다: ' + error.message); }
     studio.refs = null; studio.list = null; await loadStudio(); toast('기본 포맷으로 지정했습니다.');
   });
+}
+
+const IMG_KIND = {official: '공식 이미지', logo: '로고', ai_concept: 'AI 컨셉 이미지', mockup: '목업', reference: '참고 사례', capture: '캡처', texture: '배경·질감'};
+function openRef(id) {
+  const r = studio.refs?.find(x => x.id === id), f = r?.profile; if (!f) return;
+  activeDetail = 'r:' + id;
+  const kinds = Object.entries(f.image_pattern?.by_kind || {}).filter(([, n]) => n).sort((a, b) => b[1] - a[1]);
+  const st = f.style || {};
+  const pages = (f.pages || []).map(x => `<tr><td>${esc(x.page)}</td><td>${esc(x.role || '')}<small class="cell-sub">${esc(x.title || '')}</small></td><td>${esc(x.layout || '')}${(x.images || []).length ? `<small class="cell-sub">${x.images.map(i => esc(`${IMG_KIND[i.kind] || i.kind} ${i.ratio || ''}${i.what ? ' · ' + i.what : ''}`)).join('<br>')}</small>` : ''}</td></tr>`).join('');
+  showDrawer(`<span class="entity-avatar">${icon('studio')}</span><h2>${esc(r.title)}</h2><span class="detail-sub">${esc([r.ip_names, r.recipient, r.author].filter(Boolean).join(' · '))}</span>
+  <div class="detail-block"><h3>구성 요약</h3><p>${esc(f.summary || '')}</p><div class="detail-row"><span>페이지</span><b>${esc(f.page_count || (f.pages || []).length)}쪽</b></div><div class="detail-row"><span>이미지</span><b>${esc(f.image_pattern?.total || 0)}장</b></div>${r.is_default ? '<div class="detail-row"><span>기본 포맷</span><b><span class="pill good">기본</span></b></div>' : ''}</div>
+  ${(f.acts || []).length ? `<div class="detail-block"><h3>막 구성</h3><ol class="stage-list">${f.acts.map((a, i) => `<li class="done"><span>${i + 1}</span>${esc(a.name || '')} <small>· ${esc(a.pages || '')}쪽 · ${esc(a.purpose || '')}</small></li>`).join('')}</ol></div>` : ''}
+  ${kinds.length ? `<div class="detail-block"><h3>이미지 사용</h3>${kinds.map(([k, n]) => `<div class="detail-row"><span>${esc(IMG_KIND[k] || k)}</span><b>${n}장</b></div>`).join('')}${f.image_pattern?.note ? `<p>${esc(f.image_pattern.note)}</p>` : ''}</div>` : ''}
+  <div class="detail-block"><h3>문체·디자인</h3>${st.tone ? `<div class="detail-row"><span>문체</span><b>${esc(st.tone)}</b></div>` : ''}${st.type ? `<div class="detail-row"><span>글꼴</span><b>${esc(st.type)}</b></div>` : ''}${st.emphasis ? `<div class="detail-row"><span>강조</span><b>${esc(st.emphasis)}</b></div>` : ''}${(st.colors || []).length ? `<div class="detail-row"><span>주요 색</span><b>${st.colors.filter(c => /^#[0-9a-f]{3,8}$/i.test(c)).map(c => `<i class="swatch" style="background:${c}" title="${c}"></i>`).join('')}</b></div>` : ''}</div>
+  ${(f.rules || []).length ? `<div class="detail-block"><h3>새 제안서가 따를 규칙</h3><ol class="rule-list">${f.rules.map(x => `<li>${esc(x)}</li>`).join('')}</ol></div>` : ''}
+  ${pages ? `<div class="detail-block"><h3>페이지별 구성</h3><div class="table-wrap"><table class="ref-pages"><thead><tr><th>쪽</th><th>역할</th><th>배치·이미지</th></tr></thead><tbody>${pages}</tbody></table></div></div>` : ''}`);
 }
 
 async function proposalEvent(id, message) { await SB.from('pt_proposal_event').insert({proposal_id: id, message}); }
