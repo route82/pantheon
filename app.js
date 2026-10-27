@@ -11,7 +11,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 let RECOVERY = /type=recovery/.test(location.hash || '');
 const SB = createClient('https://dwoiobqucmikbtikfjwk.supabase.co', 'sb_publishable_K6BW26u2jRkTBDwuMqaaFA_3HkfnOc9');
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
-const icons = {home:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',entities:'<path d="M12 3 3 8l9 5 9-5-9-5Z M3 12l9 5 9-5 M3 16l9 5 9-5"/>',contacts:'<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="9" r="2.5"/><path d="M8 17c0-4 8-4 8 0 M2 7h3 M2 12h3 M2 17h3"/>',admin:'<path d="m10 3-1 3-3 1-3 3 2 2-1 4 3 3 3-1 2 3 4-1 1-3 3-1 1-4-3-2 1-3-3-3-3 1Z"/><circle cx="12" cy="12" r="3"/>',search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',bell:'<path d="M5 16h14l-2-3V8a5 5 0 0 0-10 0v5l-2 3Z M10 20h4"/>',plus:'<path d="M12 5v14 M5 12h14"/>',download:'<path d="M12 3v12 m-5-5 5 5 5-5 M4 16v5h16v-5"/>',arrow:'<path d="M4 12h16 m-5-5 5 5-5 5"/>',up:'<path d="m3 16 7-7 4 4 7-9 M15 4h6v6"/>',warning:'<path d="M12 3 2 21h20L12 3Z M12 9v5 M12 17v.2"/>',close:'<path d="m6 6 12 12 M6 18 18 6"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',link:'<path d="m9 15 6-6 M7 14l-2 2a3 3 0 0 0 4 4l4-4 M11 8l4-4a3 3 0 0 1 4 4l-2 2"/>'};
+const icons = {studio:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M10 13h6M10 17h4"/>',home:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',entities:'<path d="M12 3 3 8l9 5 9-5-9-5Z M3 12l9 5 9-5 M3 16l9 5 9-5"/>',contacts:'<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="9" r="2.5"/><path d="M8 17c0-4 8-4 8 0 M2 7h3 M2 12h3 M2 17h3"/>',admin:'<path d="m10 3-1 3-3 1-3 3 2 2-1 4 3 3 3-1 2 3 4-1 1-3 3-1 1-4-3-2 1-3-3-3-3 1Z"/><circle cx="12" cy="12" r="3"/>',search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',bell:'<path d="M5 16h14l-2-3V8a5 5 0 0 0-10 0v5l-2 3Z M10 20h4"/>',plus:'<path d="M12 5v14 M5 12h14"/>',download:'<path d="M12 3v12 m-5-5 5 5 5-5 M4 16v5h16v-5"/>',arrow:'<path d="M4 12h16 m-5-5 5 5-5 5"/>',up:'<path d="m3 16 7-7 4 4 7-9 M15 4h6v6"/>',warning:'<path d="M12 3 2 21h20L12 3Z M12 9v5 M12 17v.2"/>',close:'<path d="m6 6 12 12 M6 18 18 6"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',link:'<path d="m9 15 6-6 M7 14l-2 2a3 3 0 0 0 4 4l4-4 M11 8l4-4a3 3 0 0 1 4 4l-2 2"/>'};
 const icon = n => `<svg viewBox="0 0 24 24" aria-hidden="true">${icons[n]||icons.entities}</svg>`;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const TYPES = ['회사','브랜드','IP·유명인','기관','미디어·매체','미디어·OTT','판매 채널'];
@@ -25,8 +25,8 @@ const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) 
 let me = null, myName = '', isAdmin = false;
 let all = [];
 let page = 'home', filter = '전체', query = '', activeDetail = null, lastAnswer = '';
-const menus = [['home','대시보드'],['entities','엔티티 DB'],['contacts','연락처'],['admin','DB 관리']];
-const navMenus = () => menus.filter(m => m[0] !== 'admin' || isAdmin);
+const menus = [['home','대시보드'],['entities','엔티티 DB'],['contacts','연락처'],['studio','제안서 스튜디오'],['admin','DB 관리']];
+const navMenus = () => menus.filter(m => (m[0] !== 'admin' || isAdmin) && (m[0] !== 'studio' || studioCan));
 const byId = id => all.find(e => e.id === id);
 const isContact = e => e.type === '거래처 담당자';
 const entities = () => all.filter(e => !isContact(e)), contacts = () => all.filter(isContact);
@@ -135,17 +135,19 @@ function searchView() {
 function render() {
   if (page !== 'search' && !navMenus().some(m => m[0] === page)) page = 'home';
   $('#nav').innerHTML = navMenus().map(([key, title]) => `<button class="nav-item ${page === key ? 'active' : ''}" data-page="${key}">${icon(key)}<span>${title}</span>${key === 'contacts' ? `<span class="nav-count">${contacts().length}</span>` : ''}</button>`).join('');
-  const title = {home:['대시보드','거래처·IP·담당자 정보를 한곳에서 확인하세요.'], entities:['엔티티 DB','더올마이티·골포스트·사운드스루의 거래처·브랜드·기관·IP 목록입니다.'], contacts:['연락처','거래처 담당자의 연락처를 확인하고 바로 연락할 수 있습니다.'], search:['검색 결과', `「${query.trim()}」 검색 결과 ${searchHits(query).length}건입니다. 하나만 나오면 Enter로 바로 상세를 엽니다.`], admin:['DB 관리','누가 언제 무엇을 수정했는지 확인하고, 필요하면 이전 내용으로 복원할 수 있습니다.']}[page];
+  const title = {home:['대시보드','거래처·IP·담당자 정보를 한곳에서 확인하세요.'], entities:['엔티티 DB','더올마이티·골포스트·사운드스루의 거래처·브랜드·기관·IP 목록입니다.'], contacts:['연락처','거래처 담당자의 연락처를 확인하고 바로 연락할 수 있습니다.'], studio:['제안서 스튜디오','IP 하나를 넣으면 사람은 결정 단계에서만 확인하고, 리서치·제안서·이미지는 판테온 봇이 이어서 만듭니다.'], search:['검색 결과', `「${query.trim()}」 검색 결과 ${searchHits(query).length}건입니다. 하나만 나오면 Enter로 바로 상세를 엽니다.`], admin:['DB 관리','누가 언제 무엇을 수정했는지 확인하고, 필요하면 이전 내용으로 복원할 수 있습니다.']}[page];
   $('#crumb').textContent = page === 'search' ? '검색 결과' : menus.find(m => m[0] === page)?.[1];
   $('#page-title').innerHTML = title[0] + '<span class="title-dot">.</span>';
   $('#page-subtitle').textContent = title[1];
   $('#export-btn').innerHTML = icon('download') + '내보내기';
-  $('#add-btn').innerHTML = icon('plus') + (page === 'contacts' ? '연락처 등록' : '엔티티 등록');
+  $('#add-btn').innerHTML = icon('plus') + (page === 'contacts' ? '연락처 등록' : page === 'studio' ? (studio.tab === 'refs' ? '레퍼런스 등록' : '새 프로젝트') : '엔티티 등록');
+  $('#export-btn').hidden = page === 'studio';
   let html = '';
   if (page === 'home') html = stats() + `<div class="main-grid">${askPanel()}${alerts()}</div>`;
   if (page === 'entities') { const arr = entities().filter(match); html = `<div class="notice">엔티티 ${entities().length}개가 등록되어 있습니다. 등록·수정한 내용은 전 직원에게 공유되며 변경 이력이 기록됩니다.</div><section class="panel"><div class="panel-head"><div class="panel-title">엔티티 목록 <small>${arr.length} ENTITIES</small></div></div><div class="watch-toolbar">${filters()}</div><form class="table-tools local-form" id="local-form" role="search"><input class="local-search" id="local-q" type="search" placeholder="${page === 'contacts' ? '이름·회사·직함·연락처' : '이름·영문 이름·별칭·브랜드명'} 검색" value="${esc(query)}" aria-label="이 목록에서 검색"><button class="button primary" type="submit">${icon('search')} 검색</button>${query ? '<button class="button" type="button" id="local-clear">초기화</button>' : ''}</form><div class="entity-grid">${arr.map(entityCard).join('') || `<div class="empty">${NOT_FOUND}</div>`}</div></section>`; }
   if (page === 'contacts') { const arr = contacts().filter(c => hay(c).includes(query.toLowerCase())); html = `<div class="notice">「연락처 등록」에서 명함 사진을 업로드하면 판테온 봇이 내용을 자동으로 입력하고, 명함 이미지도 함께 저장합니다. 거래처 담당자는 회사에 연결되어 회사 상세의 「등록된 담당자」에도 표시됩니다.</div><section class="panel"><div class="panel-head"><div class="panel-title">연락처 <small>CONTACTS</small></div><span class="nav-count">${query ? arr.length + ' / ' : ''}${contacts().length}</span></div><form class="table-tools local-form" id="local-form" role="search"><input class="local-search" id="local-q" type="search" placeholder="${page === 'contacts' ? '이름·회사·직함·연락처' : '이름·영문 이름·별칭·브랜드명'} 검색" value="${esc(query)}" aria-label="이 목록에서 검색"><button class="button primary" type="submit">${icon('search')} 검색</button>${query ? '<button class="button" type="button" id="local-clear">초기화</button>' : ''}</form>${contactTable(arr)}</section>`; }
   if (page === 'admin') html = adminView();
+  if (page === 'studio') html = studioView();
   if (page === 'search') html = searchView();
   $('#content').innerHTML = html;
   bindContent();
@@ -565,6 +567,162 @@ function bindAdmin() {
   });
 }
 
+/* ---------- 제안서 스튜디오 (2026-10-27 · 시험 기간: 홍석진·김현우·류성열만 — DB 가 pt_studio_can 으로 막음) ----------
+   대표님 almighty-proposal-studio 의 흐름: IP 입력 → 인테이크 → (콜라보) 파트너 추천 → 리서치 → 컨셉 → 제안서 생성 → 이미지 계획 → 생성·삽입·QA
+   사람은 게이트에서만 결정하고, 단계 작업은 pt_proposal_job 대기열에 넣어 판테온 봇(서버 PC)이 처리한다. 엔티티는 판테온 pt_entity 를 쓴다 */
+let studioCan = false;
+const studio = {tab: 'projects', list: null, refs: null, jobs: [], loading: false, err: ''};
+const STAGES = ['IP 입력', '인테이크', '파트너 IP 추천', '리서치', '컨셉 설계', '제안서 생성', '이미지 계획', '생성·삽입·QA'];
+const GATES = {2: '인테이크 확정', 3: '파트너 IP 선택', 5: '컨셉 확정', 7: '이미지 수급·크레딧 승인', 8: '반려 이미지 최종 판단'};
+const JOB_OF = {3: 'partners', 4: 'research', 5: 'concepts', 6: 'build', 7: 'image_plan', 8: 'generate'};
+const pTitle = p => p.mode === 'single' ? `${p.ip_a_name} 단독` : `${p.ip_a_name} × ${p.ip_b_name || '파트너 선택 전'}`;
+const pStatus = p => p.status === 'done' ? '완료' : p.status === 'failed' ? '작업 실패' : p.status === 'working' ? `${STAGES[p.stage - 1]} 진행 중` : `${GATES[p.stage] || '확인'} 대기`;
+const pPill = p => `<span class="pill ${p.status === 'done' ? 'good' : p.status === 'failed' ? 'bad' : p.status === 'waiting' ? 'wait' : ''}">${esc(pStatus(p))}</span>`;
+const entityByName = name => { const n = normCo(name); return n.length < 2 ? null : entities().find(e => [e.name, e.en, ...e.aliases].some(x => x && normCo(x) === n)) || null; };
+
+async function loadStudio() {
+  if (studio.loading) return; studio.loading = true; studio.err = '';
+  try {
+    const [p, r, j] = await Promise.all([
+      SB.from('pt_proposal').select('*').order('updated_at', {ascending: false}),
+      SB.from('pt_proposal_ref').select('*').eq('hidden', false).order('created_at', {ascending: false}),
+      SB.from('pt_proposal_job').select('id,proposal_id,ref_id,kind,status,at,error').in('status', ['wait', 'work'])]);
+    if (p.error) throw p.error; if (r.error) throw r.error; if (j.error) throw j.error;
+    studio.list = p.data; studio.refs = r.data; studio.jobs = j.data;
+  } catch (e) { studio.err = '제안서 스튜디오를 불러오지 못했습니다: ' + (e?.message || ''); }
+  studio.loading = false; if (page === 'studio') render();
+}
+
+function studioView() {
+  if (!studio.list && !studio.err) { setTimeout(loadStudio); return '<div class="empty"><p>불러오는 중입니다…</p></div>'; }
+  const tabs = `<div class="tabs" style="margin-bottom:16px">${[['projects', '프로젝트', studio.list?.length], ['refs', '레퍼런스 라이브러리', studio.refs?.length]].map(([k, t, n]) => `<button class="tab ${studio.tab === k ? 'active' : ''}" data-studio-tab="${k}">${t}${n ? ` <span class="nav-count">${n}</span>` : ''}</button>`).join('')}</div>`;
+  if (studio.err) return tabs + `<div class="notice">${esc(studio.err)}</div>`;
+  return tabs + (studio.tab === 'refs' ? studioRefs() : studioProjects());
+}
+
+function studioProjects() {
+  const ps = studio.list, live = ps.filter(p => p.status !== 'done'), wait = ps.filter(p => p.status === 'waiting'), work = ps.filter(p => p.status === 'working');
+  const stat = (label, n, unit, bottom, hi) => `<div class="stat${hi ? ' highlight' : ''}"><div class="stat-label">${label}</div><div class="stat-value">${n}<small>${unit}</small></div><div class="stat-bottom">${bottom}</div></div>`;
+  const decide = wait.length ? wait.map(p => `<button class="alert-row" data-proposal="${p.id}"><span class="alert-symbol">${icon('warning')}</span><span class="alert-text">${esc(pTitle(p))}<small>${esc(GATES[p.stage] || '확인')} 대기 · ${esc(kst(p.updated_at))}</small></span></button>`).join('') : '<p class="panel-caption" style="padding:0 0 18px">지금 결정할 프로젝트가 없습니다.</p>';
+  const rows = ps.map(p => `<tr class="clickable" data-proposal="${p.id}" tabindex="0"><td>${esc(pTitle(p))}<small class="cell-sub">${esc(p.recipient || '수신사 미정')}</small></td><td>${p.stage}. ${esc(STAGES[p.stage - 1])}</td><td>${pPill(p)}</td><td style="white-space:nowrap">${esc(kst(p.updated_at))}</td></tr>`).join('');
+  return `<div class="stats">${stat('진행 중', live.length, '건', `전체 ${ps.length}건`)}${stat('결정 대기', wait.length, '건', '게이트에서 사람이 결정할 것')}${stat('판테온 봇 처리 중', work.length, '건', '리서치·생성 등 자동 단계')}${stat('완료', ps.length - live.length, '건', '제안서 전달 완료', true)}</div>
+  <div class="main-grid"><section class="panel"><div class="panel-head"><div class="panel-title">전체 프로젝트 <small>최근 업데이트 순</small></div></div>${ps.length ? `<div class="table-wrap"><table><thead><tr><th>프로젝트</th><th>현재 단계</th><th>상태</th><th>업데이트</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="empty"><p>아직 프로젝트가 없습니다.<br>오른쪽 위 「새 프로젝트」에서 IP 하나로 시작하세요.</p></div>`}</section>
+  <section class="panel"><div class="panel-head"><div class="panel-title">지금 결정할 것</div>${wait.length ? `<span class="alert-count">${wait.length}건</span>` : ''}</div><div class="alert-list">${decide}</div></section></div>`;
+}
+
+function studioRefs() {
+  const rs = studio.refs, st = {uploaded: '분석 대기', analyzing: '분석 중', ready: '분석 완료', failed: '분석 실패'};
+  return `<section class="panel"><div class="panel-head"><div><div class="panel-title">레퍼런스 라이브러리 <small>${rs.length}건</small></div><p class="panel-caption">팀이 만든 완성 제안서입니다. 새 제안서는 고른 레퍼런스의 구성과 이미지 배치를 그대로 따릅니다.</p></div></div>
+  ${rs.length ? `<div class="table-wrap"><table><thead><tr><th>제안서</th><th>IP</th><th>수신사</th><th>작성</th><th>분석</th><th>기본 포맷</th><th>파일</th></tr></thead><tbody>${rs.map(r => `<tr><td>${esc(r.title)}</td><td>${esc(r.ip_names || '—')}</td><td>${esc(r.recipient || '—')}</td><td>${esc(r.author || '—')}</td><td><span class="pill ${r.status === 'ready' ? 'good' : r.status === 'failed' ? 'bad' : ''}">${st[r.status] || r.status}</span></td><td>${r.is_default ? '<span class="pill good">기본</span>' : `<button class="text-btn" data-ref-default="${r.id}">기본으로 지정</button>`}</td><td><button class="text-btn" data-ref-open="${r.id}">열기 ↗</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty"><p>등록된 레퍼런스가 없습니다.<br>오른쪽 위 「레퍼런스 등록」에서 완성 제안서 PDF를 올려 주세요.</p></div>'}</section>`;
+}
+
+function bindStudio() {
+  $$('[data-studio-tab]').forEach(b => b.onclick = () => { studio.tab = b.dataset.studioTab; render(); });
+  $$('[data-proposal]').forEach(b => { b.onclick = () => openProposal(b.dataset.proposal); b.onkeydown = e => { if (e.key === 'Enter') openProposal(b.dataset.proposal); }; });
+  $$('[data-ref-open]').forEach(b => b.onclick = async () => { const r = studio.refs.find(x => x.id === b.dataset.refOpen); const { data, error } = await SB.storage.from('pt-studio').createSignedUrl(r.file_path, 600); if (error) return toast('파일을 열지 못했습니다.'); window.open(data.signedUrl, '_blank', 'noopener'); });
+  $$('[data-ref-default]').forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    const old = studio.refs.filter(r => r.is_default).map(r => r.id);
+    if (old.length) await SB.from('pt_proposal_ref').update({is_default: false}).in('id', old);
+    const { error } = await SB.from('pt_proposal_ref').update({is_default: true}).eq('id', b.dataset.refDefault);
+    if (error) { b.disabled = false; return toast('기본 포맷을 지정하지 못했습니다: ' + error.message); }
+    studio.refs = null; studio.list = null; await loadStudio(); toast('기본 포맷으로 지정했습니다.');
+  });
+}
+
+async function proposalEvent(id, message) { await SB.from('pt_proposal_event').insert({proposal_id: id, message}); }
+
+async function openProposal(id, keep) {
+  const p = studio.list?.find(x => x.id === id); if (!p) return;
+  activeDetail = 'p:' + id;
+  const stages = STAGES.map((s, i) => { const n = i + 1, skip = p.mode === 'single' && n === 3, cls = skip ? 'skip' : n < p.stage || p.status === 'done' ? 'done' : n === p.stage ? 'now' : ''; return `<li class="${cls}"><span>${n}</span>${esc(s)}${GATES[n] && !skip ? ` <small>· 결정 ${esc(GATES[n])}</small>` : ''}${skip ? ' <small>· 단독 제안은 건너뜀</small>' : ''}</li>`; }).join('');
+  const job = studio.jobs.find(j => j.proposal_id === id);
+  const ref = studio.refs?.find(r => r.id === p.ref_id);
+  const ent = (eid, name) => eid && byId(eid) ? `<button class="ref" type="button" data-open="${eid}">${esc(name)}</button>` : esc(name || '—');
+  let action = '';
+  if (p.status === 'waiting' && p.stage === 2) action = `<div class="detail-block"><h3>결정 · 인테이크 확정</h3><p>아래 내용으로 시작합니다. 확정하면 ${p.mode === 'collab' && !p.ip_b_name ? '판테온 봇이 파트너 IP 후보를 추천합니다.' : '판테온 봇이 IP 리서치를 시작합니다.'}</p><div class="drawer-actions"><button class="button primary" id="intake-ok">인테이크 확정</button><button class="button" id="intake-edit">내용 수정</button></div></div>`;
+  else if (p.status === 'working') action = `<div class="detail-block"><h3>진행 중 · ${esc(STAGES[p.stage - 1])}</h3><p>판테온 봇 작업 대기열에 들어가 있습니다${job ? ` (요청 ${esc(kst(job.at))})` : ''}. 끝나면 다음 결정이 여기에 표시됩니다.</p></div>`;
+  else if (p.status === 'failed') action = `<div class="detail-block"><h3>작업 실패</h3><p>${esc(p.data?.error || '판테온 봇이 작업을 끝내지 못했습니다.')}</p><div class="drawer-actions"><button class="button primary" id="job-retry">다시 시도</button></div></div>`;
+  else if (p.status === 'waiting') action = `<div class="detail-block"><h3>결정 · ${esc(GATES[p.stage] || '확인')}</h3><p>판테온 봇이 준비한 결과를 확인하고 결정해 주세요.</p></div>`;
+  showDrawer(`<span class="entity-avatar">${esc(p.ip_a_name.slice(0, 2))}</span><h2>${esc(pTitle(p))}</h2><span class="detail-sub">${p.mode === 'single' ? '단독 제안' : '콜라보 제안'} · ${esc(p.recipient || '수신사 미정')}</span>
+  <div class="detail-block"><h3>기본 정보</h3><div class="detail-row"><span>IP</span><b>${ent(p.ip_a_id, p.ip_a_name)}</b></div>${p.mode === 'collab' ? `<div class="detail-row"><span>파트너 IP</span><b>${p.ip_b_name ? ent(p.ip_b_id, p.ip_b_name) : '판테온 봇 추천 후 선택'}</b></div>` : ''}<div class="detail-row"><span>수신사</span><b>${esc(p.recipient || '—')}</b></div><div class="detail-row"><span>레퍼런스 포맷</span><b>${esc(ref?.title || '—')}</b></div><div class="detail-row"><span>현재 상태</span><b>${pPill(p)}</b></div>${p.note ? `<p>${esc(p.note)}</p>` : ''}</div>
+  ${action}<div class="detail-block"><h3>진행 단계</h3><ol class="stage-list">${stages}</ol></div><div class="detail-block"><h3>활동 기록</h3><div id="proposal-events"><p>불러오는 중입니다…</p></div></div>`, keep);
+  $('#intake-edit')?.addEventListener('click', () => studioProjectModal(p));
+  $('#intake-ok')?.addEventListener('click', async () => {
+    $('#intake-ok').disabled = true;
+    const next = p.mode === 'collab' && !p.ip_b_name ? 3 : 4;
+    const { error } = await SB.from('pt_proposal').update({stage: next, status: 'working'}).eq('id', p.id);
+    if (error) { $('#intake-ok').disabled = false; return toast('확정하지 못했습니다: ' + error.message); }
+    await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: JOB_OF[next], input: {mode: p.mode, ip_a: p.ip_a_name, ip_b: p.ip_b_name, recipient: p.recipient, ref_id: p.ref_id}});
+    await proposalEvent(p.id, `인테이크를 확정했습니다 → ${STAGES[next - 1]} 시작`);
+    studio.list = null; await loadStudio(); openProposal(p.id, true); toast('인테이크를 확정했습니다.');
+  });
+  $('#job-retry')?.addEventListener('click', async () => {
+    $('#job-retry').disabled = true;
+    await SB.from('pt_proposal').update({status: 'working'}).eq('id', p.id);
+    await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: JOB_OF[p.stage] || 'research', input: {retry: true}});
+    await proposalEvent(p.id, `${STAGES[p.stage - 1]} 작업을 다시 요청했습니다`);
+    studio.list = null; await loadStudio(); openProposal(p.id, true);
+  });
+  const { data } = await SB.from('pt_proposal_event').select('at,actor_name,message').eq('proposal_id', id).order('at', {ascending: false}).limit(50);
+  const box = $('#proposal-events'); if (!box || activeDetail !== 'p:' + id) return;
+  box.innerHTML = data?.length ? `<ol class="owner-hist">${data.map(e => `<li><time>${esc(kst(e.at))}</time><span>${esc(e.message)}<br><small>${esc(e.actor_name || '판테온 봇')}</small></span></li>`).join('')}</ol>` : '<p>기록이 없습니다.</p>';
+}
+
+function studioProjectModal(p) {
+  const refs = studio.refs || [], def = p?.ref_id || refs.find(r => r.is_default)?.id || refs[0]?.id || '';
+  const names = entities().filter(e => !e.hidden).map(e => `<option value="${esc(e.name)}">`).join('');
+  modal(`<form id="sp-form"><h2>${p ? '인테이크 수정' : '새 제안서 프로젝트'}</h2><p>IP 하나로 시작합니다. 판테온에 등록된 엔티티를 고르면 담당자·연락처가 함께 연결됩니다.</p><datalist id="sp-ents">${names}</datalist>
+  <label>IP *<input id="sp-a" list="sp-ents" required maxlength="80" value="${esc(p?.ip_a_name || '')}" placeholder="예: 에스파"></label><small class="atnote" id="sp-a-note"></small>
+  <div class="field"><span class="flabel">제안 방식</span><div class="seg-pick"><label><input type="radio" name="sp-mode" value="collab" ${p?.mode !== 'single' ? 'checked' : ''}> 콜라보 제안 <small>IP A × IP B</small></label><label><input type="radio" name="sp-mode" value="single" ${p?.mode === 'single' ? 'checked' : ''}> 단독 제안 <small>IP 하나</small></label></div></div>
+  <div id="sp-b-field"><label>파트너 IP<input id="sp-b" list="sp-ents" maxlength="80" value="${esc(p?.ip_b_name || '')}" placeholder="비워 두면 판테온 봇이 후보를 추천합니다"></label><small class="atnote" id="sp-b-note"></small></div>
+  <label>수신사<input id="sp-to" list="sp-ents" maxlength="80" value="${esc(p?.recipient || '')}" placeholder="예: SM엔터테인먼트"></label>
+  <label>레퍼런스 포맷<select id="sp-ref">${refs.length ? refs.map(r => `<option value="${r.id}" ${r.id === def ? 'selected' : ''}>${esc(r.title)}${r.is_default ? ' (기본)' : ''}</option>`).join('') : '<option value="">등록된 레퍼런스 없음</option>'}</select></label>
+  <label>메모<input id="sp-note" maxlength="300" value="${esc(p?.note || '')}" placeholder="예: 최초 제안 · 강조색 보라 · 팝업 중심"></label>
+  <div id="sp-error" style="color:#ba775e;margin-top:14px;font-size:11px" role="alert"></div><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="submit">${p ? '변경 저장' : '프로젝트 만들기'}</button></div></form>`);
+  const sync = () => { const collab = $('input[name=sp-mode]:checked').value === 'collab'; $('#sp-b-field').hidden = !collab; };
+  $$('input[name=sp-mode]').forEach(r => r.onchange = sync); sync();
+  const note = (inp, out) => { const e = entityByName($(inp).value); $(out).innerHTML = $(inp).value.trim() ? (e ? `판테온 엔티티 「${esc(e.name)}」(${esc(e.type)})와 연결됩니다${contactsOf(e).length ? ` · 등록된 담당자 ${contactsOf(e).length}명` : ''}` : '판테온에 없는 IP입니다. 이름 그대로 진행합니다.') : ''; };
+  ['#sp-a', '#sp-b'].forEach((s, i) => { $(s).oninput = () => note(s, i ? '#sp-b-note' : '#sp-a-note'); note(s, i ? '#sp-b-note' : '#sp-a-note'); });
+  $('#sp-form').onsubmit = async ev => {
+    ev.preventDefault();
+    const a = $('#sp-a').value.trim(), mode = $('input[name=sp-mode]:checked').value, b = mode === 'collab' ? $('#sp-b').value.trim() : '';
+    if (!a) { $('#sp-error').textContent = 'IP를 입력해 주세요.'; return; }
+    const ea = entityByName(a), eb = b ? entityByName(b) : null;
+    const row = {mode, ip_a_name: ea?.name || a, ip_a_id: ea?.id || null, ip_b_name: eb?.name || b, ip_b_id: eb?.id || null, recipient: $('#sp-to').value.trim(), ref_id: $('#sp-ref').value || null, note: $('#sp-note').value.trim()};
+    const btn = $('#sp-form [type=submit]'); btn.disabled = true;
+    const q = p ? SB.from('pt_proposal').update(row).eq('id', p.id).select().single() : SB.from('pt_proposal').insert({...row, stage: 2, status: 'waiting'}).select().single();
+    const { data, error } = await q;
+    if (error) { btn.disabled = false; $('#sp-error').textContent = '저장하지 못했습니다: ' + error.message; return; }
+    await proposalEvent(data.id, p ? '인테이크 내용을 수정했습니다' : `프로젝트를 만들었습니다 (${mode === 'single' ? '단독' : '콜라보'} 제안)`);
+    $('#modal').close(); studio.list = null; await loadStudio(); openProposal(data.id); toast(p ? '인테이크를 수정했습니다.' : '프로젝트를 만들었습니다.');
+  };
+}
+
+function studioRefModal() {
+  modal(`<form id="sr-form"><h2>레퍼런스 등록</h2><p>팀이 만든 완성 제안서(PDF·PPTX)를 올립니다. 판테온 봇이 페이지 구성과 이미지 배치를 분석해 새 제안서의 포맷으로 씁니다.</p>
+  <label>파일 * (PDF·PPTX, 100MB 이하)<input id="sr-file" type="file" accept=".pdf,.pptx,application/pdf" required></label>
+  <label>제안서 이름 *<input id="sr-title" required maxlength="120" placeholder="예: 바비 × 장원영 IP 콜라보레이션 제안서"></label>
+  <label>IP<input id="sr-ip" maxlength="120" placeholder="예: 바비, 장원영"></label>
+  <label>수신사<input id="sr-to" maxlength="80"></label>
+  <label>작성자<input id="sr-author" maxlength="40" placeholder="예: 김소정 매니저"></label>
+  <div id="sr-error" style="color:#ba775e;margin-top:14px;font-size:11px" role="alert"></div><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="submit">등록</button></div></form>`);
+  $('#sr-file').onchange = () => { const f = $('#sr-file').files[0]; if (f && !$('#sr-title').value) $('#sr-title').value = f.name.replace(/\.(pdf|pptx)$/i, ''); };
+  $('#sr-form').onsubmit = async ev => {
+    ev.preventDefault();
+    const f = $('#sr-file').files[0]; if (!f) return;
+    if (f.size > 100e6) { $('#sr-error').textContent = '100MB 이하 파일을 선택해 주세요.'; return; }
+    const btn = $('#sr-form [type=submit]'); btn.disabled = true; btn.textContent = '업로드하는 중…';
+    const ext = (f.name.match(/\.(pdf|pptx)$/i)?.[1] || 'pdf').toLowerCase(), path = `refs/${today()}/${uid()}.${ext}`;
+    const up = await SB.storage.from('pt-studio').upload(path, f, {contentType: f.type || (ext === 'pdf' ? 'application/pdf' : 'application/octet-stream'), upsert: false});
+    if (up.error) { btn.disabled = false; btn.textContent = '등록'; $('#sr-error').textContent = '파일을 업로드하지 못했습니다: ' + up.error.message; return; }
+    const { data, error } = await SB.from('pt_proposal_ref').insert({title: $('#sr-title').value.trim(), ip_names: $('#sr-ip').value.trim(), recipient: $('#sr-to').value.trim(), author: $('#sr-author').value.trim(), file_path: path, file_size: f.size, is_default: !(studio.refs || []).length}).select().single();
+    if (error) { btn.disabled = false; btn.textContent = '등록'; $('#sr-error').textContent = '등록하지 못했습니다: ' + error.message; return; }
+    await SB.from('pt_proposal_job').insert({ref_id: data.id, kind: 'analyze_reference', input: {file_path: path}});
+    $('#modal').close(); studio.refs = null; studio.list = null; await loadStudio(); toast('레퍼런스를 등록했습니다.');
+  };
+}
+
 /* ---------- 내보내기 · 이동 ---------- */
 function download(name, rows) {
   const csv = rows.map(r => r.map(v => '"' + String(v ?? '').replace(/^[=+@-]/, "'").replace(/"/g, '""') + '"').join(',')).join('\r\n');
@@ -587,7 +745,7 @@ function bindContent() {
   $$('[data-stat]').forEach(b => { const open = () => { const v = b.dataset.stat; if (v === 'contacts') return go('contacts'); go('entities'); filter = v; render(); }; b.onclick = open; b.onkeydown = ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); open(); } }; });
   $$('[data-detail]').forEach(b => { b.onclick = () => openDetail(b.dataset.detail); b.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(b.dataset.detail); } }; });
   $('#admin-export')?.addEventListener('click', exportCSV);
-  bindAsk(); if (page === 'admin') bindAdmin();
+  bindAsk(); if (page === 'admin') bindAdmin(); if (page === 'studio') bindStudio();
 }
 
 /* ---------- 로그인 ---------- */
@@ -631,7 +789,8 @@ async function start() {
   if (!session) return loginScreen();
   if (RECOVERY) return recoveryScreen();
   me = session.user;
-  const [can, adm, mem] = await Promise.all([SB.rpc('pt_can_use'), SB.rpc('pt_is_admin'), SB.from('hd_member').select('name,role').eq('id', me.id).maybeSingle()]);
+  const [can, adm, mem, sc] = await Promise.all([SB.rpc('pt_can_use'), SB.rpc('pt_is_admin'), SB.from('hd_member').select('name,role').eq('id', me.id).maybeSingle(), SB.rpc('pt_studio_can')]);
+  studioCan = !sc.error && !!sc.data;            // 제안서 스튜디오 — 시험 기간 3명만 (함수가 없거나 거절이면 숨김)
   if (!can.data) { await SB.auth.signOut(); return loginScreen('헤임달에서 아직 승인되지 않은 계정입니다. 승인 후 다시 로그인해 주세요.'); }
   isAdmin = !!adm.data; myName = mem.data?.name || me.email;
   $('#login').hidden = true;
@@ -664,7 +823,7 @@ function searchGo() {          // Enter — 결과가 하나(또는 이름이 �
   s.addEventListener('compositionstart', () => { composing = true; });
   s.addEventListener('compositionend', () => { composing = false; if (want) { want = false; searchGo(); } });
   s.addEventListener('keydown', e => { if (e.key !== 'Enter') return; e.preventDefault(); if (composing || e.isComposing || e.keyCode === 229) { want = true; return; } searchGo(); }); }
-$('#add-btn').onclick = () => page === 'contacts' ? contactModal() : entityModal();
+$('#add-btn').onclick = () => page === 'contacts' ? contactModal() : page === 'studio' ? (studio.tab === 'refs' ? studioRefModal() : studioProjectModal()) : entityModal();
 $('#export-btn').onclick = exportCSV;
 $('#notification').onclick = () => go('home');
 $('.top-avatar').onclick = () => $('#profile').click();      // 폰에서는 왼쪽 메뉴가 아래 막대가 되어 프로필이 위 오른쪽 사진으로
