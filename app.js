@@ -631,7 +631,10 @@ const refJob = r => studio.jobs.find(j => j.ref_id === r.id && j.kind === 'analy
 const leftText = s => s >= 60 ? `약 ${Math.floor(s / 60)}분 ${String(Math.round(s % 60)).padStart(2, '0')}초 남음` : s > 0 ? `약 ${Math.round(s)}초 남음` : '곧 끝납니다';
 function refProg(r) {
   const j = refJob(r), g = j?.result;
-  if (!j || j.status === 'wait' || !g) return `<span class="ref-prog" data-ref-prog="${r.id}"><span class="pill">분석 대기</span><small>판테온 봇 차례를 기다리는 중</small></span>`;
+  if (!j || j.status === 'wait' || !g) {
+    const long = j && Date.now() - Date.parse(j.at) > 120000;
+    return `<span class="ref-prog" data-ref-prog="${r.id}"><span class="pill">분석 대기</span><small>판테온 봇 차례를 기다리는 중<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></small>${long ? '<small class="warn">2분 넘게 대기 중입니다. DB 관리에서 판테온 봇을 재시작해 주세요.</small>' : ''}</span>`;
+  }
   const left = Math.max(0, g.eta - (Date.now() - Date.parse(g.at)) / 1000);
   return `<span class="ref-prog" data-ref-prog="${r.id}" data-eta="${g.eta}" data-at="${esc(g.at)}"><span class="row"><span class="bar" role="progressbar" aria-valuenow="${g.progress}" aria-valuemin="0" aria-valuemax="100"><i style="width:${g.progress}%"></i></span><b>${g.progress}%</b></span><small>${esc(g.step || '분석 중')}</small><small class="eta">${leftText(left)}</small></span>`;
 }
