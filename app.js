@@ -749,13 +749,13 @@ async function openProposal(id, keep) {
   const d = p.data || {};
   let action = '';
   if (p.status === 'waiting' && p.stage === 2) action = `<div class="detail-block"><h3>결정 · 인테이크 확정</h3><p>아래 내용으로 시작합니다. 확정하면 ${p.mode === 'collab' && !p.ip_b_name ? '판테온 봇이 파트너 IP 후보를 추천합니다.' : '판테온 봇이 IP 리서치를 시작합니다.'}</p><div class="drawer-actions"><button class="button primary" id="intake-ok">인테이크 확정</button><button class="button" id="intake-edit">내용 수정</button></div></div>`;
-  else if (p.status === 'working' && p.stage >= 6) action = `<div class="detail-block"><h3>진행 중 · ${esc(STAGES[p.stage - 1])}</h3><p>제안서 생성 단계는 준비 중입니다. 완성되면 여기서 이어서 진행됩니다.</p></div>`;
+  else if (p.status === 'working' && p.stage >= 7) action = `<div class="detail-block"><h3>진행 중 · ${esc(STAGES[p.stage - 1])}</h3><p>이미지 수급 단계는 준비 중입니다. 완성되면 여기서 이어서 진행됩니다. 그동안 아래 초안을 먼저 확인하실 수 있습니다.</p></div>`;
   else if (p.status === 'working') action = `<div class="detail-block"><h3>진행 중 · ${esc(STAGES[p.stage - 1])}</h3>${jobProg(job)}</div>`;
   else if (p.status === 'failed') action = `<div class="detail-block"><h3>작업 실패</h3><p>${esc(d.error || '판테온 봇이 작업을 끝내지 못했습니다.')}</p><div class="drawer-actions"><button class="button primary" id="job-retry">다시 시도</button></div></div>`;
   else if (p.status === 'waiting' && p.stage === 3 && d.partners) action = partnersPanel(p);
   else if (p.status === 'waiting' && p.stage === 5 && d.concepts) action = conceptsPanel(p);
   else if (p.status === 'waiting') action = `<div class="detail-block"><h3>결정 · ${esc(GATES[p.stage] || '확인')}</h3><p>판테온 봇이 준비한 결과를 확인하고 결정해 주세요.</p></div>`;
-  const done = [d.concept_selected && `<div class="detail-block"><h3>확정한 컨셉</h3>${conceptCard(d.concept_selected)}</div>`, d.research && researchBlock(d.research)].filter(Boolean).join('');
+  const done = [d.build && `<div class="detail-block"><h3>제안서 초안 v${d.build.version}</h3><div class="detail-row"><span>분량</span><b>${d.build.slides}쪽 · 이미지 자리 ${d.build.images}개</b></div><p>이미지 자리는 회색 상자로 비워 두었습니다. 이미지 수급 단계에서 채웁니다.</p><div class="drawer-actions">${d.build.pdf ? `<button class="button primary" data-file="${esc(d.build.pdf)}">PDF 보기</button>` : ''}<button class="button" data-file="${esc(d.build.pptx)}" data-dl="1">PPTX 받기</button></div></div>`, d.concept_selected && `<div class="detail-block"><h3>확정한 컨셉</h3>${conceptCard(d.concept_selected)}</div>`, d.research && researchBlock(d.research)].filter(Boolean).join('');
   showDrawer(`<span class="entity-avatar">${esc(p.ip_a_name.slice(0, 2))}</span><h2>${esc(pTitle(p))}</h2><span class="detail-sub">${p.mode === 'single' ? '단독 제안' : '콜라보 제안'} · ${esc(p.recipient || '수신사 미정')}</span>
   <div class="detail-block"><h3>기본 정보</h3><div class="detail-row"><span>IP</span><b>${ent(p.ip_a_id, p.ip_a_name)}</b></div>${p.mode === 'collab' ? `<div class="detail-row"><span>파트너 IP</span><b>${p.ip_b_name ? ent(p.ip_b_id, p.ip_b_name) : '판테온 봇 추천 후 선택'}</b></div>` : ''}<div class="detail-row"><span>수신사</span><b>${esc(p.recipient || '—')}</b></div><div class="detail-row"><span>레퍼런스 포맷</span><b>${esc(ref?.title || '—')}</b></div><div class="detail-row"><span>현재 상태</span><b>${pPill(p)}</b></div>${p.note ? `<p>${esc(p.note)}</p>` : ''}</div>
   ${action}${done}<div class="detail-block"><h3>진행 단계</h3><ol class="stage-list">${stages}</ol></div><div class="detail-block"><h3>활동 기록</h3><div id="proposal-events"><p>불러오는 중입니다…</p></div></div>`, keep);
@@ -775,6 +775,11 @@ async function openProposal(id, keep) {
   $('#job-retry')?.addEventListener('click', () => {
     $('#job-retry').disabled = true;
     go({status: 'working', data: {...d, error: null}}, {kind: JOB_OF[p.stage] || 'research', input: {retry: true}}, `${STAGES[p.stage - 1]} 작업을 다시 요청했습니다`);
+  });
+  $$('#drawer [data-file]').forEach(b => b.onclick = async () => {
+    const { data: u, error } = await SB.storage.from('pt-studio').createSignedUrl(b.dataset.file, 600, b.dataset.dl ? {download: `${pTitle(p)}_v${d.build.version}.pptx`} : undefined);
+    if (error) return toast('파일을 열지 못했습니다.');
+    window.open(u.signedUrl, '_blank', 'noopener');
   });
   // 3 파트너 카드 고르기 · 다른 후보 · 카테고리 바꾸기
   $$('#drawer [data-pick]').forEach(b => b.onclick = () => {
@@ -797,7 +802,7 @@ async function openProposal(id, keep) {
     go({stage: 6, status: 'working', data: {...d, concept_selected: c}}, {kind: 'build', input: {}}, `컨셉 「${c.name}」을(를) 확정했습니다 → 제안서 생성`, '컨셉을 확정했습니다.');
   });
   clearTimeout(propPoll);
-  if (p.status === 'working' && p.stage < 6) propPoll = setTimeout(() => pollProposal(p.id), 3000);
+  if (p.status === 'working' && p.stage < 7) propPoll = setTimeout(() => pollProposal(p.id), 3000);
   const { data } = await SB.from('pt_proposal_event').select('at,actor_name,message').eq('proposal_id', id).order('at', {ascending: false}).limit(50);
   const box = $('#proposal-events'); if (!box || activeDetail !== 'p:' + id) return;
   box.innerHTML = data?.length ? `<ol class="owner-hist">${data.map(e => `<li><time>${esc(kst(e.at))}</time><span>${esc(e.message)}<br><small>${esc(e.actor_name || '판테온 봇')}</small></span></li>`).join('')}</ol>` : '<p>기록이 없습니다.</p>';
