@@ -86,6 +86,17 @@ a.src{display:inline-block;font-size:10px;color:#285541;background:#edf4ef;borde
 .key-copy{font-weight:600;color:#285541!important}.axes{margin:6px 0;padding-left:18px;font-size:11px;color:#5f6b63;line-height:1.6}.formats{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.pcard p.sub-label{margin:8px 0 0;font-size:10px;font-weight:600;color:#9aa29d;letter-spacing:.02em}.why{display:block;color:#7d877f;font-size:11px;margin-top:6px}
 details.research{border-top:1px solid #eef1ec;padding:8px 0}details.research summary{cursor:pointer;font-size:12px}details.research summary small{color:#9aa29d;font-size:10px;margin-left:4px}
 ul.facts{margin:4px 0 8px;padding-left:18px;font-size:11px;line-height:1.7;color:#3d4a42}
+.accent-pick{display:flex;gap:14px;align-items:center;margin-top:8px;flex-wrap:wrap}.accent-pick label{display:flex!important;align-items:center;gap:6px;margin:0!important;font-size:12px;color:#283a2f}
+.accent-pick input[type=color],.acc-row input[type=color]{width:34px;height:24px;padding:0;border:1px solid #dde4d9;border-radius:4px;background:#fff;cursor:pointer}
+.acc-row{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}.acc-row .swatch{margin:0}
+.iboard{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.icard{border:1px solid #e3e8e1;border-radius:8px;overflow:hidden;background:#fff;display:flex;flex-direction:column}
+.ithumb{aspect-ratio:16/10;background:#eeefec center/cover no-repeat;display:grid;place-items:center;text-align:center;font-size:10px;color:#9aa29d}
+.ibody{padding:8px 10px;display:flex;flex-direction:column;gap:4px}.ibody small{font-size:10px;color:#7d877f;line-height:1.5}.ibody small.warn{color:#b4513a}
+.ihead{display:flex;justify-content:space-between;align-items:center}.ihead b{font-size:11px;color:#283a2f}
+.ibody .prompt{font-size:10px;color:#5f6b63;line-height:1.5;word-break:break-word}
+label.text-btn.up{cursor:pointer;font-size:11px;align-self:flex-start;margin-top:2px}
+@media (max-width:600px){.iboard{grid-template-columns:1fr}}
 td.wrap-cell{white-space:normal;min-width:180px;line-height:1.5}
 .ref-prog{display:inline-flex;flex-direction:column;gap:3px;width:130px}.ref-prog small{font-size:10px;color:#9aa29d;line-height:1.35}.ref-prog .row{display:flex;align-items:center;gap:8px}.ref-prog .row .bar{flex:1}
 .ref-prog .bar{display:block;height:6px;border-radius:99px;background:#edf1ec;overflow:hidden}.ref-prog .bar i{display:block;height:100%;background:#285541;border-radius:99px;transition:width .8s ease}
