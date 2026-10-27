@@ -231,25 +231,27 @@ function findMember(nm) {
   const t = flatName(nm); if (t.length < 2) return null;
   return (MEMBERS || []).find(m => { const x = flatName(m.name); return x && (t.includes(x) || x.includes(t)); }) || null;
 }
-function ownersInput(host, initial) {
-  host.innerHTML = `<div class="atin"><input type="text" list="pt-mnames" placeholder="이름 입력 후 Enter"></div><small class="atnote">맨 앞 사람이 <b>주 담당자</b>입니다. 이름을 클릭하면 주 담당자로 지정됩니다. <span class="err">빨간 이름</span>은 헤임달에 등록되지 않은 사람입니다.</small>`;
+const memberSub = m => [...new Set([m.company, m.dept].filter(Boolean))].join(' · ');
+// 이름 칩 입력 — 이름 입력 후 Enter. 찾으면 정식 이름으로 맞추고, 못 찾으면 빨간 칩
+function chipInput(host, initial, o) {
+  host.innerHTML = `<div class="atin"><input type="text" list="${o.list}" placeholder="이름 입력 후 Enter"></div><small class="atnote">${o.note}</small>`;
   const box = host.querySelector('.atin'), inp = host.querySelector('input');
   let vals = (initial || []).map(x => (x || '').trim()).filter(Boolean);
   const draw = () => {
     [...box.querySelectorAll('.atc')].forEach(x => x.remove());
     vals.forEach((v, i) => {
-      const hit = findMember(v), c = document.createElement('span');
-      c.className = 'atc' + (hit ? '' : ' out') + (i === 0 ? ' main' : '');
-      c.title = hit ? [...new Set([hit.name, hit.company, hit.dept].filter(Boolean))].join(' · ') : '헤임달에 등록되지 않은 사람입니다';
-      c.innerHTML = `${i === 0 ? '<em>주 담당자</em>' : ''}<span>${esc(v)}</span>${hit && (hit.company || hit.dept) ? `<small>${esc([...new Set([hit.company, hit.dept].filter(Boolean))].join(' · '))}</small>` : ''}<button type="button" aria-label="${esc(v)} 삭제">×</button>`;
+      const hit = o.find(v), c = document.createElement('span'), main = o.main && i === 0, sub = hit ? o.sub(hit) : '';
+      c.className = 'atc' + (hit ? '' : ' out') + (main ? ' main' : '');
+      c.title = o.title(hit, v);
+      c.innerHTML = `${main ? `<em>${o.main}</em>` : ''}<span>${esc(v)}</span>${o.badge ? `<em>${o.badge(hit)}</em>` : ''}${sub ? `<small>${esc(sub)}</small>` : ''}<button type="button" aria-label="${esc(v)} 삭제">×</button>`;
       c.querySelector('button').onclick = ev => { ev.stopPropagation(); vals.splice(i, 1); draw(); };
-      c.onclick = () => { if (i) { vals.unshift(vals.splice(i, 1)[0]); draw(); } };
+      if (o.main) c.onclick = () => { if (i) { vals.unshift(vals.splice(i, 1)[0]); draw(); } };
       box.insertBefore(c, inp);
     });
   };
   const add = t => {
     t = (t || '').replace(/,+$/, '').trim(); if (!t) return;
-    const hit = findMember(t); if (hit) t = hit.name;          // 정식 이름으로 맞춤 (「김성효 팀장」 → 「김성효」)
+    const hit = o.find(t); if (hit) t = hit.name;          // 정식 이름으로 맞춤 (「김성효 팀장」 → 「김성효」)
     if (!vals.some(v => flatName(v) === flatName(t))) vals.push(t);
     inp.value = ''; draw();
   };
@@ -265,9 +267,12 @@ function ownersInput(host, initial) {
   };
   inp.onblur = () => { if (!composing) add(inp.value); };
   inp.onpaste = e => { const t = (e.clipboardData || window.clipboardData).getData('text') || ''; if (/[,\n]/.test(t)) { e.preventDefault(); t.split(/[,\n]/).forEach(add); } };
-  draw(); loadMembers().then(draw).catch(() => {});
+  draw(); o.load?.().then(draw).catch(() => {});
   return { value() { add(inp.value); return vals.slice(); } };
 }
+const memberChips = (host, initial, o) => chipInput(host, initial, {list: 'pt-mnames', find: findMember, sub: memberSub, load: loadMembers,
+  title: (hit) => hit ? [hit.name, memberSub(hit)].filter(Boolean).join(' · ') : '헤임달에 등록되지 않은 사람입니다', ...o});
+const ownersInput = (host, initial) => memberChips(host, initial, {main: '주 담당자', note: '맨 앞 사람이 <b>주 담당자</b>입니다. 이름을 클릭하면 주 담당자로 지정됩니다. <span class="err">빨간 이름</span>은 헤임달에 등록되지 않은 사람입니다.'});
 const ownersLine = owners => owners.length ? owners.map((o, i) => `${i === 0 ? '<span class="main-badge">주 담당자</span> ' : ''}${esc(o)}`).join(' · ') : '—';
 
 /* ---------- 창 ---------- */
@@ -578,6 +583,11 @@ const JOB_OF = {3: 'partners', 4: 'research', 5: 'concepts', 6: 'build', 7: 'ima
 const pTitle = p => p.mode === 'single' ? `${p.ip_a_name} 단독` : `${p.ip_a_name} × ${p.ip_b_name || '파트너 선택 전'}`;
 const pStatus = p => p.status === 'done' ? '완료' : p.status === 'failed' ? '작업 실패' : p.status === 'working' ? `${STAGES[p.stage - 1]} 진행 중` : `${GATES[p.stage] || '확인'} 대기`;
 const pPill = p => `<span class="pill ${p.status === 'done' ? 'good' : p.status === 'failed' ? 'bad' : p.status === 'waiting' ? 'wait' : ''}">${esc(pStatus(p))}</span>`;
+const contactPoint = e => e ? '컨택포인트 있음' : '컨택포인트 없음';
+const ipChips = (host, initial, list) => chipInput(host, initial, {list, find: entityByName, badge: contactPoint,
+  sub: e => [e.type, contactsOf(e).length ? `등록된 담당자 ${contactsOf(e).length}명` : ''].filter(Boolean).join(' · '),
+  title: e => e ? `판테온 엔티티 「${e.name}」` : '판테온 엔티티에 등록되지 않은 IP입니다',
+  note: '판테온 엔티티에 등록된 IP는 <b>컨택포인트 있음</b>, <span class="err">빨간 칩</span>은 등록되지 않은 IP입니다.'});
 const entityByName = name => { const n = normCo(name); return n.length < 2 ? null : entities().find(e => [e.name, e.en, ...e.aliases].some(x => x && normCo(x) === n)) || null; };
 
 async function loadStudio() {
@@ -682,7 +692,7 @@ function studioProjectModal(p) {
   <div id="sp-error" style="color:#ba775e;margin-top:14px;font-size:11px" role="alert"></div><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="submit">${p ? '변경 저장' : '프로젝트 만들기'}</button></div></form>`);
   const sync = () => { const collab = $('input[name=sp-mode]:checked').value === 'collab'; $('#sp-b-field').hidden = !collab; };
   $$('input[name=sp-mode]').forEach(r => r.onchange = sync); sync();
-  const note = (inp, out) => { const e = entityByName($(inp).value); $(out).innerHTML = $(inp).value.trim() ? (e ? `판테온 엔티티 「${esc(e.name)}」(${esc(e.type)})와 연결됩니다${contactsOf(e).length ? ` · 등록된 담당자 ${contactsOf(e).length}명` : ''}` : '판테온에 없는 IP입니다. 이름 그대로 진행합니다.') : ''; };
+  const note = (inp, out) => { const e = entityByName($(inp).value); $(out).innerHTML = $(inp).value.trim() ? (e ? `<b>컨택포인트 있음</b> · 판테온 엔티티 「${esc(e.name)}」(${esc(e.type)})와 연결됩니다${contactsOf(e).length ? ` · 등록된 담당자 ${contactsOf(e).length}명` : ''}` : '<span class="err">컨택포인트 없음</span> · 판테온 엔티티에 등록되지 않은 IP입니다. 이름 그대로 진행합니다.') : ''; };
   ['#sp-a', '#sp-b'].forEach((s, i) => { $(s).oninput = () => note(s, i ? '#sp-b-note' : '#sp-a-note'); note(s, i ? '#sp-b-note' : '#sp-a-note'); });
   $('#sp-form').onsubmit = async ev => {
     ev.preventDefault();
@@ -703,10 +713,13 @@ function studioRefModal() {
   modal(`<form id="sr-form"><h2>레퍼런스 등록</h2><p>팀이 만든 완성 제안서(PDF·PPTX)를 올립니다. 판테온 봇이 페이지 구성과 이미지 배치를 분석해 새 제안서의 포맷으로 씁니다.</p>
   <label>파일 * (PDF·PPTX, 100MB 이하)<input id="sr-file" type="file" accept=".pdf,.pptx,application/pdf" required></label>
   <label>제안서 이름 *<input id="sr-title" required maxlength="120" placeholder="예: 바비 × 장원영 IP 콜라보레이션 제안서"></label>
-  <label>IP<input id="sr-ip" maxlength="120" placeholder="예: 바비, 장원영"></label>
-  <label>수신사<input id="sr-to" maxlength="80"></label>
-  <label>작성자<input id="sr-author" maxlength="40" placeholder="예: 김소정 매니저"></label>
+  <datalist id="sr-ents">${entities().filter(e => !e.hidden).map(e => `<option value="${esc(e.name)}">`).join('')}</datalist>
+  <div class="field"><span class="flabel">IP</span><div id="sr-ip"></div></div>
+  <label>수신사<input id="sr-to" list="sr-ents" maxlength="80"></label>
+  <div class="field"><span class="flabel">작성자</span><div id="sr-author"></div></div>
   <div id="sr-error" style="color:#ba775e;margin-top:14px;font-size:11px" role="alert"></div><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="submit">등록</button></div></form>`);
+  const ips = ipChips($('#sr-ip'), [], 'sr-ents');
+  const authors = memberChips($('#sr-author'), [], {note: '<span class="err">빨간 이름</span>은 헤임달에 등록되지 않은 사람입니다.'});
   $('#sr-file').onchange = () => { const f = $('#sr-file').files[0]; if (f && !$('#sr-title').value) $('#sr-title').value = f.name.replace(/\.(pdf|pptx)$/i, ''); };
   $('#sr-form').onsubmit = async ev => {
     ev.preventDefault();
@@ -716,7 +729,7 @@ function studioRefModal() {
     const ext = (f.name.match(/\.(pdf|pptx)$/i)?.[1] || 'pdf').toLowerCase(), path = `refs/${today()}/${uid()}.${ext}`;
     const up = await SB.storage.from('pt-studio').upload(path, f, {contentType: f.type || (ext === 'pdf' ? 'application/pdf' : 'application/octet-stream'), upsert: false});
     if (up.error) { btn.disabled = false; btn.textContent = '등록'; $('#sr-error').textContent = '파일을 업로드하지 못했습니다: ' + up.error.message; return; }
-    const { data, error } = await SB.from('pt_proposal_ref').insert({title: $('#sr-title').value.trim(), ip_names: $('#sr-ip').value.trim(), recipient: $('#sr-to').value.trim(), author: $('#sr-author').value.trim(), file_path: path, file_size: f.size, is_default: !(studio.refs || []).length}).select().single();
+    const { data, error } = await SB.from('pt_proposal_ref').insert({title: $('#sr-title').value.trim(), ip_names: ips.value().join(', '), recipient: $('#sr-to').value.trim(), author: authors.value().join(', '), file_path: path, file_size: f.size, is_default: !(studio.refs || []).length}).select().single();
     if (error) { btn.disabled = false; btn.textContent = '등록'; $('#sr-error').textContent = '등록하지 못했습니다: ' + error.message; return; }
     await SB.from('pt_proposal_job').insert({ref_id: data.id, kind: 'analyze_reference', input: {file_path: path}});
     $('#modal').close(); studio.refs = null; studio.list = null; await loadStudio(); toast('레퍼런스를 등록했습니다.');
