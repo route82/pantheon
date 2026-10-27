@@ -697,6 +697,46 @@ function openRef(id) {
   ${pages ? `<div class="detail-block"><h3>페이지별 구성</h3><div class="table-wrap"><table class="ref-pages"><thead><tr><th>쪽</th><th>역할</th><th>배치·이미지</th></tr></thead><tbody>${pages}</tbody></table></div></div>` : ''}`);
 }
 
+const SCORE_KO = {fandom: '팬덤', world: '세계관', asset: '자산 결합', business: '사업성', timing: '타이밍', risk: '리스크'};
+const host = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return '출처'; } };
+const srcLinks = urls => (urls || []).map(u => `<a class="src" href="${esc(u)}" target="_blank" rel="noopener">${esc(host(u))}</a>`).join('');
+// 단계 작업 진행률 — 판테온 봇이 job.result 에 3초마다 적는 값을 막대로 (레퍼런스 분석과 같은 모양)
+function jobProg(j) {
+  const g = j?.result;
+  if (!j || j.status === 'wait' || !g) return `<p class="job-wait">판테온 봇 차례를 기다리는 중<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></p>`;
+  const left = Math.max(0, g.eta - (Date.now() - Date.parse(g.at)) / 1000);
+  return `<div class="ref-prog wide" id="job-prog" data-eta="${g.eta}" data-at="${esc(g.at)}"><span class="row"><span class="bar" role="progressbar" aria-valuenow="${g.progress}" aria-valuemin="0" aria-valuemax="100"><i style="width:${g.progress}%"></i></span><b>${g.progress}%</b></span><small>${esc(g.step || '진행 중')}</small><small class="eta">${leftText(left)}</small></div>`;
+}
+let propPoll;
+async function pollProposal(id) {
+  if (activeDetail !== 'p:' + id) return;
+  const [p, j] = await Promise.all([SB.from('pt_proposal').select('*').eq('id', id).single(), SB.from('pt_proposal_job').select('id,proposal_id,ref_id,kind,status,at,error,result').eq('proposal_id', id).order('id', {ascending: false}).limit(1)]);
+  if (activeDetail !== 'p:' + id || p.error) return;
+  const old = studio.list.find(x => x.id === id);
+  if (old && (p.data.status !== old.status || p.data.stage !== old.stage)) { studio.list = null; await loadStudio(); return openProposal(id, true); }
+  const job = j.data?.[0];
+  if (job) { studio.jobs = [...studio.jobs.filter(x => x.id !== job.id), job]; const el = $('#job-prog') || $('#drawer .job-wait'); if (el) el.outerHTML = jobProg(job); }
+  propPoll = setTimeout(() => pollProposal(id), 3000);
+}
+setInterval(() => { const el = $('#job-prog'); const t = el?.querySelector('.eta'); if (t) t.textContent = leftText(Math.max(0, +el.dataset.eta - (Date.now() - Date.parse(el.dataset.at)) / 1000)); }, 1000);
+function partnersPanel(p) {
+  const P = p.data.partners;
+  const cats = (P.categories || []).map(cat => {
+    const cards = P.candidates.map((c, i) => [c, i]).filter(([c]) => c.category === cat.name).map(([c, i]) => {
+      const e = entityByName(c.ip);
+      return `<div class="pcard"><div class="pcard-head"><b>${esc(c.ip)}</b><span class="pill ${e ? 'good' : 'bad'}">${contactPoint(e)}</span></div><p>${esc(c.one_line_concept || '')}</p><div class="scores">${Object.entries(SCORE_KO).map(([k, n]) => `<span class="${k === 'risk' ? 'risk' : ''}" title="${n} ${c.scores?.[k] ?? '-'}/5">${n} <b>${c.scores?.[k] ?? '-'}</b><i style="--v:${(c.scores?.[k] || 0) * 20}%"></i></span>`).join('')}</div><div class="pcard-foot"><span>${srcLinks(c.evidence_urls)}</span><button class="button primary small" data-pick="${i}">이 파트너로 선택</button></div></div>`;
+    }).join('');
+    return `<div class="pcat"><div class="pcat-head"><div><b>${esc(cat.name)}</b><small>${esc(cat.reason || '')}</small></div><button class="text-btn" data-reroll="${esc(cat.name)}">다른 후보</button></div>${cards}</div>`;
+  }).join('');
+  return `<div class="detail-block"><h3>결정 · 파트너 IP 선택</h3><p>카드 하나를 고르면 판테온 봇이 두 IP 리서치를 시작합니다. 점수는 1~5이며, 리스크는 높을수록 위험합니다.</p>${P.ip_a_card?.summary ? `<p class="muted-box">${esc(p.ip_a_name)} · ${esc(P.ip_a_card.summary)}</p>` : ''}${cats}<div class="drawer-actions"><button class="button" id="recategorize">카테고리 바꿔 다시 추천</button></div></div>`;
+}
+const conceptCard = (c, i) => `<div class="pcard"><div class="pcard-head"><b>${esc(c.name)}</b></div>${c.key_copy ? `<p class="key-copy">“${esc(c.key_copy)}”</p>` : ''}<p>${esc(c.summary || '')}</p>${c.world ? `<details><summary>세계관</summary><p>${esc(c.world)}</p></details>` : ''}${(c.axes || []).length ? `<p class="sub-label">연결 축</p><ul class="axes">${c.axes.map(a => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}${(c.formats || []).length ? `<p class="sub-label">실행 포맷</p><ul class="axes">${c.formats.map(f => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}${c.why ? `<small class="why">${esc(c.why)}</small>` : ''}${i !== undefined ? `<div class="pcard-foot"><span></span><button class="button primary small" data-concept="${i}">이 컨셉으로 확정</button></div>` : ''}</div>`;
+const conceptsPanel = p => `<div class="detail-block"><h3>결정 · 컨셉 확정</h3><p>하나를 확정하면 레퍼런스 포맷에 맞춰 제안서를 만듭니다.</p>${p.data.concepts.candidates.map((c, i) => conceptCard(c, i)).join('')}</div>`;
+function researchBlock(R) {
+  const fact = f => `<li>${esc(f.text)} ${f.url ? `<a class="src" href="${esc(f.url)}" target="_blank" rel="noopener">${esc(host(f.url))}${f.as_of ? ' · ' + esc(f.as_of) : ''}</a>` : ''}</li>`;
+  return `<div class="detail-block"><h3>리서치</h3>${(R.ips || []).map(x => `<details class="research"><summary><b>${esc(x.name)}</b> <small>출처 있는 사실 ${x.facts.length}개</small></summary><p>${esc(x.summary || '')}</p>${x.fandom ? `<p><b>팬덤</b> ${esc(x.fandom)}</p>` : ''}${x.world ? `<p><b>세계관·정서</b> ${esc(x.world)}</p>` : ''}<ul class="facts">${x.facts.map(fact).join('')}</ul>${(x.collabs || []).length ? `<p><b>지난 협업</b></p><ul class="facts">${x.collabs.map(fact).join('')}</ul>` : ''}${(x.hooks || []).length ? `<p><b>도입에 쓸 장면</b></p><ul class="facts">${x.hooks.map(h => fact({...h, text: h.text + (h.note ? ` (${h.note})` : '')})).join('')}</ul>` : ''}${(x.risks || []).length ? `<p><b>유의점</b> ${x.risks.map(esc).join(' · ')}</p>` : ''}</details>`).join('')}${(R.common_ground || []).length ? `<p><b>공통점</b></p><ul class="facts">${R.common_ground.map(c => `<li>${esc(c)}</li>`).join('')}</ul>` : ''}</div>`;
+}
+
 async function proposalEvent(id, message) { await SB.from('pt_proposal_event').insert({proposal_id: id, message}); }
 
 async function openProposal(id, keep) {
@@ -706,31 +746,58 @@ async function openProposal(id, keep) {
   const job = studio.jobs.find(j => j.proposal_id === id);
   const ref = studio.refs?.find(r => r.id === p.ref_id);
   const ent = (eid, name) => eid && byId(eid) ? `<button class="ref" type="button" data-open="${eid}">${esc(name)}</button>` : esc(name || '—');
+  const d = p.data || {};
   let action = '';
   if (p.status === 'waiting' && p.stage === 2) action = `<div class="detail-block"><h3>결정 · 인테이크 확정</h3><p>아래 내용으로 시작합니다. 확정하면 ${p.mode === 'collab' && !p.ip_b_name ? '판테온 봇이 파트너 IP 후보를 추천합니다.' : '판테온 봇이 IP 리서치를 시작합니다.'}</p><div class="drawer-actions"><button class="button primary" id="intake-ok">인테이크 확정</button><button class="button" id="intake-edit">내용 수정</button></div></div>`;
-  else if (p.status === 'working') action = `<div class="detail-block"><h3>진행 중 · ${esc(STAGES[p.stage - 1])}</h3><p>판테온 봇 작업 대기열에 들어가 있습니다${job ? ` (요청 ${esc(kst(job.at))})` : ''}. 끝나면 다음 결정이 여기에 표시됩니다.</p></div>`;
-  else if (p.status === 'failed') action = `<div class="detail-block"><h3>작업 실패</h3><p>${esc(p.data?.error || '판테온 봇이 작업을 끝내지 못했습니다.')}</p><div class="drawer-actions"><button class="button primary" id="job-retry">다시 시도</button></div></div>`;
+  else if (p.status === 'working' && p.stage >= 6) action = `<div class="detail-block"><h3>진행 중 · ${esc(STAGES[p.stage - 1])}</h3><p>제안서 생성 단계는 준비 중입니다. 완성되면 여기서 이어서 진행됩니다.</p></div>`;
+  else if (p.status === 'working') action = `<div class="detail-block"><h3>진행 중 · ${esc(STAGES[p.stage - 1])}</h3>${jobProg(job)}</div>`;
+  else if (p.status === 'failed') action = `<div class="detail-block"><h3>작업 실패</h3><p>${esc(d.error || '판테온 봇이 작업을 끝내지 못했습니다.')}</p><div class="drawer-actions"><button class="button primary" id="job-retry">다시 시도</button></div></div>`;
+  else if (p.status === 'waiting' && p.stage === 3 && d.partners) action = partnersPanel(p);
+  else if (p.status === 'waiting' && p.stage === 5 && d.concepts) action = conceptsPanel(p);
   else if (p.status === 'waiting') action = `<div class="detail-block"><h3>결정 · ${esc(GATES[p.stage] || '확인')}</h3><p>판테온 봇이 준비한 결과를 확인하고 결정해 주세요.</p></div>`;
+  const done = [d.concept_selected && `<div class="detail-block"><h3>확정한 컨셉</h3>${conceptCard(d.concept_selected)}</div>`, d.research && researchBlock(d.research)].filter(Boolean).join('');
   showDrawer(`<span class="entity-avatar">${esc(p.ip_a_name.slice(0, 2))}</span><h2>${esc(pTitle(p))}</h2><span class="detail-sub">${p.mode === 'single' ? '단독 제안' : '콜라보 제안'} · ${esc(p.recipient || '수신사 미정')}</span>
   <div class="detail-block"><h3>기본 정보</h3><div class="detail-row"><span>IP</span><b>${ent(p.ip_a_id, p.ip_a_name)}</b></div>${p.mode === 'collab' ? `<div class="detail-row"><span>파트너 IP</span><b>${p.ip_b_name ? ent(p.ip_b_id, p.ip_b_name) : '판테온 봇 추천 후 선택'}</b></div>` : ''}<div class="detail-row"><span>수신사</span><b>${esc(p.recipient || '—')}</b></div><div class="detail-row"><span>레퍼런스 포맷</span><b>${esc(ref?.title || '—')}</b></div><div class="detail-row"><span>현재 상태</span><b>${pPill(p)}</b></div>${p.note ? `<p>${esc(p.note)}</p>` : ''}</div>
-  ${action}<div class="detail-block"><h3>진행 단계</h3><ol class="stage-list">${stages}</ol></div><div class="detail-block"><h3>활동 기록</h3><div id="proposal-events"><p>불러오는 중입니다…</p></div></div>`, keep);
+  ${action}${done}<div class="detail-block"><h3>진행 단계</h3><ol class="stage-list">${stages}</ol></div><div class="detail-block"><h3>활동 기록</h3><div id="proposal-events"><p>불러오는 중입니다…</p></div></div>`, keep);
+  const go = async (row, nextJob, msg, okMsg) => {
+    const { error } = await SB.from('pt_proposal').update(row).eq('id', p.id);
+    if (error) return toast('저장하지 못했습니다: ' + error.message);
+    if (nextJob) await SB.from('pt_proposal_job').insert({proposal_id: p.id, ...nextJob});
+    await proposalEvent(p.id, msg);
+    studio.list = null; await loadStudio(); openProposal(p.id, true); if (okMsg) toast(okMsg);
+  };
   $('#intake-edit')?.addEventListener('click', () => studioProjectModal(p));
-  $('#intake-ok')?.addEventListener('click', async () => {
+  $('#intake-ok')?.addEventListener('click', () => {
     $('#intake-ok').disabled = true;
     const next = p.mode === 'collab' && !p.ip_b_name ? 3 : 4;
-    const { error } = await SB.from('pt_proposal').update({stage: next, status: 'working'}).eq('id', p.id);
-    if (error) { $('#intake-ok').disabled = false; return toast('확정하지 못했습니다: ' + error.message); }
-    await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: JOB_OF[next], input: {mode: p.mode, ip_a: p.ip_a_name, ip_b: p.ip_b_name, recipient: p.recipient, ref_id: p.ref_id}});
-    await proposalEvent(p.id, `인테이크를 확정했습니다 → ${STAGES[next - 1]} 시작`);
-    studio.list = null; await loadStudio(); openProposal(p.id, true); toast('인테이크를 확정했습니다.');
+    go({stage: next, status: 'working'}, {kind: JOB_OF[next], input: {}}, `인테이크를 확정했습니다 → ${STAGES[next - 1]} 시작`, '인테이크를 확정했습니다.');
   });
-  $('#job-retry')?.addEventListener('click', async () => {
+  $('#job-retry')?.addEventListener('click', () => {
     $('#job-retry').disabled = true;
-    await SB.from('pt_proposal').update({status: 'working'}).eq('id', p.id);
-    await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: JOB_OF[p.stage] || 'research', input: {retry: true}});
-    await proposalEvent(p.id, `${STAGES[p.stage - 1]} 작업을 다시 요청했습니다`);
-    studio.list = null; await loadStudio(); openProposal(p.id, true);
+    go({status: 'working', data: {...d, error: null}}, {kind: JOB_OF[p.stage] || 'research', input: {retry: true}}, `${STAGES[p.stage - 1]} 작업을 다시 요청했습니다`);
   });
+  // 3 파트너 카드 고르기 · 다른 후보 · 카테고리 바꾸기
+  $$('#drawer [data-pick]').forEach(b => b.onclick = () => {
+    const c = d.partners.candidates[+b.dataset.pick], e = entityByName(c.ip);
+    $$('#drawer [data-pick]').forEach(x => x.disabled = true);
+    go({ip_b_name: e?.name || c.ip, ip_b_id: e?.id || null, stage: 4, status: 'working', data: {...d, partner_selected: c}}, {kind: 'research', input: {}}, `파트너 IP 「${c.ip}」를 골랐습니다 → 리서치 시작`, `${c.ip}을(를) 파트너로 골랐습니다.`);
+  });
+  $$('#drawer [data-reroll]').forEach(b => b.onclick = () => {
+    b.disabled = true;
+    go({status: 'working'}, {kind: 'partners', input: {mode: 'reroll', category: b.dataset.reroll, exclude: d.partners.shown || []}}, `「${b.dataset.reroll}」 카테고리 후보를 다시 요청했습니다`);
+  });
+  $('#recategorize')?.addEventListener('click', ev => {
+    ev.target.disabled = true;
+    go({status: 'working'}, {kind: 'partners', input: {mode: 'recategorize', exclude: [...(d.partners.shown || []), ...(d.partners.categories || []).map(c => c.name)]}}, '카테고리를 바꿔 다시 추천을 요청했습니다');
+  });
+  // 5 컨셉 확정
+  $$('#drawer [data-concept]').forEach(b => b.onclick = () => {
+    const c = d.concepts.candidates[+b.dataset.concept];
+    $$('#drawer [data-concept]').forEach(x => x.disabled = true);
+    go({stage: 6, status: 'working', data: {...d, concept_selected: c}}, {kind: 'build', input: {}}, `컨셉 「${c.name}」을(를) 확정했습니다 → 제안서 생성`, '컨셉을 확정했습니다.');
+  });
+  clearTimeout(propPoll);
+  if (p.status === 'working' && p.stage < 6) propPoll = setTimeout(() => pollProposal(p.id), 3000);
   const { data } = await SB.from('pt_proposal_event').select('at,actor_name,message').eq('proposal_id', id).order('at', {ascending: false}).limit(50);
   const box = $('#proposal-events'); if (!box || activeDetail !== 'p:' + id) return;
   box.innerHTML = data?.length ? `<ol class="owner-hist">${data.map(e => `<li><time>${esc(kst(e.at))}</time><span>${esc(e.message)}<br><small>${esc(e.actor_name || '판테온 봇')}</small></span></li>`).join('')}</ol>` : '<p>기록이 없습니다.</p>';
