@@ -743,11 +743,13 @@ function imagesPanel(p) {
   const n = st => keys.filter(k => S[k].status === st).length;
   const card = k => { const s = S[k], [cls, label] = SLOT_ST[s.status] || ['', s.status];
     return `<div class="icard"><div class="ithumb" data-thumb="${esc(s.path || '')}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}<br>${esc(s.ratio || '')}</span>`}</div><div class="ibody"><div class="ihead"><b>${esc(s.slide)}쪽</b><span class="pill ${cls}">${label}</span></div><small>${esc(KIND_KO_IMG[s.kind] || s.kind)} · ${esc(s.what || '')}</small>${s.source_page ? `<a class="src" href="${esc(s.source_page)}" target="_blank" rel="noopener">${esc(host(s.source_page))}</a>` : ''}${s.note ? `<small class="warn">${esc(s.note)}</small>` : ''}${s.status === 'ai' && s.prompt ? `<details><summary>생성 프롬프트</summary><p class="prompt">${esc(s.prompt)}</p></details>` : ''}<label class="text-btn up">내 이미지로 바꾸기<input type="file" accept="image/png,image/jpeg,image/webp" data-upimg="${esc(k)}" hidden></label></div></div>`; };
-  return `<div class="detail-block"><h3>결정 · 이미지 수급 확인</h3><p>공식 이미지·로고·참고 사례는 판테온 봇이 찾아 넣었습니다. 잘못 들어갔거나 비어 있으면 「내 이미지로 바꾸기」로 바꾼 뒤 다시 그려 주세요. AI 컨셉 이미지·목업·질감은 힉스필드를 연결하면 만들 수 있습니다.</p>
+  const E = p.data.images.ai_estimate, nAi = n('ai');
+  const ai = nAi ? (E && E.count === nAi ? `<div class="ai-box"><b>AI 이미지 ${nAi}장 · 예상 약 $${E.usd}</b><small>힉스필드 ${esc(E.model || '')} · 2K · 실패하거나 부적절 판정된 이미지는 청구되지 않습니다</small><div class="drawer-actions"><button class="button primary" id="ai-go" data-usd="${E.usd}">승인하고 만들기</button><button class="text-btn" id="ai-est">견적 다시 받기</button></div></div>` : `<div class="ai-box"><b>AI 이미지 ${nAi}장</b><small>만들기 전에 힉스필드 견적을 먼저 받습니다 (비용 없음)</small><div class="drawer-actions"><button class="button" id="ai-est">견적 받기</button></div></div>`) : '';
+  return `<div class="detail-block"><h3>결정 · ${p.stage >= 8 ? '최종 확인' : '이미지 수급·AI 이미지 승인'}</h3><p>공식 이미지·로고·참고 사례는 판테온 봇이 찾아 넣었습니다. 잘못 들어갔거나 비어 있으면 「내 이미지로 바꾸기」로 바꾼 뒤 다시 그려 주세요.${nAi ? ' AI 컨셉 이미지·목업·질감은 견적을 보고 승인하면 힉스필드로 만듭니다.' : ''}</p>${ai}
   <div class="detail-row"><span>채움</span><b>${n('found') + n('uploaded') + n('generated')}개</b></div><div class="detail-row"><span>못 찾음</span><b>${n('missing')}개</b></div><div class="detail-row"><span>AI 생성 대기</span><b>${n('ai')}개</b></div>
   <div class="drawer-actions"><button class="button" id="img-rerender">바꾼 이미지로 다시 그리기</button><button class="button primary" id="img-done">이 버전으로 완료</button></div>
   <div class="iboard" id="img-board">${keys.filter(k => S[k].status !== 'ai').map(card).join('')}</div>
-  <details class="research"><summary><b>AI 생성 대기 ${n('ai')}개</b> <small>힉스필드 연결 후</small></summary><div class="iboard">${keys.filter(k => S[k].status === 'ai').map(card).join('')}</div></details></div>`;
+  <details class="research"><summary><b>AI 생성 대기 ${n('ai')}개</b> <small>프롬프트 보기</small></summary><div class="iboard">${keys.filter(k => S[k].status === 'ai').map(card).join('')}</div></details></div>`;
 }
 const KIND_KO_IMG = {official: '공식 이미지', logo: '로고', ai_concept: 'AI 컨셉', mockup: '목업', reference: '참고 사례', capture: '캡처', texture: '배경·질감'};
 async function loadImgThumbs(slots) {
@@ -769,12 +771,12 @@ async function openProposal(id, keep) {
   const d = p.data || {};
   let action = '';
   if (p.status === 'waiting' && p.stage === 2) action = `<div class="detail-block"><h3>결정 · 인테이크 확정</h3><p>아래 내용으로 시작합니다. 확정하면 ${p.mode === 'collab' && !p.ip_b_name ? '판테온 봇이 파트너 IP 후보를 추천합니다.' : '판테온 봇이 IP 리서치를 시작합니다.'}</p><div class="drawer-actions"><button class="button primary" id="intake-ok">인테이크 확정</button><button class="button" id="intake-edit">내용 수정</button></div></div>`;
-  else if (p.status === 'working' && p.stage >= 7 && job && !['image_plan', 'finalize'].includes(job.kind)) action = `<div class="detail-block"><h3>진행 중 · ${esc(STAGES[p.stage - 1])}</h3><p>이 단계는 준비 중입니다. 완성되면 여기서 이어서 진행됩니다.</p></div>`;
+  else if (p.status === 'working' && p.stage >= 7 && job && !['image_plan', 'finalize', 'generate'].includes(job.kind)) action = `<div class="detail-block"><h3>진행 중 · ${esc(STAGES[p.stage - 1])}</h3><p>이 단계는 준비 중입니다. 완성되면 여기서 이어서 진행됩니다.</p></div>`;
   else if (p.status === 'working') action = `<div class="detail-block"><h3>진행 중 · ${esc(STAGES[p.stage - 1])}</h3>${jobProg(job)}</div>`;
   else if (p.status === 'failed') action = `<div class="detail-block"><h3>작업 실패</h3><p>${esc(d.error || '판테온 봇이 작업을 끝내지 못했습니다.')}</p><div class="drawer-actions"><button class="button primary" id="job-retry">다시 시도</button></div></div>`;
   else if (p.status === 'waiting' && p.stage === 3 && d.partners) action = partnersPanel(p);
   else if (p.status === 'waiting' && p.stage === 5 && d.concepts) action = conceptsPanel(p);
-  else if (p.status === 'waiting' && p.stage === 7 && d.images) action = imagesPanel(p);
+  else if (p.status === 'waiting' && p.stage >= 7 && d.images) action = imagesPanel(p);
   else if (p.status === 'waiting') action = `<div class="detail-block"><h3>결정 · ${esc(GATES[p.stage] || '확인')}</h3><p>판테온 봇이 준비한 결과를 확인하고 결정해 주세요.</p></div>`;
   const done = [d.build && `<div class="detail-block"><h3>제안서 초안 v${d.build.version}</h3><div class="detail-row"><span>분량</span><b>${d.build.slides}쪽 · 이미지 자리 ${d.build.images}개</b></div>${d.images ? '' : '<p>이미지 자리는 회색 상자로 비워 두었습니다. 이미지 수급 단계에서 채웁니다.</p>'}<div class="detail-row"><span>강조색</span><b class="acc-row"><i class="swatch" style="background:${esc(d.build.deck?.theme?.accent || '#285541')}"></i>${esc(d.build.deck?.theme?.accent || '')} ${d.accent ? '(직접 고름)' : '(클로드 추천)'}${p.status === 'waiting' ? ` <input type="color" id="acc-new" value="${esc(d.build.deck?.theme?.accent || '#285541')}" aria-label="강조색 고르기"> <button class="text-btn" id="acc-apply">이 색으로 다시 그리기</button>` : ''}</b></div><div class="drawer-actions">${d.build.pdf ? `<button class="button primary" data-file="${esc(d.build.pdf)}">PDF 보기</button>` : ''}<button class="button" data-file="${esc(d.build.pptx)}" data-dl="1">PPTX 받기</button></div></div>`, d.concept_selected && `<div class="detail-block"><h3>확정한 컨셉</h3>${conceptCard(d.concept_selected)}</div>`, d.research && researchBlock(d.research)].filter(Boolean).join('');
   showDrawer(`<span class="entity-avatar">${esc(p.ip_a_name.slice(0, 2))}</span><h2>${esc(pTitle(p))}</h2><span class="detail-sub">${p.mode === 'single' ? '단독 제안' : '콜라보 제안'} · ${esc(p.recipient || '수신사 미정')}</span>
@@ -795,7 +797,8 @@ async function openProposal(id, keep) {
   });
   $('#job-retry')?.addEventListener('click', () => {
     $('#job-retry').disabled = true;
-    go({status: 'working', data: {...d, error: null}}, {kind: JOB_OF[p.stage] || 'research', input: {retry: true}}, `${STAGES[p.stage - 1]} 작업을 다시 요청했습니다`);
+    const kind = d.failed_kind || JOB_OF[p.stage] || 'research';
+    go({status: 'working', data: {...d, error: null}}, {kind, input: kind === 'generate' ? {estimate_only: true} : {retry: true}}, `${STAGES[p.stage - 1]} 작업을 다시 요청했습니다`);
   });
   $$('#drawer [data-file]').forEach(b => b.onclick = async () => {
     const { data: u, error } = await SB.storage.from('pt-studio').createSignedUrl(b.dataset.file, 600, b.dataset.dl ? {download: `${pTitle(p)}_v${d.build.version}.pptx`} : undefined);
@@ -819,6 +822,13 @@ async function openProposal(id, keep) {
     if (error) return toast('저장하지 못했습니다: ' + error.message);
     await proposalEvent(p.id, `이미지 ${key} 을(를) 직접 올린 이미지로 바꿨습니다`);
     studio.list = null; await loadStudio(); openProposal(p.id, true); toast('이미지를 바꿨습니다. 「바꾼 이미지로 다시 그리기」를 누르면 제안서에 반영됩니다.');
+  });
+  $('#ai-est')?.addEventListener('click', ev => { ev.target.disabled = true; go({status: 'working'}, {kind: 'generate', input: {estimate_only: true}}, 'AI 이미지 견적을 요청했습니다'); });
+  $('#ai-go')?.addEventListener('click', ev => {
+    const usd = +ev.target.dataset.usd, n = d.images.ai_estimate.count;
+    if (!confirm(`AI 이미지 ${n}장을 힉스필드로 만듭니다. 예상 비용 약 $${usd} 가 회사 힉스필드 API 잔액에서 나갑니다. 진행할까요?`)) return;
+    ev.target.disabled = true;
+    go({status: 'working'}, {kind: 'generate', input: {approved_usd: usd}}, `AI 이미지 ${n}장 생성을 승인했습니다 (예상 $${usd})`, '승인했습니다. 판테온 봇이 만들기 시작합니다.');
   });
   $('#img-rerender')?.addEventListener('click', ev => { ev.target.disabled = true; go({status: 'working'}, {kind: 'finalize', input: {}}, '바꾼 이미지로 다시 그리기를 요청했습니다'); });
   $('#img-done')?.addEventListener('click', ev => { ev.target.disabled = true; go({status: 'done'}, null, `v${d.build.version} 으로 제안서를 완료했습니다`, '제안서를 완료했습니다.'); });
