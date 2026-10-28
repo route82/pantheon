@@ -653,7 +653,7 @@ async function pollRefJobs() {
 // 목록에서도 진행이 보이게 — 작업 중인 프로젝트가 있으면 3초마다 진행률·상태를 다시 읽는다
 function rowProg(p) {
   const j = studio.jobs.find(x => x.proposal_id === p.id), g = j?.result;
-  if (!j || j.status === 'wait' || !g) return `<small class="row-prog">판테온 봇 차례를 기다리는 중<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></small>`;
+  if (!j || j.status === 'wait' || !g) return `<small class="row-prog">${j?.kind === 'aside' ? '사무실 PC Aside 차례를 기다리는 중' : '판테온 봇 차례를 기다리는 중'}<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></small>`;
   const left = Math.max(0, g.eta - (Date.now() - Date.parse(g.at)) / 1000);
   return `<span class="ref-prog row-prog"><span class="row"><span class="bar"><i style="width:${g.progress}%"></i></span><b>${g.progress}%</b></span><small>${esc(g.step || '')} · ${leftText(left)}</small></span>`;
 }
@@ -724,7 +724,7 @@ const srcLinks = urls => (urls || []).map(u => `<a class="src" href="${esc(u)}" 
 // 단계 작업 진행률 — 판테온 봇이 job.result 에 3초마다 적는 값을 막대로 (레퍼런스 분석과 같은 모양)
 function jobProg(j) {
   const g = j?.result;
-  if (!j || j.status === 'wait' || !g) return `<p class="job-wait">판테온 봇 차례를 기다리는 중<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></p>`;
+  if (!j || j.status === 'wait' || !g) return `<p class="job-wait">${j?.kind === 'aside' ? '사무실 PC Aside 차례를 기다리는 중' : '판테온 봇 차례를 기다리는 중'}<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></p>`;
   const left = Math.max(0, g.eta - (Date.now() - Date.parse(g.at)) / 1000);
   return `<div class="ref-prog wide" id="job-prog" data-eta="${g.eta}" data-at="${esc(g.at)}"><span class="row"><span class="bar" role="progressbar" aria-valuenow="${g.progress}" aria-valuemin="0" aria-valuemax="100"><i style="width:${g.progress}%"></i></span><b>${g.progress}%</b></span><small>${esc(g.step || '진행 중')}</small><small class="eta">${leftText(left)}</small></div>`;
 }
@@ -763,7 +763,7 @@ function imagesPanel(p) {
   const S = p.data.images.slots, keys = Object.keys(S).sort();
   const n = st => keys.filter(k => S[k].status === st).length;
   const card = k => { const s = S[k], [cls, label] = SLOT_ST[s.status] || ['', s.status];
-    return `<div class="icard"><div class="ithumb" data-thumb="${esc(s.path || '')}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}<br>${esc(s.ratio || '')}</span>`}</div><div class="ibody"><div class="ihead"><b>${esc(s.slide)}쪽</b><span class="pill ${cls}">${label}</span></div><small>${esc(KIND_KO_IMG[s.kind] || s.kind)} · ${esc(s.what || '')}</small>${s.source_page ? `<a class="src" href="${esc(s.source_page)}" target="_blank" rel="noopener">${esc(host(s.source_page))}</a>` : ''}${s.note ? `<small class="warn">${esc(s.note)}</small>` : ''}${s.status === 'ai' && s.prompt ? `<details><summary>생성 프롬프트</summary><p class="prompt">${esc(s.prompt)}</p></details>` : ''}<label class="text-btn up">내 이미지로 바꾸기<input type="file" accept="image/png,image/jpeg,image/webp" data-upimg="${esc(k)}" hidden></label></div></div>`; };
+    return `<div class="icard"><div class="ithumb" data-thumb="${esc(s.path || '')}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}<br>${esc(s.ratio || '')}</span>`}</div><div class="ibody"><div class="ihead"><b>${esc(s.slide)}쪽</b><span class="pill ${cls}">${label}</span></div><small>${esc(KIND_KO_IMG[s.kind] || s.kind)} · ${esc(s.what || '')}</small>${s.source_page ? `<a class="src" href="${esc(s.source_page)}" target="_blank" rel="noopener">${s.via === 'aside' ? 'Aside · ' : ''}${esc(host(s.source_page))}</a>` : ''}${s.note ? `<small class="warn">${esc(s.note)}</small>` : ''}${s.status === 'ai' && s.prompt ? `<details><summary>생성 프롬프트</summary><p class="prompt">${esc(s.prompt)}</p></details>` : ''}<div class="ibtns"><label class="text-btn up">내 이미지로 바꾸기<input type="file" accept="image/png,image/jpeg,image/webp" data-upimg="${esc(k)}" hidden></label>${s.status !== 'ai' ? `<button class="text-btn" data-aside="${esc(k)}">Aside로 다시 찾기</button>` : ''}</div></div></div>`; };
   const E = p.data.images.ai_estimate, nAi = n('ai');
   const ai = nAi ? (E && E.count === nAi ? `<div class="ai-box"><b>AI 이미지 ${nAi}장 · 예상 약 $${E.usd}</b><small>힉스필드 ${esc((E.model || '').replace('higgsfield-ai/', ''))} · 실패하거나 부적절 판정된 이미지는 청구되지 않습니다</small><div class="drawer-actions"><button class="button primary" id="ai-go" data-usd="${E.usd}">승인하고 만들기</button><button class="text-btn" id="ai-est">견적 다시 받기</button></div></div>` : `<div class="ai-box"><b>AI 이미지 ${nAi}장</b><small>만들기 전에 힉스필드 견적을 먼저 받습니다 (비용 없음)</small><div class="drawer-actions"><button class="button" id="ai-est">견적 받기</button></div></div>`) : '';
   return `<div class="detail-block"><h3>결정 · ${p.stage >= 8 ? '최종 확인' : '이미지 수급·AI 이미지 승인'}</h3><p>공식 이미지·로고·참고 사례는 판테온 봇이 찾아 넣었습니다. 잘못 들어갔거나 비어 있으면 「내 이미지로 바꾸기」로 바꾼 뒤 다시 그려 주세요.${nAi ? ' AI 컨셉 이미지·목업·질감은 견적을 보고 승인하면 힉스필드로 만듭니다.' : ''}</p>${ai}
@@ -792,7 +792,7 @@ async function openProposal(id, keep) {
   const d = p.data || {};
   let action = '';
   if (p.status === 'waiting' && p.stage === 2) action = `<div class="detail-block"><h3>결정 · 인테이크 확정</h3><p>아래 내용으로 시작합니다. 확정하면 ${p.mode === 'collab' && !p.ip_b_name ? '판테온 봇이 파트너 IP 후보를 추천합니다.' : '판테온 봇이 IP 리서치를 시작합니다.'}</p><div class="drawer-actions"><button class="button primary" id="intake-ok">인테이크 확정</button><button class="button" id="intake-edit">내용 수정</button></div></div>`;
-  else if (p.status === 'working' && p.stage >= 7 && job && !['image_plan', 'finalize', 'generate'].includes(job.kind)) action = `<div class="detail-block"><h3>진행 중 · ${esc(STAGES[p.stage - 1])}</h3><p>이 단계는 준비 중입니다. 완성되면 여기서 이어서 진행됩니다.</p></div>`;
+  else if (p.status === 'working' && p.stage >= 7 && job && !['image_plan', 'finalize', 'generate', 'aside'].includes(job.kind)) action = `<div class="detail-block"><h3>진행 중 · ${esc(STAGES[p.stage - 1])}</h3><p>이 단계는 준비 중입니다. 완성되면 여기서 이어서 진행됩니다.</p></div>`;
   else if (p.status === 'working') action = `<div class="detail-block"><h3>진행 중 · ${esc(STAGES[p.stage - 1])}</h3>${jobProg(job)}</div>`;
   else if (p.status === 'failed') action = `<div class="detail-block"><h3>작업 실패</h3><p>${esc(d.error || '판테온 봇이 작업을 끝내지 못했습니다.')}</p><div class="drawer-actions"><button class="button primary" id="job-retry">다시 시도</button></div></div>`;
   else if (p.status === 'waiting' && p.stage === 3 && d.partners) action = partnersPanel(p);
@@ -850,6 +850,13 @@ async function openProposal(id, keep) {
     if (!confirm(`AI 이미지 ${n}장을 힉스필드로 만듭니다. 예상 비용 약 $${usd} 가 회사 힉스필드 API 잔액에서 나갑니다. 진행할까요?`)) return;
     ev.target.disabled = true;
     go({status: 'working'}, {kind: 'generate', input: {approved_usd: usd}}, `AI 이미지 ${n}장 생성을 승인했습니다 (예상 $${usd})`, '승인했습니다. 판테온 봇이 만들기 시작합니다.');
+  });
+  $$('#drawer [data-aside]').forEach(b => b.onclick = () => {
+    const k = b.dataset.aside, sl = d.images.slots[k];
+    const im = (d.build?.deck?.slides || []).flatMap(x => x.images || []).find(x => x.key === k) || {};
+    b.disabled = true;
+    go({status: 'working'}, {kind: 'aside', input: {slots: [{key: k, kind: sl.kind, what: sl.what || '', ratio: sl.ratio || '', search: im.search || ''}], ips: [p.ip_a_name, p.ip_b_name].filter(Boolean)}},
+       `${sl.slide}쪽 「${sl.what || k}」 이미지를 Aside 로 다시 찾도록 요청했습니다`, 'Aside 에 맡겼습니다. 한 자리에 몇 분 걸립니다.');
   });
   $('#img-rerender')?.addEventListener('click', ev => { ev.target.disabled = true; go({status: 'working'}, {kind: 'finalize', input: {}}, '바꾼 이미지로 다시 그리기를 요청했습니다'); });
   $('#img-done')?.addEventListener('click', ev => { ev.target.disabled = true; go({status: 'done'}, null, `v${d.build.version} 으로 제안서를 완료했습니다`, '제안서를 완료했습니다.'); });
