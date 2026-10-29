@@ -1022,7 +1022,17 @@ async function openProposal(id, keep) {
        `${sl.slide}쪽 「${sl.what || k}」 이미지를 Aside 로 다시 찾도록 요청했습니다`, 'Aside 에 맡겼습니다. 한 자리에 몇 분 걸립니다.');
   });
   $('#img-rerender')?.addEventListener('click', ev => { ev.target.disabled = true; go({status: 'working'}, {kind: 'finalize', input: {}}, '바꾼 이미지로 다시 그리기를 요청했습니다'); });
-  $('#img-done')?.addEventListener('click', ev => { ev.target.disabled = true; go({status: 'done'}, null, `v${d.build.version} 으로 제안서를 완료했습니다`, '제안서를 완료했습니다.'); });
+  $('#img-done')?.addEventListener('click', ev => {
+    ev.target.disabled = true;
+    // 완료한 버전에 남은 AI 이미지·좌우 넓힌 이미지 = 사람이 통과시킨 것 → good_images (10-29 · 다음 원고가 이 수준을 따르게)
+    const S = d.images?.slots || {}, at = new Date().toISOString();
+    const good = Object.entries(S).filter(([, s]) => s.path && (s.status === 'generated' || s.widened))
+      .map(([k, s]) => ({key: k, slide: s.slide, kind: s.kind, what: s.what || '', prompt: s.prompt || '', widen_extra: s.widen_extra || '', widened: !!s.widened,
+                         retried: (s.prev_paths || []).length, path: s.path, version: d.build.version, at, by: myName || ''}));
+    const keep = new Set(good.map(g => g.key));
+    const log = (d.prompt_log || []).map(x => keep.has(x.key) ? {...x, kept: true} : x);
+    go({status: 'done', data: {...d, good_images: good, prompt_log: log}}, null, `v${d.build.version} 으로 제안서를 완료했습니다 (통과한 AI 이미지 ${good.length}장 기록)`, '제안서를 완료했습니다.');
+  });
   if (d.images && $('#img-board')) loadImgThumbs(d.images.slots);
   if (d.social?.captures?.length) loadImgThumbs(Object.fromEntries(d.social.captures.map((c, i) => [i, c])));
   // 3 파트너 카드 고르기 · 다른 후보 · 카테고리 바꾸기
