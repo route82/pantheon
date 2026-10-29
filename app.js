@@ -1022,9 +1022,11 @@ async function pageReview(pid, start) {
     const fs = [...new Set(flags.map(f => f.slide))];
     $('#rv-qa').innerHTML = qa ? (fs.length ? `자동 검수 · 확인할 곳 ${flags.length}곳 ${fs.map(s => `<button class="rv-jump${s === cur ? ' on' : ''}" data-go="${s}">${s}페이지</button>`).join('')}` : '자동 검수 · 눈에 띄는 문제 없음') : '자동 검수 전입니다';
     $$('#rv-qa [data-go]').forEach(x => x.onclick = () => show(+x.dataset.go));
-    const pg = await doc.getPage(cur), c = $('#rv-canvas'), w = c.parentElement.clientWidth - 2;
-    const vp = pg.getViewport({scale: w / pg.getViewport({scale: 1}).width * (window.devicePixelRatio || 1)});
-    c.width = vp.width; c.height = vp.height; await pg.render({canvasContext: c.getContext('2d'), viewport: vp}).promise; $('#rv-load').hidden = true;
+    // 페이지 그림은 기다리지 않고 그린다 — 그림이 늦어도 오른쪽 이미지 자리는 바로 보이게
+    doc.getPage(cur).then(pg => { const c = $('#rv-canvas'); if (!c) return; const w = c.parentElement.clientWidth - 2;
+      const vp = pg.getViewport({scale: w / pg.getViewport({scale: 1}).width * (window.devicePixelRatio || 1)});
+      c.width = vp.width; c.height = vp.height; return pg.render({canvasContext: c.getContext('2d'), viewport: vp}).promise; })
+      .then(() => { if ($('#rv-load')) $('#rv-load').hidden = true; }).catch(() => {});
     const fl = flags.filter(f => f.slide === cur), keys = Object.keys(S).filter(k => +S[k].slide === cur).sort();
     const card = k => { const s = S[k], [cls, label] = SLOT_ST[s.status] || ['', s.status], bad = fl.filter(f => f.key === k);
       return `<div class="rv-slot${bad.length ? ' flag' : ''}"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-rk="${esc(k)}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}</span>`}</div><div class="rv-info"><div class="ihead"><b>${esc(KIND_KO_IMG[s.kind] || s.kind)}</b><span class="pill ${cls}">${label}</span></div><small>${esc(s.what || '')}</small>${bad.map(f => `<small class="warn">${esc(QA_KO[f.type] || '확인')} · ${esc(f.detail)}</small>`).join('')}<div class="ibtns">${s.path ? `<button class="text-btn" data-rv-open="${esc(k)}">크게 보기·고치기</button>` : ''}<label class="text-btn up">내 이미지로 바꾸기<input type="file" accept="image/png,image/jpeg,image/webp" data-rv-up="${esc(k)}" hidden></label></div>${makeBox(k, s)}</div></div>`; };
