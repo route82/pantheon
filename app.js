@@ -835,6 +835,14 @@ async function loadImgThumbs(slots) {
 // 판테온 봇이 그릴 때와 같은 방식: 꽉 채우기는 x·y(0~1) 위치를 남기고 자르고, 전체 넣기는 자르지 않는다
 const POS_TOP = ['official', 'capture', 'reference'];
 const defaultPos = s => ({x: 0.5, y: POS_TOP.includes(s?.kind) ? 0.15 : 0.5, fit: s?.kind === 'logo' ? 'contain' : 'cover', zoom: 1});
+// 다시 만들기 (10-29 김현우) — 고친 프롬프트·아쉬운 점은 제안서 데이터(prompt_log)에 쌓이고, 다음 원고를 쓸 때 판테온 봇이 참고한다
+const AI_KINDS = ['ai_concept', 'mockup', 'texture'];
+const regenBox = s => { const ai = AI_KINDS.includes(s.kind) && !s.widened;
+  return `<details class="regen"><summary>마음에 안 들면 다시 만들기</summary>
+  <label>아쉬운 점<input id="rg-why" maxlength="200" placeholder="예: 얼굴이 너무 크게 나옴 · 배경이 너무 밝음"></label>
+  ${ai ? `<label>생성 프롬프트 (영문)<textarea id="rg-prompt" rows="5">${esc(s.prompt || '')}</textarea></label>`
+       : `<label>좌우 넓히기에 덧붙일 지시 (영문 권장)<textarea id="rg-prompt" rows="3" placeholder="예: extend as a dark concert stage with purple haze">${esc(s.widen_extra || '')}</textarea></label>`}
+  <button class="button" type="button" id="rg-go">${ai ? '이 프롬프트로 다시 만들기' : '이 지시로 다시 넓히기'}</button><small>견적을 받은 뒤 승인하면 만듭니다. 고친 내용은 다음 제안서 원고에 반영됩니다.</small></details>`; };
 function imgViewer(el) {
   const src = el.dataset.src, key = el.dataset.key;
   const p = studio.list?.find(x => activeDetail === 'p:' + x.id), d = p?.data || {}, s = key && d.images?.slots?.[key];
@@ -842,7 +850,7 @@ function imgViewer(el) {
   const ar = box ? box.w / box.h : (r.length === 2 && r[0] > 0 && r[1] > 0 ? r[0] / r[1] : 0);
   const canEdit = !!(s && ar && p.status === 'waiting');
   let pos = {...defaultPos(s), ...(s?.pos || {})};
-  modal(`<h2>${esc(el.dataset.label || '이미지')}</h2><div class="imgv${ar ? '' : ' one'}"><figure><figcaption>원본 전체</figcaption><img src="${esc(src)}" alt="원본 이미지"></figure>${ar ? `<figure><figcaption>제안서에 들어가는 모양${box ? '' : ' (예상)'}</figcaption><div class="imgv-crop${canEdit ? ' drag' : ''}" id="imgv-box" style="aspect-ratio:${ar};width:min(100%,calc(64vh * ${ar}));background-image:url('${esc(src)}')"></div>${canEdit ? `<small>이미지를 끌어서 보일 부분을 옮기고, 마우스 휠이나 아래 막대로 확대·축소하세요. 「전체 넣기」는 자르지 않고 다 보이게 넣습니다.</small><div class="imgv-zoom"><span>확대</span><input type="range" id="imgv-zoom" min="100" max="400" step="5" aria-label="확대"><b id="imgv-zoom-v"></b></div><div class="imgv-tools"><div class="seg-pick"><label><input type="radio" name="imgv-fit" value="cover"> 꽉 채우기</label><label><input type="radio" name="imgv-fit" value="contain"> 전체 넣기</label></div><button class="text-btn" type="button" id="imgv-reset">처음 위치로</button></div>` : ''}</figure>` : ''}</div><div class="modal-actions"><a class="button" href="${esc(src)}" target="_blank" rel="noopener">새 창에서 열기</a>${canEdit && s.widen ? '<span class="imgv-wide-on">좌우 넓히기 대기 · 견적 승인 때 함께 만듭니다</span>' : ''}${canEdit && !s.widen ? '<button class="button" id="imgv-widen" hidden>힉스필드로 좌우 넓히기</button>' : ''}${canEdit ? '<button class="button" data-cancel>취소</button><button class="button primary" id="imgv-save">위치 저장</button>' : '<button class="button primary" data-cancel>닫기</button>'}</div>`);
+  modal(`<h2>${esc(el.dataset.label || '이미지')}</h2><div class="imgv${ar ? '' : ' one'}"><figure><figcaption>원본 전체</figcaption><img src="${esc(src)}" alt="원본 이미지"></figure>${ar ? `<figure><figcaption>제안서에 들어가는 모양${box ? '' : ' (예상)'}</figcaption><div class="imgv-crop${canEdit ? ' drag' : ''}" id="imgv-box" style="aspect-ratio:${ar};width:min(100%,calc(64vh * ${ar}));background-image:url('${esc(src)}')"></div>${canEdit ? `${canEdit && (AI_KINDS.includes(s.kind) || s.widened) ? regenBox(s) : ''}<small>이미지를 끌어서 보일 부분을 옮기고, 마우스 휠이나 아래 막대로 확대·축소하세요. 「전체 넣기」는 자르지 않고 다 보이게 넣습니다.</small><div class="imgv-zoom"><span>확대</span><input type="range" id="imgv-zoom" min="100" max="400" step="5" aria-label="확대"><b id="imgv-zoom-v"></b></div><div class="imgv-tools"><div class="seg-pick"><label><input type="radio" name="imgv-fit" value="cover"> 꽉 채우기</label><label><input type="radio" name="imgv-fit" value="contain"> 전체 넣기</label></div><button class="text-btn" type="button" id="imgv-reset">처음 위치로</button></div>` : ''}</figure>` : ''}</div><div class="modal-actions"><a class="button" href="${esc(src)}" target="_blank" rel="noopener">새 창에서 열기</a>${canEdit && s.widen ? '<span class="imgv-wide-on">좌우 넓히기 대기 · 견적 승인 때 함께 만듭니다</span>' : ''}${canEdit && !s.widen ? '<button class="button" id="imgv-widen" hidden>힉스필드로 좌우 넓히기</button>' : ''}${canEdit ? '<button class="button" data-cancel>취소</button><button class="button primary" id="imgv-save">위치 저장</button>' : '<button class="button primary" data-cancel>닫기</button>'}</div>`);
   $('#modal').classList.add('wide'); $('#modal').addEventListener('close', () => $('#modal').classList.remove('wide'), {once: true});
   const bx = $('#imgv-box'); if (!bx) return;
   const nat = new Image(); nat.src = src;
@@ -888,6 +896,24 @@ function imgViewer(el) {
     await proposalEvent(p.id, `${s.slide}쪽 이미지 좌우 넓히기를 요청했습니다 · 견적을 받습니다`);
     $('#modal').close(); studio.list = null; await loadStudio(); openProposal(p.id, true);
     toast('좌우 넓히기 견적을 받습니다. 견적이 나오면 승인해 주세요.');
+  });
+  $('#rg-go')?.addEventListener('click', async ev => {
+    const why = $('#rg-why').value.trim(), txt = $('#rg-prompt').value.trim(), ai = AI_KINDS.includes(s.kind) && !s.widened;
+    if (ai && !txt) return toast('프롬프트를 적어 주세요.');
+    ev.target.disabled = true;
+    const fresh = studio.list?.find(x => x.id === p.id)?.data || d, cur = fresh.images.slots[key];
+    const prev = [...(cur.prev_paths || []), cur.path].filter(Boolean);
+    const next = ai ? {...cur, status: 'ai', prompt: txt, prev_paths: prev, pos: {}, note: '다시 만들기 대기'}
+                    : {...cur, path: cur.orig_path || cur.path, widen: true, widened: false, widen_extra: txt, prev_paths: prev, pos: {}, note: '좌우 넓히기 다시 하기 대기'};
+    const log = {at: new Date().toISOString(), key, slide: s.slide, kind: s.kind, what: s.what || '', mode: ai ? 'ai' : 'widen',
+                 before: ai ? (cur.prompt || '') : (cur.widen_extra || ''), after: txt, why, by: myName || ''};
+    const data = {...fresh, images: {...fresh.images, slots: {...fresh.images.slots, [key]: next}}, prompt_log: [...(fresh.prompt_log || []), log]};
+    const { error } = await SB.from('pt_proposal').update({data, status: 'working'}).eq('id', p.id);
+    if (error) { ev.target.disabled = false; return toast('저장하지 못했습니다: ' + error.message); }
+    await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'generate', input: {estimate_only: true}});
+    await proposalEvent(p.id, `${s.slide}쪽 이미지 다시 만들기를 요청했습니다${why ? ' · ' + why : ''}`);
+    $('#modal').close(); studio.list = null; await loadStudio(); openProposal(p.id, true);
+    toast('견적을 받습니다. 견적이 나오면 승인해 주세요.');
   });
   $('#imgv-save').onclick = async () => {
     $('#imgv-save').disabled = true;

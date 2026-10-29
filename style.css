@@ -151,6 +151,9 @@ dialog.wide{width:min(1200px,calc(100vw - 32px))}
 .imgv-crop.drag{cursor:grab;touch-action:none;user-select:none}.imgv-crop.drag.moving{cursor:grabbing}.imgv-crop.drag.fit{cursor:default}
 .imgv-zoom{display:flex;align-items:center;gap:10px;font-size:12px;color:#495f44}.imgv-zoom input{flex:1;width:auto;margin:0;display:inline;accent-color:#285a44}.imgv-zoom b{min-width:42px;text-align:right;font-weight:600}
 .imgv-wide-on{align-self:center;margin-right:auto;font-size:12px;color:#b18f5c}
+.regen{border:1px solid #e4eae4;border-radius:8px;padding:10px 12px;margin:2px 0}.regen summary{cursor:pointer;font-size:12px;font-weight:600;color:#285541}
+.regen label{display:block;font-size:12px;color:#495f44;margin-top:10px}.regen input,.regen textarea{display:block;width:100%;margin-top:6px;border:1px solid #dde4d9;border-radius:6px;padding:8px;font:inherit;font-size:12px}
+.regen .button{margin-top:10px}.regen small{display:block;margin-top:6px}
 .imgv-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .imgv-tools .seg-pick{display:flex;gap:14px}.imgv-tools label{display:inline-flex;align-items:center;gap:5px;margin:0;font-size:12px;color:#495f44}.imgv-tools input{width:auto;margin:0;display:inline}
 @media(max-width:850px){.imgv{grid-template-columns:1fr}}
