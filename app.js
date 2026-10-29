@@ -867,7 +867,7 @@ function imgViewer(el) {
   const ar = box ? box.w / box.h : (r.length === 2 && r[0] > 0 && r[1] > 0 ? r[0] / r[1] : 0);
   const canEdit = !!(s && ar && p.status === 'waiting');
   let pos = {...defaultPos(s), ...(s?.pos || {})};
-  modal(`<h2>${esc(el.dataset.label || '이미지')}</h2><div class="imgv${ar ? '' : ' one'}"><figure><figcaption>원본 전체</figcaption><img src="${esc(src)}" alt="원본 이미지"></figure>${ar ? `<figure><figcaption>제안서에 들어가는 모양${box ? '' : ' (예상)'}</figcaption><div class="imgv-crop${canEdit ? ' drag' : ''}" id="imgv-box" style="aspect-ratio:${ar};width:min(100%,calc(64vh * ${ar}));background-image:url('${esc(src)}')"></div>${canEdit ? `${canEdit && (AI_KINDS.includes(s.kind) || s.widened) ? regenBox(s) : ''}<small>이미지를 끌어서 보일 부분을 옮기고, 마우스 휠이나 아래 막대로 확대·축소하세요. 「전체 넣기」는 자르지 않고 다 보이게 넣습니다.</small><div class="imgv-zoom"><span>확대</span><input type="range" id="imgv-zoom" min="100" max="400" step="5" aria-label="확대"><b id="imgv-zoom-v"></b></div><div class="imgv-tools"><div class="seg-pick"><label><input type="radio" name="imgv-fit" value="cover"> 꽉 채우기</label><label><input type="radio" name="imgv-fit" value="contain"> 전체 넣기</label></div><button class="text-btn" type="button" id="imgv-reset">처음 위치로</button></div>` : ''}</figure>` : ''}</div><div class="modal-actions"><a class="button" href="${esc(src)}" target="_blank" rel="noopener">새 창에서 열기</a>${canEdit && s.widen ? '<span class="imgv-wide-on">좌우 넓히기 대기 · 견적 승인 때 함께 만듭니다</span>' : ''}${canEdit && !s.widen ? '<button class="button" id="imgv-widen" hidden>힉스필드로 좌우 넓히기</button>' : ''}${canEdit ? '<button class="button" data-cancel>취소</button><button class="button primary" id="imgv-save">위치 저장</button>' : '<button class="button primary" data-cancel>닫기</button>'}</div>`);
+  modal(`<h2>${esc(el.dataset.label || '이미지')}</h2><div class="imgv${ar ? '' : ' one'}"><figure><figcaption>원본 전체</figcaption><img src="${esc(src)}" alt="원본 이미지"></figure>${ar ? `<figure><figcaption>제안서에 들어가는 모양${box ? '' : ' (예상)'}</figcaption><div class="imgv-crop${canEdit ? ' drag' : ''}" id="imgv-box" style="aspect-ratio:${ar};width:min(100%,calc(64vh * ${ar}));background-image:url('${esc(src)}')"></div>${canEdit ? `${canEdit && (AI_KINDS.includes(s.kind) || s.widened) ? regenBox(s) : ''}<small>이미지를 끌어서 보일 부분을 옮기고, 마우스 휠이나 아래 막대로 확대·축소하세요. 「전체 넣기」는 자르지 않고 다 보이게 넣습니다.</small><div class="imgv-zoom"><span>확대</span><input type="range" id="imgv-zoom" min="100" max="400" step="5" aria-label="확대"><b id="imgv-zoom-v"></b></div><div class="imgv-tools"><div class="seg-pick"><label><input type="radio" name="imgv-fit" value="cover"> 꽉 채우기</label><label><input type="radio" name="imgv-fit" value="contain"> 전체 넣기</label></div><button class="text-btn" type="button" id="imgv-reset">처음 위치로</button></div>` : ''}</figure>` : ''}</div><div class="modal-actions"><a class="button" href="${esc(src)}" target="_blank" rel="noopener">새 창에서 열기</a>${canEdit && s.widen ? '<span class="imgv-wide-on">좌우 넓히기 대기 · 견적 승인 때 함께 만듭니다</span>' : ''}${canEdit && !s.widen ? '<button class="button" id="imgv-widen" hidden>힉스필드로 넓혀 전체 넣기</button>' : ''}${canEdit ? '<button class="button" data-cancel>취소</button><button class="button primary" id="imgv-save">위치 저장</button>' : '<button class="button primary" data-cancel>닫기</button>'}</div>`);
   $('#modal').classList.add('wide'); $('#modal').addEventListener('close', () => $('#modal').classList.remove('wide'), {once: true});
   const bx = $('#imgv-box'); if (!bx) return;
   const nat = new Image(); nat.src = src;
@@ -880,7 +880,7 @@ function imgViewer(el) {
     const z = $('#imgv-zoom'); if (z) { z.value = Math.round((pos.zoom || 1) * 100); z.disabled = fit; $('#imgv-zoom-v').textContent = Math.round((pos.zoom || 1) * 100) + '%'; }
   };
   // 가로 상자에 세로로 긴 이미지면 좌우 넓히기 단추를 보인다 (10-29) — 넓힌 이미지를 줄여 넣으면 잘리지 않는다
-  const wideBtn = () => { const b = $('#imgv-widen'); if (b && nat.naturalWidth) b.hidden = !(ar >= 1.15 && nat.naturalWidth / nat.naturalHeight < ar / 1.3); };
+  const wideBtn = () => { const b = $('#imgv-widen'); if (b && nat.naturalWidth) b.hidden = !shapeOff(nat.naturalWidth, nat.naturalHeight, ar); };
   paint(); wideBtn(); nat.onload = () => { paint(); wideBtn(); };
   if (!canEdit) return;
   $$('input[name=imgv-fit]').forEach(i => { i.checked = i.value === pos.fit; i.onchange = () => { pos.fit = i.value; paint(); }; });
@@ -977,6 +977,27 @@ const qaBlock = p => { const d = p.data || {}, qa = qaOf(d), busy = studio.jobs.
   if (!qa.flags.length) return '<p class="qa-line good">자동 검수 · 눈에 띄는 문제 없음</p>';
   return `<div class="qa-box"><b>자동 검수 · 확인할 곳 ${qa.flags.length}곳</b><small>누르면 그 페이지로 가서 바로 고칠 수 있습니다</small>${qa.flags.map(f => `<button class="qa-flag" data-review="${f.slide}"><span>${f.slide}페이지</span><b>${esc(QA_KO[f.type] || '확인')}</b> ${esc(f.detail)}</button>`).join('')}</div>`; };
 const qaOf = d => d.qa && d.build && d.qa.version === d.build.version ? d.qa : null;
+// 페이지별 검토에서 바로 만들어 넣기 (10-29 김현우) — 단추에 금액을 보이고 누르면 그 자리 하나만 승인해 힉스필드로 만든다
+const shapeOff = (w, h, ar) => ar && w && h && (w / h < ar / 1.3 || w / h > ar * 1.3);
+async function quickMake(p, key, mode, prompt, why) {
+  const fresh = studio.list?.find(x => x.id === p.id)?.data || p.data, cur = fresh.images.slots[key];
+  const usd = mode === 'widen' ? 0.1 : 0.02;
+  if (!confirm(mode === 'widen' ? `${cur.slide}페이지 이미지를 힉스필드로 넓혀 상자에 전체가 들어가게 만듭니다. 예상 비용 약 $0.08 입니다. 진행할까요?`
+                                : `${cur.slide}페이지 자리에 AI 이미지를 만들어 넣습니다. 예상 비용 약 $0.01 입니다. 진행할까요?`)) return false;
+  const prev = [...(cur.prev_paths || []), cur.path].filter(Boolean);
+  const next = mode === 'widen' ? {...cur, path: cur.orig_path || cur.path, widen: true, widened: false, widen_extra: prompt || cur.widen_extra || '', prev_paths: prev, pos: {}, note: '넓히는 중'}
+                                : {...cur, status: 'ai', prompt, prev_paths: prev, pos: {}, note: 'AI 이미지 만드는 중'};
+  const log = (mode === 'widen' && !prompt && !why) || (mode === 'ai' && prompt === (cur.prompt || '') && !why) ? [] :
+    [{at: new Date().toISOString(), key, slide: cur.slide, kind: cur.kind, what: cur.what || '', mode, before: mode === 'widen' ? (cur.widen_extra || '') : (cur.prompt || ''), after: prompt, why, by: myName || ''}];
+  const data = {...fresh, images: {...fresh.images, slots: {...fresh.images.slots, [key]: next}}, prompt_log: [...(fresh.prompt_log || []), ...log]};
+  const { error } = await SB.from('pt_proposal').update({data, status: 'working'}).eq('id', p.id);
+  if (error) { toast('저장하지 못했습니다: ' + error.message); return false; }
+  await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'generate', input: {approved_usd: usd, keys: [key]}});
+  await proposalEvent(p.id, `${cur.slide}페이지 ${mode === 'widen' ? '이미지 넓히기' : 'AI 이미지 만들기'}를 승인했습니다 (예상 $${mode === 'widen' ? '0.08' : '0.01'})${why ? ' · ' + why : ''}`);
+  studio.list = null; await loadStudio();
+  toast('만들기 시작했습니다. 3~5분 뒤 제안서가 다시 그려지고 자동 검수까지 돌아갑니다.');
+  return true;
+}
 async function pageReview(pid, start) {
   let p = studio.list?.find(x => x.id === pid); if (!p?.data?.build?.pdf) return toast('그려진 제안서가 없습니다.');
   let dlg = $('#review');
@@ -1006,7 +1027,15 @@ async function pageReview(pid, start) {
     c.width = vp.width; c.height = vp.height; await pg.render({canvasContext: c.getContext('2d'), viewport: vp}).promise; $('#rv-load').hidden = true;
     const fl = flags.filter(f => f.slide === cur), keys = Object.keys(S).filter(k => +S[k].slide === cur).sort();
     const card = k => { const s = S[k], [cls, label] = SLOT_ST[s.status] || ['', s.status], bad = fl.filter(f => f.key === k);
-      return `<div class="rv-slot${bad.length ? ' flag' : ''}"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-rk="${esc(k)}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}</span>`}</div><div class="rv-info"><div class="ihead"><b>${esc(KIND_KO_IMG[s.kind] || s.kind)}</b><span class="pill ${cls}">${label}</span></div><small>${esc(s.what || '')}</small>${bad.map(f => `<small class="warn">${esc(QA_KO[f.type] || '확인')} · ${esc(f.detail)}</small>`).join('')}<div class="ibtns">${s.path ? `<button class="text-btn" data-rv-open="${esc(k)}">크게 보기·고치기</button>` : ''}<label class="text-btn up">내 이미지로 바꾸기<input type="file" accept="image/png,image/jpeg,image/webp" data-rv-up="${esc(k)}" hidden></label></div></div></div>`; };
+      return `<div class="rv-slot${bad.length ? ' flag' : ''}"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-rk="${esc(k)}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}</span>`}</div><div class="rv-info"><div class="ihead"><b>${esc(KIND_KO_IMG[s.kind] || s.kind)}</b><span class="pill ${cls}">${label}</span></div><small>${esc(s.what || '')}</small>${bad.map(f => `<small class="warn">${esc(QA_KO[f.type] || '확인')} · ${esc(f.detail)}</small>`).join('')}<div class="ibtns">${s.path ? `<button class="text-btn" data-rv-open="${esc(k)}">크게 보기·고치기</button>` : ''}<label class="text-btn up">내 이미지로 바꾸기<input type="file" accept="image/png,image/jpeg,image/webp" data-rv-up="${esc(k)}" hidden></label></div>${makeBox(k, s)}</div></div>`; };
+    const canAi = s => AI_KINDS.includes(s.kind) || (!s.path && !['official', 'logo', 'capture'].includes(s.kind));
+    function makeBox(k, s) {
+      if (p.status === 'working' && (s.widen || s.status === 'ai')) return '<p class="rv-busy">만드는 중입니다…</p>';
+      const ai = canAi(s) && !s.widened;
+      return `<div class="rv-make">${ai ? `<textarea data-mk-prompt="${esc(k)}" rows="3" placeholder="생성 프롬프트 (영문) — 무엇을 어떤 장면·분위기로">${esc(s.prompt || '')}</textarea>
+        <input data-mk-why="${esc(k)}" maxlength="200" placeholder="아쉬운 점 (다시 만들 때)"><button class="button primary small" data-mk-ai="${esc(k)}">${s.status === 'generated' ? 'AI로 다시 만들기' : 'AI로 만들어 넣기'} · 약 $0.01</button>` : ''}
+        ${s.path ? `<button class="button small" data-mk-wide="${esc(k)}" hidden>힉스필드로 넓혀 전체 넣기 · 약 $0.08</button>` : ''}</div>`;
+    }
     const loose = fl.filter(f => !f.key || !keys.includes(f.key));
     $('#rv-side').innerHTML = `${loose.map(f => `<div class="rv-flag"><b>${esc(QA_KO[f.type] || '확인')}</b> ${esc(f.detail)}</div>`).join('')}${keys.length ? keys.map(card).join('') : '<p class="muted-box">이 페이지에는 이미지 자리가 없습니다.</p>'}`;
     const paths = keys.map(k => S[k].path).filter(Boolean);
@@ -1019,6 +1048,12 @@ async function pageReview(pid, start) {
     $$('#rv-side [data-rv-open]').forEach(x => x.onclick = () => open(x.dataset.rvOpen));
     $$('#rv-side .ithumb[data-rk]').forEach(x => x.onclick = () => open(x.dataset.rk));
     $$('#rv-side [data-rv-up]').forEach(inp => inp.onchange = async () => { const f = inp.files[0]; if (f && await replaceSlotImage(p, inp.dataset.rvUp, f)) show(cur); });
+    $$('#rv-side [data-mk-ai]').forEach(x => x.onclick = async () => { const k = x.dataset.mkAi, pr = $(`[data-mk-prompt="${CSS.escape(k)}"]`).value.trim();
+      if (!pr) return toast('생성 프롬프트를 적어 주세요.');
+      x.disabled = true; if (await quickMake(p, k, 'ai', pr, $(`[data-mk-why="${CSS.escape(k)}"]`).value.trim())) show(cur); else x.disabled = false; });
+    $$('#rv-side [data-mk-wide]').forEach(x => { const k = x.dataset.mkWide, b = d.build?.boxes?.[k], el = $(`#rv-side [data-rk="${CSS.escape(k)}"]`);
+      x.onclick = async () => { x.disabled = true; if (await quickMake(p, k, 'widen', '', '')) show(cur); else x.disabled = false; };
+      if (b && el?.dataset.src) { const im = new Image(); im.onload = () => { x.hidden = !shapeOff(im.naturalWidth, im.naturalHeight, b.w / b.h); }; im.src = el.dataset.src; } });
   };
   $('#rv-prev').onclick = () => show(cur - 1); $('#rv-next').onclick = () => show(cur + 1);
   dlg.onkeydown = ev => { if ($('#modal').open) return; if (ev.key === 'ArrowLeft') show(cur - 1); if (ev.key === 'ArrowRight') show(cur + 1); };
