@@ -578,7 +578,7 @@ function bindAdmin() {
    대표님 almighty-proposal-studio 의 흐름: IP 입력 → 인테이크 → (콜라보) 파트너 추천 → 리서치 → 컨셉 → 제안서 생성 → 이미지 계획 → 생성·삽입·QA
    사람은 게이트에서만 결정하고, 단계 작업은 pt_proposal_job 대기열에 넣어 판테온 봇(서버 PC)이 처리한다. 엔티티는 판테온 pt_entity 를 쓴다 */
 let studioCan = false;
-const studio = {tab: 'projects', list: null, refs: null, jobs: [], loading: false, err: ''};
+const studio = {tab: 'projects', filter: 'all', list: null, refs: null, jobs: [], loading: false, err: ''};
 const STAGES = ['IP 입력', '인테이크', '파트너 IP 추천', '리서치', '컨셉 설계', '제안서 생성', '이미지 계획', '생성·삽입·QA'];
 const GATES = {2: '인테이크 확정', 3: '파트너 IP 선택', 5: '컨셉 확정', 7: '이미지 수급·크레딧 승인', 8: '반려 이미지 최종 판단'};
 const JOB_OF = {3: 'partners', 4: 'research', 5: 'concepts', 6: 'build', 7: 'image_plan', 8: 'generate'};
@@ -613,12 +613,15 @@ function studioView() {
 }
 
 function studioProjects() {
-  const ps = studio.list, live = ps.filter(p => p.status !== 'done'), wait = ps.filter(p => p.status === 'waiting'), work = ps.filter(p => p.status === 'working');
-  const stat = (label, n, unit, bottom, hi) => `<div class="stat${hi ? ' highlight' : ''}"><div class="stat-label">${label}</div><div class="stat-value">${n}<small>${unit}</small></div><div class="stat-bottom">${bottom}</div></div>`;
+  const all = studio.list, live = all.filter(p => p.status !== 'done'), wait = all.filter(p => p.status === 'waiting'), work = all.filter(p => p.status === 'working'), done = all.filter(p => p.status === 'done');
+  // 숫자 카드를 누르면 그 건만 (10-29 김현우) · 다시 누르면 전체
+  const F = {live: ['진행 중', live], wait: ['결정 대기', wait], work: ['판테온 봇 처리 중', work], done: ['완료', done]};
+  const ps = F[studio.filter]?.[1] || all;
+  const stat = (key, n, unit, bottom, hi) => `<div class="stat${hi ? ' highlight' : ''}${studio.filter === key ? ' on' : ''}" data-pfilter="${key}" role="button" tabindex="0" aria-pressed="${studio.filter === key}" aria-label="${F[key][0]} 프로젝트만 보기"><div class="stat-label">${F[key][0]}</div><div class="stat-value">${n}<small>${unit}</small></div><div class="stat-bottom">${bottom}</div></div>`;
   const decide = wait.length ? wait.map(p => `<button class="alert-row" data-proposal="${p.id}"><span class="alert-symbol">${icon('warning')}</span><span class="alert-text">${esc(pTitle(p))}<small>${esc(GATES[p.stage] || '확인')} 대기 · ${esc(kst(p.updated_at))}</small></span></button>`).join('') : '<p class="panel-caption" style="padding:0 0 18px">지금 결정할 프로젝트가 없습니다.</p>';
   const rows = ps.map(p => `<tr class="clickable" data-proposal="${p.id}" tabindex="0"><td>${esc(pTitle(p))}<small class="cell-sub">${esc(p.recipient || '수신사 미정')}</small></td><td>${p.stage}. ${esc(STAGES[p.stage - 1])}</td><td>${pPill(p)}${p.status === 'working' ? `<div data-prow="${p.id}">${rowProg(p)}</div>` : ''}</td><td style="white-space:nowrap">${esc(kst(p.updated_at))}</td></tr>`).join('');
-  return `<div class="stats">${stat('진행 중', live.length, '건', `전체 ${ps.length}건`)}${stat('결정 대기', wait.length, '건', '게이트에서 사람이 결정할 것')}${stat('판테온 봇 처리 중', work.length, '건', '리서치·생성 등 자동 단계')}${stat('완료', ps.length - live.length, '건', '제안서 전달 완료', true)}</div>
-  <div class="main-grid"><section class="panel"><div class="panel-head"><div class="panel-title">전체 프로젝트 <small>최근 업데이트 순</small></div></div>${ps.length ? `<div class="table-wrap"><table><thead><tr><th>프로젝트</th><th>현재 단계</th><th>상태</th><th>업데이트</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="empty"><p>아직 프로젝트가 없습니다.<br>오른쪽 위 「새 프로젝트」에서 IP 하나로 시작하세요.</p></div>`}</section>
+  return `<div class="stats">${stat('live', live.length, '건', `전체 ${all.length}건`)}${stat('wait', wait.length, '건', '게이트에서 사람이 결정할 것')}${stat('work', work.length, '건', '리서치·생성 등 자동 단계')}${stat('done', done.length, '건', '제안서 전달 완료', true)}</div>
+  <div class="main-grid"><section class="panel"><div class="panel-head"><div class="panel-title">${F[studio.filter] ? `${F[studio.filter][0]} 프로젝트 <small>${ps.length}건 · 최근 업데이트 순</small>` : '전체 프로젝트 <small>최근 업데이트 순</small>'}</div>${F[studio.filter] ? '<button class="text-btn" data-pfilter="all">전체 보기</button>' : ''}</div>${!ps.length && F[studio.filter] ? `<div class="empty"><p>${F[studio.filter][0]}인 프로젝트가 없습니다.</p></div>` : ps.length ? `<div class="table-wrap"><table><thead><tr><th>프로젝트</th><th>현재 단계</th><th>상태</th><th>업데이트</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="empty"><p>아직 프로젝트가 없습니다.<br>오른쪽 위 「새 프로젝트」에서 IP 하나로 시작하세요.</p></div>`}</section>
   <section class="panel"><div class="panel-head"><div class="panel-title">지금 결정할 것</div>${wait.length ? `<span class="alert-count">${wait.length}건</span>` : ''}</div><div class="alert-list">${decide}</div></section></div>`;
 }
 
@@ -692,6 +695,7 @@ function bindStudio() {
     await loadStudio(); toast('다시 분석을 요청했습니다.');
   });
   $$('[data-studio-tab]').forEach(b => b.onclick = () => { studio.tab = b.dataset.studioTab; render(); });
+  $$('[data-pfilter]').forEach(b => { const pick = () => { const v = b.dataset.pfilter; studio.filter = studio.filter === v ? 'all' : v; render(); }; b.onclick = pick; b.onkeydown = ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pick(); } }; });
   $$('[data-proposal]').forEach(b => { b.onclick = () => openProposal(b.dataset.proposal); b.onkeydown = e => { if (e.key === 'Enter') openProposal(b.dataset.proposal); }; });
   $$('[data-ref-open]').forEach(b => b.onclick = async () => { const r = studio.refs.find(x => x.id === b.dataset.refOpen); const { data, error } = await SB.storage.from('pt-studio').createSignedUrl(r.file_path, 600); if (error) return toast('파일을 열지 못했습니다.'); window.open(data.signedUrl, '_blank', 'noopener'); });
   $$('[data-ref-default]').forEach(b => b.onclick = async () => {
