@@ -1191,5 +1191,6 @@ $('#profile').onclick = async () => { if (!me) return; modal(`<h2>로그아웃</
 $('#overlay').onclick = closeDrawer;
 SB.auth.onAuthStateChange(e => { if (e === 'PASSWORD_RECOVERY') { RECOVERY = true; recoveryScreen(); } });
 window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (me && h && !h.includes('=') && h !== page) { page = h; filter = '전체'; render(); } });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); $('#global-search').focus(); } });
+// 창(이미지 크게 보기 등)이 떠 있으면 Esc 는 그 창만 닫고 상세로 돌아간다 (10-29)
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal').open) closeDrawer(); if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); $('#global-search').focus(); } });
 start();
