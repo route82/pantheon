@@ -825,7 +825,7 @@ async function loadImgThumbs(slots) {
 // 이미지 크게 보기 · 위치 맞추기 (10-29 김현우) — 원본 전체 + 제안서 상자(실제 그려진 크기) 안에서 끌어 옮기기
 // 판테온 봇이 그릴 때와 같은 방식: 꽉 채우기는 x·y(0~1) 위치를 남기고 자르고, 전체 넣기는 자르지 않는다
 const POS_TOP = ['official', 'capture', 'reference'];
-const defaultPos = s => ({x: 0.5, y: POS_TOP.includes(s?.kind) ? 0.15 : 0.5, fit: s?.kind === 'logo' ? 'contain' : 'cover'});
+const defaultPos = s => ({x: 0.5, y: POS_TOP.includes(s?.kind) ? 0.15 : 0.5, fit: s?.kind === 'logo' ? 'contain' : 'cover', zoom: 1});
 function imgViewer(el) {
   const src = el.dataset.src, key = el.dataset.key;
   const p = studio.list?.find(x => activeDetail === 'p:' + x.id), d = p?.data || {}, s = key && d.images?.slots?.[key];
@@ -833,19 +833,29 @@ function imgViewer(el) {
   const ar = box ? box.w / box.h : (r.length === 2 && r[0] > 0 && r[1] > 0 ? r[0] / r[1] : 0);
   const canEdit = !!(s && ar && p.status === 'waiting');
   let pos = {...defaultPos(s), ...(s?.pos || {})};
-  modal(`<h2>${esc(el.dataset.label || '이미지')}</h2><div class="imgv${ar ? '' : ' one'}"><figure><figcaption>원본 전체</figcaption><img src="${esc(src)}" alt="원본 이미지"></figure>${ar ? `<figure><figcaption>제안서에 들어가는 모양${box ? '' : ' (예상)'}</figcaption><div class="imgv-crop${canEdit ? ' drag' : ''}" id="imgv-box" style="aspect-ratio:${ar};width:min(100%,calc(64vh * ${ar}));background-image:url('${esc(src)}')"></div>${canEdit ? `<small>${'이미지를 끌어서 상자 안에 보일 부분을 옮기세요. 「전체 넣기」는 자르지 않고 다 보이게 넣습니다.'}</small><div class="imgv-tools"><div class="seg-pick"><label><input type="radio" name="imgv-fit" value="cover"> 꽉 채우기</label><label><input type="radio" name="imgv-fit" value="contain"> 전체 넣기</label></div><button class="text-btn" type="button" id="imgv-reset">처음 위치로</button></div>` : ''}</figure>` : ''}</div><div class="modal-actions"><a class="button" href="${esc(src)}" target="_blank" rel="noopener">새 창에서 열기</a>${canEdit ? '<button class="button" data-cancel>취소</button><button class="button primary" id="imgv-save">위치 저장</button>' : '<button class="button primary" data-cancel>닫기</button>'}</div>`);
+  modal(`<h2>${esc(el.dataset.label || '이미지')}</h2><div class="imgv${ar ? '' : ' one'}"><figure><figcaption>원본 전체</figcaption><img src="${esc(src)}" alt="원본 이미지"></figure>${ar ? `<figure><figcaption>제안서에 들어가는 모양${box ? '' : ' (예상)'}</figcaption><div class="imgv-crop${canEdit ? ' drag' : ''}" id="imgv-box" style="aspect-ratio:${ar};width:min(100%,calc(64vh * ${ar}));background-image:url('${esc(src)}')"></div>${canEdit ? `<small>이미지를 끌어서 보일 부분을 옮기고, 마우스 휠이나 아래 막대로 확대·축소하세요. 「전체 넣기」는 자르지 않고 다 보이게 넣습니다.</small><div class="imgv-zoom"><span>확대</span><input type="range" id="imgv-zoom" min="100" max="400" step="5" aria-label="확대"><b id="imgv-zoom-v"></b></div><div class="imgv-tools"><div class="seg-pick"><label><input type="radio" name="imgv-fit" value="cover"> 꽉 채우기</label><label><input type="radio" name="imgv-fit" value="contain"> 전체 넣기</label></div><button class="text-btn" type="button" id="imgv-reset">처음 위치로</button></div>` : ''}</figure>` : ''}</div><div class="modal-actions"><a class="button" href="${esc(src)}" target="_blank" rel="noopener">새 창에서 열기</a>${canEdit ? '<button class="button" data-cancel>취소</button><button class="button primary" id="imgv-save">위치 저장</button>' : '<button class="button primary" data-cancel>닫기</button>'}</div>`);
   $('#modal').classList.add('wide'); $('#modal').addEventListener('close', () => $('#modal').classList.remove('wide'), {once: true});
   const bx = $('#imgv-box'); if (!bx) return;
   const nat = new Image(); nat.src = src;
-  const paint = () => { bx.style.backgroundSize = pos.fit === 'contain' ? 'contain' : 'cover'; bx.style.backgroundPosition = pos.fit === 'contain' ? 'center' : `${pos.x * 100}% ${pos.y * 100}%`; bx.classList.toggle('fit', pos.fit === 'contain'); };
-  paint();
+  // 꽉 채운 크기 × 확대 — 판테온 봇이 그릴 때와 같은 계산 (위치 %는 남는 부분 중 어디를 보이게 할지)
+  const scale = () => Math.max(bx.clientWidth / nat.naturalWidth, bx.clientHeight / nat.naturalHeight) * (pos.zoom || 1);
+  const paint = () => {
+    const fit = pos.fit === 'contain';
+    bx.style.backgroundSize = fit ? 'contain' : nat.naturalWidth ? `${nat.naturalWidth * scale()}px ${nat.naturalHeight * scale()}px` : 'cover';
+    bx.style.backgroundPosition = fit ? 'center' : `${pos.x * 100}% ${pos.y * 100}%`; bx.classList.toggle('fit', fit);
+    const z = $('#imgv-zoom'); if (z) { z.value = Math.round((pos.zoom || 1) * 100); z.disabled = fit; $('#imgv-zoom-v').textContent = Math.round((pos.zoom || 1) * 100) + '%'; }
+  };
+  paint(); nat.onload = paint;
   if (!canEdit) return;
   $$('input[name=imgv-fit]').forEach(i => { i.checked = i.value === pos.fit; i.onchange = () => { pos.fit = i.value; paint(); }; });
   $('#imgv-reset').onclick = () => { pos = defaultPos(s); $$('input[name=imgv-fit]').forEach(i => i.checked = i.value === pos.fit); paint(); };
+  const setZoom = z => { pos.zoom = Math.min(4, Math.max(1, Math.round(z * 100) / 100)); paint(); };
+  $('#imgv-zoom').oninput = ev => setZoom(ev.target.value / 100);
+  bx.onwheel = ev => { if (pos.fit === 'contain') return; ev.preventDefault(); setZoom((pos.zoom || 1) * (ev.deltaY < 0 ? 1.08 : 1 / 1.08)); };
   let drag = null;
   bx.onpointerdown = ev => {
     if (pos.fit === 'contain' || !nat.naturalWidth) return;
-    const W = bx.clientWidth, H = bx.clientHeight, sc = Math.max(W / nat.naturalWidth, H / nat.naturalHeight);
+    const W = bx.clientWidth, H = bx.clientHeight, sc = scale();
     drag = {x0: ev.clientX, y0: ev.clientY, px: pos.x, py: pos.y, ex: nat.naturalWidth * sc - W, ey: nat.naturalHeight * sc - H};
     bx.setPointerCapture(ev.pointerId); bx.classList.add('moving');
   };
@@ -860,7 +870,7 @@ function imgViewer(el) {
   $('#imgv-save').onclick = async () => {
     $('#imgv-save').disabled = true;
     const fresh = studio.list?.find(x => x.id === p.id)?.data || d;
-    const v = {x: Math.round(pos.x * 1000) / 1000, y: Math.round(pos.y * 1000) / 1000, fit: pos.fit};
+    const v = {x: Math.round(pos.x * 1000) / 1000, y: Math.round(pos.y * 1000) / 1000, fit: pos.fit, zoom: pos.zoom || 1};
     const slots = {...fresh.images.slots, [key]: {...fresh.images.slots[key], pos: v}};
     const { error } = await SB.from('pt_proposal').update({data: {...fresh, images: {...fresh.images, slots}}}).eq('id', p.id);
     if (error) { $('#imgv-save').disabled = false; return toast('저장하지 못했습니다: ' + error.message); }
