@@ -731,12 +731,12 @@ function openRef(id) {
   const st = f.style || {};
   const pages = (f.pages || []).map(x => `<tr><td>${esc(x.page)}</td><td>${esc(x.role || '')}<small class="cell-sub">${esc(x.title || '')}</small></td><td>${esc(x.layout || '')}${(x.images || []).length ? `<small class="cell-sub">${x.images.map(i => esc(`${IMG_KIND[i.kind] || i.kind} ${i.ratio || ''}${i.what ? ' · ' + i.what : ''}`)).join('<br>')}</small>` : ''}</td></tr>`).join('');
   showDrawer(`<span class="entity-avatar">${icon('studio')}</span><h2>${esc(r.title)}</h2><span class="detail-sub">${esc([r.ip_names, r.recipient, r.author].filter(Boolean).join(' · '))}</span>
-  <div class="detail-block"><h3>구성 요약</h3><p>${esc(f.summary || '')}</p><div class="detail-row"><span>페이지</span><b>${esc(f.page_count || (f.pages || []).length)}쪽</b></div><div class="detail-row"><span>이미지</span><b>${esc(f.image_pattern?.total || 0)}장</b></div>${r.is_default ? '<div class="detail-row"><span>기본 포맷</span><b><span class="pill good">기본</span></b></div>' : ''}</div>
-  ${(f.acts || []).length ? `<div class="detail-block"><h3>막 구성</h3><ol class="rule-list">${f.acts.map(a => `<li><b>${esc(a.name || '')}</b> <span class="muted">· ${esc(a.pages || '')}쪽</span><br><small>${esc(a.purpose || '')}</small></li>`).join('')}</ol></div>` : ''}
+  <div class="detail-block"><h3>구성 요약</h3><p>${esc(f.summary || '')}</p><div class="detail-row"><span>페이지</span><b>${esc(f.page_count || (f.pages || []).length)}페이지</b></div><div class="detail-row"><span>이미지</span><b>${esc(f.image_pattern?.total || 0)}장</b></div>${r.is_default ? '<div class="detail-row"><span>기본 포맷</span><b><span class="pill good">기본</span></b></div>' : ''}</div>
+  ${(f.acts || []).length ? `<div class="detail-block"><h3>막 구성</h3><ol class="rule-list">${f.acts.map(a => `<li><b>${esc(a.name || '')}</b> <span class="muted">· ${esc(a.pages || '')}페이지</span><br><small>${esc(a.purpose || '')}</small></li>`).join('')}</ol></div>` : ''}
   ${kinds.length ? `<div class="detail-block"><h3>이미지 사용</h3>${kinds.map(([k, n]) => `<div class="detail-row"><span>${esc(IMG_KIND[k] || k)}</span><b>${n}장</b></div>`).join('')}${f.image_pattern?.note ? `<p>${esc(f.image_pattern.note)}</p>` : ''}</div>` : ''}
   <div class="detail-block"><h3>문체·디자인</h3>${st.tone ? `<div class="detail-row"><span>문체</span><b>${esc(st.tone)}</b></div>` : ''}${st.type ? `<div class="detail-row"><span>글꼴</span><b>${esc(st.type)}</b></div>` : ''}${st.emphasis ? `<div class="detail-row"><span>강조</span><b>${esc(st.emphasis)}</b></div>` : ''}${(st.colors || []).length ? `<div class="detail-row"><span>주요 색</span><b>${st.colors.filter(c => /^#[0-9a-f]{3,8}$/i.test(c)).map(c => `<i class="swatch" style="background:${c}" title="${c}"></i>`).join('')}</b></div>` : ''}</div>
   ${(f.rules || []).length ? `<div class="detail-block"><h3>새 제안서가 따를 규칙</h3><ol class="rule-list">${f.rules.map(x => `<li>${esc(x)}</li>`).join('')}</ol></div>` : ''}
-  ${pages ? `<div class="detail-block"><h3>페이지별 구성</h3><div class="table-wrap"><table class="ref-pages"><thead><tr><th>쪽</th><th>역할</th><th>배치·이미지</th></tr></thead><tbody>${pages}</tbody></table></div></div>` : ''}`);
+  ${pages ? `<div class="detail-block"><h3>페이지별 구성</h3><div class="table-wrap"><table class="ref-pages"><thead><tr><th>페이지</th><th>역할</th><th>배치·이미지</th></tr></thead><tbody>${pages}</tbody></table></div></div>` : ''}`);
 }
 
 const SCORE_KO = {fandom: '팬덤', world: '세계관', asset: '자산 결합', business: '사업성', timing: '타이밍', risk: '리스크'};
@@ -827,7 +827,7 @@ function imagesPanel(p) {
   const S = p.data.images.slots, keys = Object.keys(S).sort();
   const n = st => keys.filter(k => S[k].status === st).length;
   const card = k => { const s = S[k], [cls, label] = SLOT_ST[s.status] || ['', s.status];
-    return `<div class="icard"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-key="${esc(k)}" data-ratio="${esc(s.ratio || '')}" data-label="${esc(s.slide)}쪽 · ${esc(KIND_KO_IMG[s.kind] || s.kind)} · ${esc(s.what || '')}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}<br>${esc(s.ratio || '')}</span>`}</div><div class="ibody"><div class="ihead"><b>${esc(s.slide)}쪽</b><span class="pill ${cls}">${label}</span></div><small>${esc(KIND_KO_IMG[s.kind] || s.kind)} · ${esc(s.what || '')}</small>${s.source_page ? `<a class="src" href="${esc(s.source_page)}" target="_blank" rel="noopener">${s.via === 'aside' ? 'Aside · ' : ''}${esc(host(s.source_page))}</a>` : ''}${s.note ? `<small class="warn">${esc(s.note)}</small>` : ''}${s.status === 'ai' && s.prompt ? `<details><summary>생성 프롬프트</summary><p class="prompt">${esc(s.prompt)}</p></details>` : ''}<div class="ibtns"><label class="text-btn up">내 이미지로 바꾸기<input type="file" accept="image/png,image/jpeg,image/webp" data-upimg="${esc(k)}" hidden></label>${s.status !== 'ai' ? `<button class="text-btn" data-aside="${esc(k)}">Aside로 다시 찾기</button>` : ''}</div></div></div>`; };
+    return `<div class="icard"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-key="${esc(k)}" data-ratio="${esc(s.ratio || '')}" data-label="${esc(s.slide)}페이지 · ${esc(KIND_KO_IMG[s.kind] || s.kind)} · ${esc(s.what || '')}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}<br>${esc(s.ratio || '')}</span>`}</div><div class="ibody"><div class="ihead"><b>${esc(s.slide)}페이지</b><span class="pill ${cls}">${label}</span></div><small>${esc(KIND_KO_IMG[s.kind] || s.kind)} · ${esc(s.what || '')}</small>${s.source_page ? `<a class="src" href="${esc(s.source_page)}" target="_blank" rel="noopener">${s.via === 'aside' ? 'Aside · ' : ''}${esc(host(s.source_page))}</a>` : ''}${s.note ? `<small class="warn">${esc(s.note)}</small>` : ''}${s.status === 'ai' && s.prompt ? `<details><summary>생성 프롬프트</summary><p class="prompt">${esc(s.prompt)}</p></details>` : ''}<div class="ibtns"><label class="text-btn up">내 이미지로 바꾸기<input type="file" accept="image/png,image/jpeg,image/webp" data-upimg="${esc(k)}" hidden></label>${s.status !== 'ai' ? `<button class="text-btn" data-aside="${esc(k)}">Aside로 다시 찾기</button>` : ''}</div></div></div>`; };
   const E = p.data.images.ai_estimate, nW = keys.filter(k => S[k].widen && S[k].status === 'found').length, nAi = n('ai') + nW;
   const aiWhat = [n('ai') ? `AI 이미지 ${n('ai')}장` : '', nW ? `세로 사진 좌우 넓히기 ${nW}장` : ''].filter(Boolean).join(' + ');
   const ai = nAi ? (E && E.count === nAi ? `<div class="ai-box"><b>${aiWhat} · 예상 약 $${E.usd}</b><small>힉스필드 ${esc((E.model || '').replace('higgsfield-ai/', ''))} · 실패하거나 부적절 판정된 이미지는 청구되지 않습니다</small><div class="drawer-actions"><button class="button primary" id="ai-go" data-usd="${E.usd}">승인하고 만들기</button><button class="text-btn" id="ai-est">견적 다시 받기</button></div></div>` : `<div class="ai-box"><b>${aiWhat}</b><small>만들기 전에 힉스필드 견적을 먼저 받습니다 (비용 없음)</small><div class="drawer-actions"><button class="button" id="ai-est">견적 받기</button></div></div>`) : '';
@@ -910,7 +910,7 @@ function imgViewer(el) {
     const { error } = await SB.from('pt_proposal').update({data: {...fresh, images: {...fresh.images, slots}}, status: 'working'}).eq('id', p.id);
     if (error) { ev.target.disabled = false; return toast('저장하지 못했습니다: ' + error.message); }
     await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'generate', input: {estimate_only: true}});
-    await proposalEvent(p.id, `${s.slide}쪽 이미지 좌우 넓히기를 요청했습니다 · 견적을 받습니다`);
+    await proposalEvent(p.id, `${s.slide}페이지 이미지 좌우 넓히기를 요청했습니다 · 견적을 받습니다`);
     $('#modal').close(); studio.list = null; await loadStudio(); openProposal(p.id, true);
     toast('좌우 넓히기 견적을 받습니다. 견적이 나오면 승인해 주세요.');
   });
@@ -928,7 +928,7 @@ function imgViewer(el) {
     const { error } = await SB.from('pt_proposal').update({data, status: 'working'}).eq('id', p.id);
     if (error) { ev.target.disabled = false; return toast('저장하지 못했습니다: ' + error.message); }
     await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'generate', input: {estimate_only: true}});
-    await proposalEvent(p.id, `${s.slide}쪽 이미지 다시 만들기를 요청했습니다${why ? ' · ' + why : ''}`);
+    await proposalEvent(p.id, `${s.slide}페이지 이미지 다시 만들기를 요청했습니다${why ? ' · ' + why : ''}`);
     $('#modal').close(); studio.list = null; await loadStudio(); openProposal(p.id, true);
     toast('견적을 받습니다. 견적이 나오면 승인해 주세요.');
   });
@@ -939,7 +939,7 @@ function imgViewer(el) {
     const slots = {...fresh.images.slots, [key]: {...fresh.images.slots[key], pos: v}};
     const { error } = await SB.from('pt_proposal').update({data: {...fresh, images: {...fresh.images, slots}}}).eq('id', p.id);
     if (error) { $('#imgv-save').disabled = false; return toast('저장하지 못했습니다: ' + error.message); }
-    await proposalEvent(p.id, `${s.slide}쪽 이미지 위치를 맞췄습니다`);
+    await proposalEvent(p.id, `${s.slide}페이지 이미지 위치를 맞췄습니다`);
     $('#modal').close(); studio.list = null; await loadStudio(); openProposal(p.id, true);
     toast('위치를 저장했습니다. 「바꾼 이미지로 다시 그리기」를 누르면 제안서에 반영됩니다.');
   };
@@ -947,8 +947,8 @@ function imgViewer(el) {
 document.addEventListener('click', ev => { const el = ev.target.closest('#drawer .ithumb.zoom'); if (el) imgViewer(el); });
 document.addEventListener('keydown', ev => { const el = ev.target.closest?.('#drawer .ithumb.zoom'); if (el && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); imgViewer(el); } });
 
-// ── 쪽별 검토 · 자동 검수 표시 (10-29 김현우) — 실제 그려진 쪽(PDF)을 한 쪽씩 보며 그 쪽 이미지 자리를 바로 고친다
-const QA_KO = {wrong: '다른 대상', brand_text: '다른 회사 글자·로고', cropped: '잘림', empty: '비어 있음', quality: '품질', mismatch: '쪽 내용과 안 맞음', duplicate: '같은 이미지 반복'};
+// ── 페이지별 검토 · 자동 검수 표시 (10-29 김현우) — 실제 그려진 페이지(PDF)를 한 페이지씩 보며 그 페이지 이미지 자리를 바로 고친다
+const QA_KO = {wrong: '다른 대상', brand_text: '다른 회사 글자·로고', cropped: '잘림', empty: '비어 있음', quality: '품질', mismatch: '페이지 내용과 안 맞음', duplicate: '같은 이미지 반복'};
 let PDFJS = null;
 async function loadPdfjs() {
   if (PDFJS) return PDFJS;
@@ -975,14 +975,14 @@ const qaBlock = p => { const d = p.data || {}, qa = qaOf(d), busy = studio.jobs.
   if (!qa) return busy ? '<p class="qa-line">자동 검수 중입니다 · 1~3분 걸립니다</p>' : '';
   if (qa.error) return `<p class="qa-line">${esc(qa.error)}</p>`;
   if (!qa.flags.length) return '<p class="qa-line good">자동 검수 · 눈에 띄는 문제 없음</p>';
-  return `<div class="qa-box"><b>자동 검수 · 확인할 곳 ${qa.flags.length}곳</b><small>누르면 그 쪽으로 가서 바로 고칠 수 있습니다</small>${qa.flags.map(f => `<button class="qa-flag" data-review="${f.slide}"><span>${f.slide}쪽</span><b>${esc(QA_KO[f.type] || '확인')}</b> ${esc(f.detail)}</button>`).join('')}</div>`; };
+  return `<div class="qa-box"><b>자동 검수 · 확인할 곳 ${qa.flags.length}곳</b><small>누르면 그 페이지로 가서 바로 고칠 수 있습니다</small>${qa.flags.map(f => `<button class="qa-flag" data-review="${f.slide}"><span>${f.slide}페이지</span><b>${esc(QA_KO[f.type] || '확인')}</b> ${esc(f.detail)}</button>`).join('')}</div>`; };
 const qaOf = d => d.qa && d.build && d.qa.version === d.build.version ? d.qa : null;
 async function pageReview(pid, start) {
   let p = studio.list?.find(x => x.id === pid); if (!p?.data?.build?.pdf) return toast('그려진 제안서가 없습니다.');
   let dlg = $('#review');
   if (!dlg) { dlg = document.createElement('dialog'); dlg.id = 'review'; dlg.className = 'review'; document.body.appendChild(dlg); }
   const b = p.data.build;
-  dlg.innerHTML = `<div class="rv-head"><div><h2>쪽별 검토 · v${b.version}</h2><small id="rv-qa"></small></div><div class="rv-nav"><button class="button" id="rv-prev">◀ 이전 쪽</button><b id="rv-n"></b><button class="button" id="rv-next">다음 쪽 ▶</button><button class="button" id="rv-close">닫기</button></div></div>
+  dlg.innerHTML = `<div class="rv-head"><div><h2>페이지별 검토 · v${b.version}</h2><small id="rv-qa"></small></div><div class="rv-nav"><button class="button" id="rv-prev">◀ 이전 페이지</button><b id="rv-n"></b><button class="button" id="rv-next">다음 페이지 ▶</button><button class="button" id="rv-close">닫기</button></div></div>
   <div class="rv-body"><div class="rv-page"><canvas id="rv-canvas"></canvas><p id="rv-load">제안서를 불러오는 중입니다…</p></div><div class="rv-side" id="rv-side"></div></div>`;
   dlg.showModal();
   dlg.addEventListener('close', () => { if (activeDetail === 'p:' + pid) openProposal(pid, true); }, {once: true});
@@ -997,9 +997,9 @@ async function pageReview(pid, start) {
     p = studio.list?.find(x => x.id === pid) || p;
     const d = p.data || {}, S = d.images?.slots || {}, qa = qaOf(d), flags = qa?.flags || [];
     cur = Math.min(Math.max(1, n), N);
-    $('#rv-n').textContent = `${cur} / ${N}쪽`; $('#rv-prev').disabled = cur <= 1; $('#rv-next').disabled = cur >= N;
+    $('#rv-n').textContent = `${cur} / ${N}페이지`; $('#rv-prev').disabled = cur <= 1; $('#rv-next').disabled = cur >= N;
     const fs = [...new Set(flags.map(f => f.slide))];
-    $('#rv-qa').innerHTML = qa ? (fs.length ? `자동 검수 · 확인할 곳 ${flags.length}곳 ${fs.map(s => `<button class="rv-jump${s === cur ? ' on' : ''}" data-go="${s}">${s}쪽</button>`).join('')}` : '자동 검수 · 눈에 띄는 문제 없음') : '자동 검수 전입니다';
+    $('#rv-qa').innerHTML = qa ? (fs.length ? `자동 검수 · 확인할 곳 ${flags.length}곳 ${fs.map(s => `<button class="rv-jump${s === cur ? ' on' : ''}" data-go="${s}">${s}페이지</button>`).join('')}` : '자동 검수 · 눈에 띄는 문제 없음') : '자동 검수 전입니다';
     $$('#rv-qa [data-go]').forEach(x => x.onclick = () => show(+x.dataset.go));
     const pg = await doc.getPage(cur), c = $('#rv-canvas'), w = c.parentElement.clientWidth - 2;
     const vp = pg.getViewport({scale: w / pg.getViewport({scale: 1}).width * (window.devicePixelRatio || 1)});
@@ -1008,14 +1008,14 @@ async function pageReview(pid, start) {
     const card = k => { const s = S[k], [cls, label] = SLOT_ST[s.status] || ['', s.status], bad = fl.filter(f => f.key === k);
       return `<div class="rv-slot${bad.length ? ' flag' : ''}"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-rk="${esc(k)}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}</span>`}</div><div class="rv-info"><div class="ihead"><b>${esc(KIND_KO_IMG[s.kind] || s.kind)}</b><span class="pill ${cls}">${label}</span></div><small>${esc(s.what || '')}</small>${bad.map(f => `<small class="warn">${esc(QA_KO[f.type] || '확인')} · ${esc(f.detail)}</small>`).join('')}<div class="ibtns">${s.path ? `<button class="text-btn" data-rv-open="${esc(k)}">크게 보기·고치기</button>` : ''}<label class="text-btn up">내 이미지로 바꾸기<input type="file" accept="image/png,image/jpeg,image/webp" data-rv-up="${esc(k)}" hidden></label></div></div></div>`; };
     const loose = fl.filter(f => !f.key || !keys.includes(f.key));
-    $('#rv-side').innerHTML = `${loose.map(f => `<div class="rv-flag"><b>${esc(QA_KO[f.type] || '확인')}</b> ${esc(f.detail)}</div>`).join('')}${keys.length ? keys.map(card).join('') : '<p class="muted-box">이 쪽에는 이미지 자리가 없습니다.</p>'}`;
+    $('#rv-side').innerHTML = `${loose.map(f => `<div class="rv-flag"><b>${esc(QA_KO[f.type] || '확인')}</b> ${esc(f.detail)}</div>`).join('')}${keys.length ? keys.map(card).join('') : '<p class="muted-box">이 페이지에는 이미지 자리가 없습니다.</p>'}`;
     const paths = keys.map(k => S[k].path).filter(Boolean);
     if (paths.length) {
       const { data } = await SB.storage.from('pt-studio').createSignedUrls(paths, 900);
       (data || []).forEach(x => { if (!x.signedUrl) return; $$(`#rv-side [data-thumb="${CSS.escape(x.path)}"]`).forEach(el => { el.style.backgroundImage = `url("${x.signedUrl}")`; el.dataset.src = x.signedUrl; }); });
     }
     const open = k => { const s = S[k], el = $(`#rv-side [data-rk="${CSS.escape(k)}"]`); if (!el?.dataset.src) return;
-      imgViewer({dataset: {src: el.dataset.src, key: k, ratio: s.ratio || '', label: `${s.slide}쪽 · ${KIND_KO_IMG[s.kind] || s.kind} · ${s.what || ''}`}}); };
+      imgViewer({dataset: {src: el.dataset.src, key: k, ratio: s.ratio || '', label: `${s.slide}페이지 · ${KIND_KO_IMG[s.kind] || s.kind} · ${s.what || ''}`}}); };
     $$('#rv-side [data-rv-open]').forEach(x => x.onclick = () => open(x.dataset.rvOpen));
     $$('#rv-side .ithumb[data-rk]').forEach(x => x.onclick = () => open(x.dataset.rk));
     $$('#rv-side [data-rv-up]').forEach(inp => inp.onchange = async () => { const f = inp.files[0]; if (f && await replaceSlotImage(p, inp.dataset.rvUp, f)) show(cur); });
@@ -1043,7 +1043,7 @@ async function openProposal(id, keep) {
   else if (p.status === 'waiting' && p.stage === 5 && d.concepts) action = conceptsPanel(p);
   else if (p.status === 'waiting' && p.stage >= 7 && d.images) action = imagesPanel(p);
   else if (p.status === 'waiting') action = `<div class="detail-block"><h3>결정 · ${esc(GATES[p.stage] || '확인')}</h3><p>판테온 봇이 준비한 결과를 확인하고 결정해 주세요.</p></div>`;
-  const done = [d.build && `<div class="detail-block"><h3>제안서 초안 v${d.build.version}</h3><div class="detail-row"><span>분량</span><b>${d.build.slides}쪽 · 이미지 자리 ${d.build.images}개</b></div>${d.images ? '' : '<p>이미지 자리는 회색 상자로 비워 두었습니다. 이미지 수급 단계에서 채웁니다.</p>'}<div class="detail-row"><span>강조색</span><b class="acc-row"><i class="swatch" style="background:${esc(d.build.deck?.theme?.accent || '#285541')}"></i>${esc(d.build.deck?.theme?.accent || '')} ${d.accent ? '(직접 고름)' : '(클로드 추천)'}${p.status === 'waiting' ? ` <input type="color" id="acc-new" value="${esc(d.build.deck?.theme?.accent || '#285541')}" aria-label="강조색 고르기"> <button class="text-btn" id="acc-apply">이 색으로 다시 그리기</button>` : ''}</b></div><div class="drawer-actions">${d.build.pdf ? `<button class="button primary" data-file="${esc(d.build.pdf)}">PDF 보기</button>` : ''}<button class="button" data-file="${esc(d.build.pptx)}" data-dl="1">PPTX 받기</button>${d.build.pdf ? '<button class="button" data-review="1">쪽별 검토</button>' : ''}</div>${qaBlock(p)}</div>`, d.concept_selected && `<div class="detail-block"><h3>확정한 컨셉</h3>${conceptCard(d.concept_selected)}</div>`, d.research && researchBlock(d.research), d.social && socialBlock(d.social)].filter(Boolean).join('');
+  const done = [d.build && `<div class="detail-block"><h3>제안서 초안 v${d.build.version}</h3><div class="detail-row"><span>분량</span><b>${d.build.slides}페이지 · 이미지 자리 ${d.build.images}개</b></div>${d.images ? '' : '<p>이미지 자리는 회색 상자로 비워 두었습니다. 이미지 수급 단계에서 채웁니다.</p>'}<div class="detail-row"><span>강조색</span><b class="acc-row"><i class="swatch" style="background:${esc(d.build.deck?.theme?.accent || '#285541')}"></i>${esc(d.build.deck?.theme?.accent || '')} ${d.accent ? '(직접 고름)' : '(클로드 추천)'}${p.status === 'waiting' ? ` <input type="color" id="acc-new" value="${esc(d.build.deck?.theme?.accent || '#285541')}" aria-label="강조색 고르기"> <button class="text-btn" id="acc-apply">이 색으로 다시 그리기</button>` : ''}</b></div><div class="drawer-actions">${d.build.pdf ? `<button class="button primary" data-file="${esc(d.build.pdf)}">PDF 보기</button>` : ''}<button class="button" data-file="${esc(d.build.pptx)}" data-dl="1">PPTX 받기</button>${d.build.pdf ? '<button class="button" data-review="1">페이지별 검토</button>' : ''}</div>${qaBlock(p)}</div>`, d.concept_selected && `<div class="detail-block"><h3>확정한 컨셉</h3>${conceptCard(d.concept_selected)}</div>`, d.research && researchBlock(d.research), d.social && socialBlock(d.social)].filter(Boolean).join('');
   showDrawer(`<span class="entity-avatar">${esc(p.ip_a_name.slice(0, 2))}</span><h2>${esc(pTitle(p))}</h2><span class="detail-sub">${p.mode === 'single' ? '단독 제안' : '콜라보 제안'} · ${esc(p.recipient || '수신사 미정')}${propSub(p) ? ' · ' + esc(propSub(p)) : ''}</span>${d.concepts ? `<div class="drawer-actions"><button class="button" id="prop-more">${icon('plus')} 같은 IP로 다른 컨셉 제안서 만들기</button></div>` : ''}
   <div class="detail-block"><h3>기본 정보</h3><div class="detail-row"><span>IP</span><b>${ent(p.ip_a_id, p.ip_a_name)}</b></div>${p.mode === 'collab' ? `<div class="detail-row"><span>파트너 IP</span><b>${p.ip_b_name ? ent(p.ip_b_id, p.ip_b_name) : '판테온 봇 추천 후 선택'}</b></div>` : ''}<div class="detail-row"><span>수신사</span><b>${esc(p.recipient || '—')}</b></div><div class="detail-row"><span>레퍼런스 포맷</span><b>${esc(ref?.title || '—')}</b></div><div class="detail-row"><span>현재 상태</span><b>${pPill(p)}</b></div>${p.note ? `<p>${esc(p.note)}</p>` : ''}</div>
   ${action}${done}<div class="detail-block"><h3>진행 단계</h3><ol class="stage-list">${stages}</ol></div><div class="detail-block"><h3>활동 기록</h3><div id="proposal-events"><p>불러오는 중입니다…</p></div></div>`, keep);
@@ -1105,7 +1105,7 @@ async function openProposal(id, keep) {
     const im = (d.build?.deck?.slides || []).flatMap(x => x.images || []).find(x => x.key === k) || {};
     b.disabled = true;
     go({status: 'working'}, {kind: 'aside', input: {slots: [{key: k, kind: sl.kind, what: sl.what || '', ratio: sl.ratio || '', search: im.search || ''}], ips: [p.ip_a_name, p.ip_b_name].filter(Boolean)}},
-       `${sl.slide}쪽 「${sl.what || k}」 이미지를 Aside 로 다시 찾도록 요청했습니다`, 'Aside 에 맡겼습니다. 한 자리에 몇 분 걸립니다.');
+       `${sl.slide}페이지 「${sl.what || k}」 이미지를 Aside 로 다시 찾도록 요청했습니다`, 'Aside 에 맡겼습니다. 한 자리에 몇 분 걸립니다.');
   });
   $('#img-rerender')?.addEventListener('click', ev => { ev.target.disabled = true; go({status: 'working'}, {kind: 'finalize', input: {}}, '바꾼 이미지로 다시 그리기를 요청했습니다'); });
   $('#img-done')?.addEventListener('click', ev => {
