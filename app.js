@@ -788,7 +788,7 @@ function socialBlock(S) {
     ${list('수치', x.metrics, fact)}${list('팬이 쓰는 말', x.fan_terms, t => `<li><b>${esc(t.term)}</b> ${esc(t.meaning || '')} ${t.url ? srcLinks([t.url]) : ''}</li>`)}
     ${list('좋아하는 것', x.loves, v => theme(v, 'theme', 'detail'))}${list('싫어하는 것', x.dislikes, v => theme(v, 'theme', 'detail'))}
     ${list('지난 협업 반응', x.collab_reactions, v => theme(v, 'collab', 'reaction'))}${list('도입에 쓸 장면', x.hooks, fact)}</details>`).join('');
-  const caps = (S.captures || []).length ? `<p><b>캡처 ${S.captures.length}장</b></p><div class="iboard">${S.captures.map(c => `<div class="icard"><div class="ithumb" data-thumb="${esc(c.path)}"></div></div>`).join('')}</div>` : '';
+  const caps = (S.captures || []).length ? `<p><b>캡처 ${S.captures.length}장</b></p><div class="iboard">${S.captures.map(c => `<div class="icard"><div class="ithumb" data-thumb="${esc(c.path)}" data-label="팬·SNS 캡처"></div></div>`).join('')}</div>` : '';
   const locked = (S.locked || []).length ? `<p><b>가입이 필요해 못 본 곳</b></p><ul class="facts">${S.locked.map(l => `<li>${esc(l.site)} · ${esc(l.need || '')} ${l.url ? srcLinks([l.url]) : ''}</li>`).join('')}</ul>` : '';
   return `<div class="detail-block"><h3>팬·SNS</h3>${ips}${caps}${locked}</div>`;
 }
@@ -802,7 +802,7 @@ function imagesPanel(p) {
   const S = p.data.images.slots, keys = Object.keys(S).sort();
   const n = st => keys.filter(k => S[k].status === st).length;
   const card = k => { const s = S[k], [cls, label] = SLOT_ST[s.status] || ['', s.status];
-    return `<div class="icard"><div class="ithumb" data-thumb="${esc(s.path || '')}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}<br>${esc(s.ratio || '')}</span>`}</div><div class="ibody"><div class="ihead"><b>${esc(s.slide)}쪽</b><span class="pill ${cls}">${label}</span></div><small>${esc(KIND_KO_IMG[s.kind] || s.kind)} · ${esc(s.what || '')}</small>${s.source_page ? `<a class="src" href="${esc(s.source_page)}" target="_blank" rel="noopener">${s.via === 'aside' ? 'Aside · ' : ''}${esc(host(s.source_page))}</a>` : ''}${s.note ? `<small class="warn">${esc(s.note)}</small>` : ''}${s.status === 'ai' && s.prompt ? `<details><summary>생성 프롬프트</summary><p class="prompt">${esc(s.prompt)}</p></details>` : ''}<div class="ibtns"><label class="text-btn up">내 이미지로 바꾸기<input type="file" accept="image/png,image/jpeg,image/webp" data-upimg="${esc(k)}" hidden></label>${s.status !== 'ai' ? `<button class="text-btn" data-aside="${esc(k)}">Aside로 다시 찾기</button>` : ''}</div></div></div>`; };
+    return `<div class="icard"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-ratio="${esc(s.ratio || '')}" data-label="${esc(s.slide)}쪽 · ${esc(KIND_KO_IMG[s.kind] || s.kind)} · ${esc(s.what || '')}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}<br>${esc(s.ratio || '')}</span>`}</div><div class="ibody"><div class="ihead"><b>${esc(s.slide)}쪽</b><span class="pill ${cls}">${label}</span></div><small>${esc(KIND_KO_IMG[s.kind] || s.kind)} · ${esc(s.what || '')}</small>${s.source_page ? `<a class="src" href="${esc(s.source_page)}" target="_blank" rel="noopener">${s.via === 'aside' ? 'Aside · ' : ''}${esc(host(s.source_page))}</a>` : ''}${s.note ? `<small class="warn">${esc(s.note)}</small>` : ''}${s.status === 'ai' && s.prompt ? `<details><summary>생성 프롬프트</summary><p class="prompt">${esc(s.prompt)}</p></details>` : ''}<div class="ibtns"><label class="text-btn up">내 이미지로 바꾸기<input type="file" accept="image/png,image/jpeg,image/webp" data-upimg="${esc(k)}" hidden></label>${s.status !== 'ai' ? `<button class="text-btn" data-aside="${esc(k)}">Aside로 다시 찾기</button>` : ''}</div></div></div>`; };
   const E = p.data.images.ai_estimate, nAi = n('ai');
   const ai = nAi ? (E && E.count === nAi ? `<div class="ai-box"><b>AI 이미지 ${nAi}장 · 예상 약 $${E.usd}</b><small>힉스필드 ${esc((E.model || '').replace('higgsfield-ai/', ''))} · 실패하거나 부적절 판정된 이미지는 청구되지 않습니다</small><div class="drawer-actions"><button class="button primary" id="ai-go" data-usd="${E.usd}">승인하고 만들기</button><button class="text-btn" id="ai-est">견적 다시 받기</button></div></div>` : `<div class="ai-box"><b>AI 이미지 ${nAi}장</b><small>만들기 전에 힉스필드 견적을 먼저 받습니다 (비용 없음)</small><div class="drawer-actions"><button class="button" id="ai-est">견적 받기</button></div></div>`) : '';
   return `<div class="detail-block"><h3>결정 · ${p.stage >= 8 ? '최종 확인' : '이미지 수급·AI 이미지 승인'}</h3><p>공식 이미지·로고·참고 사례는 판테온 봇이 찾아 넣었습니다. 잘못 들어갔거나 비어 있으면 「내 이미지로 바꾸기」로 바꾼 뒤 다시 그려 주세요.${nAi ? ' AI 컨셉 이미지·목업·질감은 견적을 보고 승인하면 힉스필드로 만듭니다.' : ''}</p>${ai}
@@ -816,8 +816,19 @@ async function loadImgThumbs(slots) {
   const paths = [...new Set(Object.values(slots).map(s => s.path).filter(Boolean))];
   if (!paths.length) return;
   const { data } = await SB.storage.from('pt-studio').createSignedUrls(paths, 900);
-  (data || []).forEach(x => { if (!x.signedUrl) return; $$(`#drawer [data-thumb="${CSS.escape(x.path)}"]`).forEach(el => { el.style.backgroundImage = `url("${x.signedUrl}")`; }); });
+  (data || []).forEach(x => { if (!x.signedUrl) return; $$(`#drawer [data-thumb="${CSS.escape(x.path)}"]`).forEach(el => {
+    el.style.backgroundImage = `url("${x.signedUrl}")`; el.dataset.src = x.signedUrl;
+    el.classList.add('zoom'); el.setAttribute('role', 'button'); el.tabIndex = 0; el.setAttribute('aria-label', '크게 보기');
+  }); });
 }
+// 이미지 크게 보기 (10-29 김현우) — 원본 전체 + 제안서 자리 비율로 가운데를 잘라 넣은 모양(실제 제안서와 같은 방식)
+function imgViewer(el) {
+  const src = el.dataset.src, r = (el.dataset.ratio || '').split(':').map(Number), ok = r.length === 2 && r[0] > 0 && r[1] > 0;
+  modal(`<h2>${esc(el.dataset.label || '이미지')}</h2><div class="imgv${ok ? '' : ' one'}"><figure><figcaption>원본</figcaption><img src="${esc(src)}" alt="원본 이미지"></figure>${ok ? `<figure><figcaption>제안서에 들어가는 모양 · ${r[0]}:${r[1]}</figcaption><div class="imgv-crop" style="aspect-ratio:${r[0]}/${r[1]};width:min(100%,calc(68vh * ${r[0] / r[1]}));background-image:url('${esc(src)}')"></div><small>자리 비율에 맞춰 가운데를 기준으로 잘라 넣습니다. 중요한 부분이 잘리면 「내 이미지로 바꾸기」로 바꿔 주세요.</small></figure>` : ''}</div><div class="modal-actions"><a class="button" href="${esc(src)}" target="_blank" rel="noopener">새 창에서 열기</a><button class="button primary" data-cancel>닫기</button></div>`);
+  $('#modal').classList.add('wide'); $('#modal').addEventListener('close', () => $('#modal').classList.remove('wide'), {once: true});
+}
+document.addEventListener('click', ev => { const el = ev.target.closest('#drawer .ithumb.zoom'); if (el) imgViewer(el); });
+document.addEventListener('keydown', ev => { const el = ev.target.closest?.('#drawer .ithumb.zoom'); if (el && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); imgViewer(el); } });
 
 async function proposalEvent(id, message) { await SB.from('pt_proposal_event').insert({proposal_id: id, message}); }
 
