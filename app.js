@@ -769,6 +769,23 @@ async function pollProposal(id) {
   }
   propPoll = setTimeout(() => pollProposal(id), 3000);
 }
+// 새 버전 알림 (10-29) — 판테온 탭을 며칠 열어 두면 예전 화면이 남는다(홍석진 대표님 10/27 화면). 5분마다·탭으로 돌아올 때 확인
+const MY_VER = (document.querySelector('script[src*="app.js?v="]')?.src.match(/v=([\w]+)/) || [])[1] || '';
+async function checkVersion() {
+  if (!MY_VER || $('#new-ver')) return;
+  try {
+    const html = await (await fetch(location.pathname + '?nv=' + Date.now(), {cache: 'no-store'})).text();
+    const v = (html.match(/app\.js\?v=([\w]+)/) || [])[1];
+    if (v && v !== MY_VER) {
+      const bar = document.createElement('div'); bar.id = 'new-ver';
+      bar.innerHTML = '판테온이 새 버전으로 바뀌었습니다. <button class="button primary small" type="button">새로고침</button>';
+      bar.querySelector('button').onclick = () => location.reload();
+      document.body.appendChild(bar);
+    }
+  } catch {}
+}
+setInterval(checkVersion, 300000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkVersion(); });
 setInterval(() => $$('.job-prog').forEach(el => { const t = el.querySelector('.eta'); if (t) t.textContent = leftText(Math.max(0, +el.dataset.eta - (Date.now() - Date.parse(el.dataset.at)) / 1000)); }), 1000);
 function partnersPanel(p) {
   const P = p.data.partners;

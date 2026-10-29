@@ -138,6 +138,7 @@ td.wrap-cell{white-space:normal;min-width:180px;line-height:1.5}
 .stat.on{border-color:#285a44;box-shadow:inset 0 0 0 1px #285a44}
 .stat.highlight.on{box-shadow:0 0 0 3px #c3e4a2}
 .ver{font-weight:600;color:#285541}
+#new-ver{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:120;background:#244c39;color:#fff;border-radius:8px;padding:10px 14px;font-size:13px;display:flex;align-items:center;gap:12px;box-shadow:0 10px 30px #142b2340}
 .prop-no{display:inline-block;margin-left:6px;font-size:10px;font-weight:600;color:#285541;background:#edf4ef;border-radius:4px;padding:2px 6px}
 /* 이미지 크게 보기 (10-29) */
 .ithumb.zoom{cursor:zoom-in}.ithumb.zoom:hover{filter:brightness(.94)}
