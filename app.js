@@ -842,7 +842,7 @@ function imgViewer(el) {
   const ar = box ? box.w / box.h : (r.length === 2 && r[0] > 0 && r[1] > 0 ? r[0] / r[1] : 0);
   const canEdit = !!(s && ar && p.status === 'waiting');
   let pos = {...defaultPos(s), ...(s?.pos || {})};
-  modal(`<h2>${esc(el.dataset.label || '이미지')}</h2><div class="imgv${ar ? '' : ' one'}"><figure><figcaption>원본 전체</figcaption><img src="${esc(src)}" alt="원본 이미지"></figure>${ar ? `<figure><figcaption>제안서에 들어가는 모양${box ? '' : ' (예상)'}</figcaption><div class="imgv-crop${canEdit ? ' drag' : ''}" id="imgv-box" style="aspect-ratio:${ar};width:min(100%,calc(64vh * ${ar}));background-image:url('${esc(src)}')"></div>${canEdit ? `<small>이미지를 끌어서 보일 부분을 옮기고, 마우스 휠이나 아래 막대로 확대·축소하세요. 「전체 넣기」는 자르지 않고 다 보이게 넣습니다.</small><div class="imgv-zoom"><span>확대</span><input type="range" id="imgv-zoom" min="100" max="400" step="5" aria-label="확대"><b id="imgv-zoom-v"></b></div><div class="imgv-tools"><div class="seg-pick"><label><input type="radio" name="imgv-fit" value="cover"> 꽉 채우기</label><label><input type="radio" name="imgv-fit" value="contain"> 전체 넣기</label></div><button class="text-btn" type="button" id="imgv-reset">처음 위치로</button></div>` : ''}</figure>` : ''}</div><div class="modal-actions"><a class="button" href="${esc(src)}" target="_blank" rel="noopener">새 창에서 열기</a>${canEdit ? '<button class="button" data-cancel>취소</button><button class="button primary" id="imgv-save">위치 저장</button>' : '<button class="button primary" data-cancel>닫기</button>'}</div>`);
+  modal(`<h2>${esc(el.dataset.label || '이미지')}</h2><div class="imgv${ar ? '' : ' one'}"><figure><figcaption>원본 전체</figcaption><img src="${esc(src)}" alt="원본 이미지"></figure>${ar ? `<figure><figcaption>제안서에 들어가는 모양${box ? '' : ' (예상)'}</figcaption><div class="imgv-crop${canEdit ? ' drag' : ''}" id="imgv-box" style="aspect-ratio:${ar};width:min(100%,calc(64vh * ${ar}));background-image:url('${esc(src)}')"></div>${canEdit ? `<small>이미지를 끌어서 보일 부분을 옮기고, 마우스 휠이나 아래 막대로 확대·축소하세요. 「전체 넣기」는 자르지 않고 다 보이게 넣습니다.</small><div class="imgv-zoom"><span>확대</span><input type="range" id="imgv-zoom" min="100" max="400" step="5" aria-label="확대"><b id="imgv-zoom-v"></b></div><div class="imgv-tools"><div class="seg-pick"><label><input type="radio" name="imgv-fit" value="cover"> 꽉 채우기</label><label><input type="radio" name="imgv-fit" value="contain"> 전체 넣기</label></div><button class="text-btn" type="button" id="imgv-reset">처음 위치로</button></div>` : ''}</figure>` : ''}</div><div class="modal-actions"><a class="button" href="${esc(src)}" target="_blank" rel="noopener">새 창에서 열기</a>${canEdit && s.widen ? '<span class="imgv-wide-on">좌우 넓히기 대기 · 견적 승인 때 함께 만듭니다</span>' : ''}${canEdit && !s.widen ? '<button class="button" id="imgv-widen" hidden>힉스필드로 좌우 넓히기</button>' : ''}${canEdit ? '<button class="button" data-cancel>취소</button><button class="button primary" id="imgv-save">위치 저장</button>' : '<button class="button primary" data-cancel>닫기</button>'}</div>`);
   $('#modal').classList.add('wide'); $('#modal').addEventListener('close', () => $('#modal').classList.remove('wide'), {once: true});
   const bx = $('#imgv-box'); if (!bx) return;
   const nat = new Image(); nat.src = src;
@@ -854,7 +854,9 @@ function imgViewer(el) {
     bx.style.backgroundPosition = fit ? 'center' : `${pos.x * 100}% ${pos.y * 100}%`; bx.classList.toggle('fit', fit);
     const z = $('#imgv-zoom'); if (z) { z.value = Math.round((pos.zoom || 1) * 100); z.disabled = fit; $('#imgv-zoom-v').textContent = Math.round((pos.zoom || 1) * 100) + '%'; }
   };
-  paint(); nat.onload = paint;
+  // 가로 상자에 세로로 긴 이미지면 좌우 넓히기 단추를 보인다 (10-29) — 넓힌 이미지를 줄여 넣으면 잘리지 않는다
+  const wideBtn = () => { const b = $('#imgv-widen'); if (b && nat.naturalWidth) b.hidden = !(ar >= 1.15 && nat.naturalWidth / nat.naturalHeight < ar / 1.3); };
+  paint(); wideBtn(); nat.onload = () => { paint(); wideBtn(); };
   if (!canEdit) return;
   $$('input[name=imgv-fit]').forEach(i => { i.checked = i.value === pos.fit; i.onchange = () => { pos.fit = i.value; paint(); }; });
   $('#imgv-reset').onclick = () => { pos = defaultPos(s); $$('input[name=imgv-fit]').forEach(i => i.checked = i.value === pos.fit); paint(); };
@@ -876,6 +878,17 @@ function imgViewer(el) {
     paint();
   };
   bx.onpointerup = bx.onpointercancel = () => { drag = null; bx.classList.remove('moving'); };
+  $('#imgv-widen')?.addEventListener('click', async ev => {
+    ev.target.disabled = true;
+    const fresh = studio.list?.find(x => x.id === p.id)?.data || d;
+    const slots = {...fresh.images.slots, [key]: {...fresh.images.slots[key], widen: true, pos: {}, note: '좌우 배경을 넓혀 넣습니다 (견적 승인 때 함께)'}};
+    const { error } = await SB.from('pt_proposal').update({data: {...fresh, images: {...fresh.images, slots}}, status: 'working'}).eq('id', p.id);
+    if (error) { ev.target.disabled = false; return toast('저장하지 못했습니다: ' + error.message); }
+    await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'generate', input: {estimate_only: true}});
+    await proposalEvent(p.id, `${s.slide}쪽 이미지 좌우 넓히기를 요청했습니다 · 견적을 받습니다`);
+    $('#modal').close(); studio.list = null; await loadStudio(); openProposal(p.id, true);
+    toast('좌우 넓히기 견적을 받습니다. 견적이 나오면 승인해 주세요.');
+  });
   $('#imgv-save').onclick = async () => {
     $('#imgv-save').disabled = true;
     const fresh = studio.list?.find(x => x.id === p.id)?.data || d;

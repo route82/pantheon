@@ -150,6 +150,7 @@ dialog.wide{width:min(1200px,calc(100vw - 32px))}
 .imgv small{font-size:11px;color:#8c9987;line-height:1.6}
 .imgv-crop.drag{cursor:grab;touch-action:none;user-select:none}.imgv-crop.drag.moving{cursor:grabbing}.imgv-crop.drag.fit{cursor:default}
 .imgv-zoom{display:flex;align-items:center;gap:10px;font-size:12px;color:#495f44}.imgv-zoom input{flex:1;width:auto;margin:0;display:inline;accent-color:#285a44}.imgv-zoom b{min-width:42px;text-align:right;font-weight:600}
+.imgv-wide-on{align-self:center;margin-right:auto;font-size:12px;color:#b18f5c}
 .imgv-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .imgv-tools .seg-pick{display:flex;gap:14px}.imgv-tools label{display:inline-flex;align-items:center;gap:5px;margin:0;font-size:12px;color:#495f44}.imgv-tools input{width:auto;margin:0;display:inline}
 @media(max-width:850px){.imgv{grid-template-columns:1fr}}
