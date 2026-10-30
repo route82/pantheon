@@ -308,7 +308,7 @@ footer{display:none}
 .rv-hot button.empty{border:2px dashed #e0a77c}
 .rv-hot button.bg{border-width:3px}.rv-hot button.bg:hover{background:transparent}.rv-hot button.bg span{left:auto;right:6px;top:auto;bottom:6px}
 .rv-slot.hl{border-color:#3fbf7f;box-shadow:0 0 0 3px #3fbf7f33}
-.rv-info .text-btn.ok{font-weight:600;color:#285541;border:1px solid #9fc1ab;border-radius:6px;padding:4px 10px;background:#edf4ef}
+.rv-info .ibtns .pill{align-self:center}.rv-info .text-btn.ok{font-weight:600;color:#285541;border:1px solid #9fc1ab;border-radius:6px;padding:4px 10px;background:#edf4ef}
 .rv-side{overflow-x:hidden}.rv-slot,.rv-info{min-width:0}.rv-make .button{white-space:normal;max-width:100%;height:auto}.rv-make textarea,.rv-make input{width:100%;min-width:0}
 /* ── 제안서 스튜디오 폰 (10-30 김현우 「급할 땐 이동하면서 해야 할 수도」) — 누를 곳 40px 안팎 · 글자 12px 이상 · 입력칸 16px(아이폰 확대 방지) */
 @media(max-width:600px){

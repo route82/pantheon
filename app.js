@@ -1059,8 +1059,9 @@ async function pageReview(pid, start) {
     const big = b => b.w * b.h / (EW * EH) > 0.8;
     $('#rv-hot').innerHTML = keys.flatMap(k => spots(k).filter(a => +a.page === cur && a.w).map(b => [k, b])).sort((x, y) => big(y[1]) - big(x[1])).map(([k, b]) => { const bad = fl.some(f => f.key === k);
       return `<button type="button" class="${bad ? 'flag' : ''}${S[k].path ? '' : ' empty'}${big(b) ? ' bg' : ''}" data-hot="${esc(k)}" style="left:${b.x / EW * 100}%;top:${b.y / EH * 100}%;width:${b.w / EW * 100}%;height:${b.h / EH * 100}%" aria-label="${esc(KIND_KO_IMG[S[k].kind] || '')} ${esc(whatText(S[k].what))}"><span>${esc(KIND_KO_IMG[S[k].kind] || '')}</span></button>`; }).join('');
+    const okd = k => !!S[k]?.path && (d.qa_ok || {})[k] === S[k].path;          // 사람이 확정한 이미지 (검수 목록에서 빠짐)
     const card = k => { const s = S[k], [cls, label] = SLOT_ST[s.status] || ['', s.status], bad = fl.filter(f => f.key === k);
-      return `<div class="rv-slot${bad.length ? ' flag' : ''}"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-rk="${esc(k)}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}</span>`}</div><div class="rv-info"><div class="ihead"><b>${esc(KIND_KO_IMG[s.kind] || s.kind)}</b><span class="pill ${cls}">${label}</span></div><small>${esc(whatText(s.what))}</small>${bad.map(f => `<small class="warn">${esc(QA_KO[f.type] || '확인')} · ${esc(f.detail)}</small>`).join('')}<div class="ibtns">${bad.length && s.path && p.status === 'waiting' ? `<button class="text-btn ok" data-rv-ok="${esc(k)}">이대로 사용</button>` : ''}${s.path ? `<button class="text-btn" data-rv-open="${esc(k)}">크게 보기·수정</button>` : ''}<label class="text-btn up">내 이미지로 교체<input type="file" accept="image/png,image/jpeg,image/webp" data-rv-up="${esc(k)}" hidden></label></div>${makeBox(k, s)}</div></div>`; };
+      return `<div class="rv-slot${bad.length ? ' flag' : ''}"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-rk="${esc(k)}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}</span>`}</div><div class="rv-info"><div class="ihead"><b>${esc(KIND_KO_IMG[s.kind] || s.kind)}</b><span class="pill ${cls}">${label}</span></div><small>${esc(whatText(s.what))}</small>${bad.map(f => `<small class="warn">${esc(QA_KO[f.type] || '확인')} · ${esc(f.detail)}</small>`).join('')}<div class="ibtns">${s.path && p.status === 'waiting' && okd(k) ? `<span class="pill good">확정</span><button class="text-btn" data-rv-unok="${esc(k)}">확정 취소</button>` : bad.length && s.path && p.status === 'waiting' ? `<button class="text-btn ok" data-rv-ok="${esc(k)}">이 이미지로 확정</button>` : ''}${s.path ? `<button class="text-btn" data-rv-open="${esc(k)}">크게 보기·수정</button>` : ''}<label class="text-btn up">내 이미지로 교체<input type="file" accept="image/png,image/jpeg,image/webp" data-rv-up="${esc(k)}" hidden></label></div>${makeBox(k, s)}</div></div>`; };
     const canAi = s => AI_KINDS.includes(s.kind) || (!s.path && !['official', 'logo', 'capture'].includes(s.kind));
     function makeBox(k, s) {
       if (p.status === 'working' && (s.widen || s.upscale || s.status === 'ai')) return '<p class="rv-busy">생성 중입니다…</p>';
@@ -1080,12 +1081,16 @@ async function pageReview(pid, start) {
     const open = k => { const s = S[k], el = $(`#rv-side [data-rk="${CSS.escape(k)}"]`); if (!el?.dataset.src) return;
       imgViewer({dataset: {src: el.dataset.src, key: k, ratio: s.ratio || '', label: `${s.slide}페이지 · ${KIND_KO_IMG[s.kind] || s.kind} · ${s.what || ''}`}}); };
     $$('#rv-side [data-rv-open]').forEach(x => x.onclick = () => open(x.dataset.rvOpen));
-    $$('#rv-side [data-rv-ok]').forEach(x => x.onclick = async () => { const k = x.dataset.rvOk; x.disabled = true;
-      const fresh = studio.list?.find(y => y.id === p.id)?.data || d;
-      const { error } = await SB.from('pt_proposal').update({data: {...fresh, qa_ok: {...(fresh.qa_ok || {}), [k]: S[k].path}}}).eq('id', p.id);
+    // 이 이미지로 확정 / 확정 취소 (10-30 김현우) — 확정하면 검수 「확인할 곳」에서 빠지고, 같은 이미지인 동안 다음 검수에서도 다시 뜨지 않는다
+    const setOk = async (k, on, x) => { x.disabled = true;
+      const fresh = studio.list?.find(y => y.id === p.id)?.data || d, ok = {...(fresh.qa_ok || {})};
+      if (on) ok[k] = S[k].path; else delete ok[k];
+      const { error } = await SB.from('pt_proposal').update({data: {...fresh, qa_ok: ok}}).eq('id', p.id);
       if (error) { x.disabled = false; return toast('저장하지 못했습니다: ' + error.message); }
-      await proposalEvent(p.id, `${cur}페이지 「${whatText(S[k].what) || k}」 이미지를 검수 표시와 관계없이 그대로 쓰기로 했습니다`);
-      studio.list = null; await loadStudio(); toast('이 이미지를 그대로 사용합니다.'); show(cur); });
+      await proposalEvent(p.id, `${cur}페이지 「${whatText(S[k].what) || k}」 이미지를 ${on ? '확정했습니다' : '확정 취소했습니다'}`);
+      studio.list = null; await loadStudio(); toast(on ? '이 이미지로 확정했습니다. 확인할 곳에서 빠집니다.' : '확정을 취소했습니다.'); show(cur); };
+    $$('#rv-side [data-rv-ok]').forEach(x => x.onclick = () => setOk(x.dataset.rvOk, true, x));
+    $$('#rv-side [data-rv-unok]').forEach(x => x.onclick = () => setOk(x.dataset.rvUnok, false, x));
     $$('#rv-side .ithumb[data-rk]').forEach(x => x.onclick = () => open(x.dataset.rk));
     const card1 = k => $(`#rv-side [data-rk="${CSS.escape(k)}"]`)?.closest('.rv-slot');
     $$('#rv-hot [data-hot]').forEach(h => { const k = h.dataset.hot;
