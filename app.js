@@ -1050,6 +1050,7 @@ async function pageReview(pid, start) {
   } catch (e) { $('#rv-load').textContent = '제안서를 불러오지 못했습니다: ' + (e?.message || ''); return; }
   const N = doc.numPages;
   // 작업 중이면 3초마다 진행률을 다시 읽고, 끝나면(상태가 바뀌면) 새 버전으로 다시 연다 (10-30 김현우 「기다리는 곳은 무조건 동적으로」)
+  let seen = '';
   const tick = async () => {
     if (!dlg.open) return;
     const [{ data: row }, { data: js }] = await Promise.all([SB.from('pt_proposal').select('status,data').eq('id', pid).single(),
@@ -1059,12 +1060,11 @@ async function pageReview(pid, start) {
     const live = (js || []).filter(x => ['wait', 'work'].includes(x.status)).sort((a, b) => a.id - b.id);
     const box = $('#rv-live'); if (box) { box.hidden = !live.length; if (live.length) box.innerHTML = `<b>진행 중</b>${jobsProg(live)}`; }
     $$('#rv-side .rv-busy').forEach(el => { el.innerHTML = jobsProg(live.length ? live : [null]); });
-    const was = studio.list?.find(x => x.id === pid);
-    if (was && (row.status !== was.status || row.data?.build?.version !== was.data?.build?.version || JSON.stringify(row.data?.images?.slots) !== JSON.stringify(was.data?.images?.slots))) {
-      studio.list = null; await loadStudio();
-      if (row.data?.build?.version !== b.version) { toast(`새 버전 v${row.data.build.version}이 생성되었습니다.`); return pageReview(pid, cur); }
-      show(cur);
-    }
+    // 비교는 이 창이 연 버전·상태와 — 뒤의 상세 화면이 먼저 목록을 새로 읽어도 놓치지 않게
+    if (row.data?.build?.version !== b.version) { studio.list = null; await loadStudio(); toast(`새 버전 v${row.data.build.version}이 생성되었습니다.`); return pageReview(pid, cur); }
+    const snap = row.status + JSON.stringify(row.data?.images?.slots || {}) + JSON.stringify(row.data?.qa || {}) + JSON.stringify(row.data?.qa_ok || {});
+    if (seen && snap !== seen) { studio.list = null; await loadStudio(); show(cur); }
+    seen = snap;
     setTimeout(tick, 3000);
   };
   setTimeout(tick, 1500);
