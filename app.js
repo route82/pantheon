@@ -1037,7 +1037,8 @@ async function pageReview(pid, start) {
     $('#rv-n').textContent = `${cur} / ${N}페이지`; $('#rv-prev').disabled = cur <= 1; $('#rv-next').disabled = cur >= N;
     // 이미지가 몇 페이지 어디에 그려졌는지 — 렌더러가 남긴 위치(boxes)가 있으면 그것, 없으면 원고의 페이지 번호 (10-30)
     const B = d.build?.boxes || {}, pageOf = k => +(B[k]?.page || S[k].slide);
-    const fs = new Set(flags.map(f => +f.slide)), miss = new Set(Object.keys(S).filter(k => ['missing', 'ai'].includes(S[k].status)).map(pageOf));
+    const spots = k => B[k]?.at || (B[k]?.x !== undefined ? [B[k]] : []), onPage = (k, n) => spots(k).length ? spots(k).some(a => +a.page === n) : pageOf(k) === n;   // 한 이미지를 여러 페이지에 쓰면 그 페이지마다
+    const fs = new Set(flags.map(f => +f.slide)), miss = new Set(Object.keys(S).filter(k => ['missing', 'ai'].includes(S[k].status)).flatMap(k => spots(k).length ? spots(k).map(a => +a.page) : [pageOf(k)]));
     $('#rv-qa').textContent = qa ? (flags.length ? `자동 검수 · 확인할 곳 ${flags.length}곳 (빨간 페이지)` : '자동 검수 · 특이 사항 없음') : '자동 검수 전입니다';
     $('#rv-strip').innerHTML = Array.from({length: N}, (_, i) => i + 1).map(n => `<button type="button" class="${n === cur ? 'on ' : ''}${fs.has(n) ? 'flag' : miss.has(n) ? 'miss' : ''}" data-go="${n}" aria-label="${n}페이지">${n}</button>`).join('');
     $$('#rv-strip [data-go]').forEach(x => x.onclick = () => show(+x.dataset.go));
@@ -1047,9 +1048,9 @@ async function pageReview(pid, start) {
       const vp = pg.getViewport({scale: w / pg.getViewport({scale: 1}).width * (window.devicePixelRatio || 1)});
       c.width = vp.width; c.height = vp.height; return pg.render({canvasContext: c.getContext('2d'), viewport: vp}).promise; })
       .then(() => { if ($('#rv-load')) $('#rv-load').hidden = true; }).catch(() => {});
-    const fl = flags.filter(f => +f.slide === cur), keys = Object.keys(S).filter(k => pageOf(k) === cur).sort();
+    const fl = flags.filter(f => +f.slide === cur), keys = Object.keys(S).filter(k => onPage(k, cur)).sort();
     const EW = 12192000, EH = 6858000;            // 960×540pt 페이지 (EMU)
-    $('#rv-hot').innerHTML = keys.filter(k => B[k]?.w && B[k].x !== undefined).map(k => { const b = B[k], bad = fl.some(f => f.key === k);
+    $('#rv-hot').innerHTML = keys.flatMap(k => spots(k).filter(a => +a.page === cur && a.w).map(b => [k, b])).map(([k, b]) => { const bad = fl.some(f => f.key === k);
       return `<button type="button" class="${bad ? 'flag' : ''}${S[k].path ? '' : ' empty'}" data-hot="${esc(k)}" style="left:${b.x / EW * 100}%;top:${b.y / EH * 100}%;width:${b.w / EW * 100}%;height:${b.h / EH * 100}%" aria-label="${esc(KIND_KO_IMG[S[k].kind] || '')} ${esc(whatText(S[k].what))}"><span>${esc(KIND_KO_IMG[S[k].kind] || '')}</span></button>`; }).join('');
     const card = k => { const s = S[k], [cls, label] = SLOT_ST[s.status] || ['', s.status], bad = fl.filter(f => f.key === k);
       return `<div class="rv-slot${bad.length ? ' flag' : ''}"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-rk="${esc(k)}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}</span>`}</div><div class="rv-info"><div class="ihead"><b>${esc(KIND_KO_IMG[s.kind] || s.kind)}</b><span class="pill ${cls}">${label}</span></div><small>${esc(whatText(s.what))}</small>${bad.map(f => `<small class="warn">${esc(QA_KO[f.type] || '확인')} · ${esc(f.detail)}</small>`).join('')}<div class="ibtns">${s.path ? `<button class="text-btn" data-rv-open="${esc(k)}">크게 보기·수정</button>` : ''}<label class="text-btn up">내 이미지로 교체<input type="file" accept="image/png,image/jpeg,image/webp" data-rv-up="${esc(k)}" hidden></label></div>${makeBox(k, s)}</div></div>`; };
