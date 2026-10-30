@@ -1097,8 +1097,10 @@ async function pageReview(pid, start) {
       const hunt = liveJobs(p.id).find(j => j.kind === 'aside' && (j.input?.slots || []).some(x => x.key === k));
       if (hunt) return `<div class="rv-busy">${jobsProg([hunt])}</div>`;
       const ai = canAi(s) && !s.widened;
-      return `<div class="rv-make">${ai ? `<textarea data-mk-prompt="${esc(k)}" rows="3" placeholder="생성 프롬프트(영문) — 피사체·장면·분위기">${esc(s.prompt || '')}</textarea>
-        <input data-mk-why="${esc(k)}" maxlength="200" placeholder="개선할 점(재생성 시 반영)"><button class="button primary small" data-mk-ai="${esc(k)}">${s.status === 'generated' ? 'AI로 다시 생성' : 'AI로 생성'} · 약 $0.01</button>` : ''}
+      // 자동 검수가 고친 프롬프트·고칠 점이 있으면 미리 채운다 (10-30 김현우 「개선할 점에 자동으로 개선 프롬프트」)
+      const fx = fl.find(f => f.key === k && f.prompt_fix);
+      return `<div class="rv-make">${ai ? `${fx ? '<small class="rv-fix">자동 검수가 고친 프롬프트입니다. 확인 후 다시 생성하세요.</small>' : ''}<textarea data-mk-prompt="${esc(k)}" rows="${fx ? 5 : 3}" placeholder="생성 프롬프트(영문) — 피사체·장면·분위기">${esc(fx ? fx.prompt_fix : s.prompt || '')}</textarea>
+        <input data-mk-why="${esc(k)}" maxlength="200" placeholder="개선할 점(재생성 시 반영)" value="${esc(fx ? (fx.why || fx.detail) : '')}"><button class="button primary small" data-mk-ai="${esc(k)}">${s.status === 'generated' ? 'AI로 다시 생성' : 'AI로 생성'} · 약 $0.01</button>` : ''}
         ${s.path ? `<button class="button small" data-mk-wide="${esc(k)}" hidden>힉스필드로 확장해 전체 표시 · 약 $0.08</button>` : ''}
         ${['official', 'logo', 'reference', 'capture'].includes(s.kind) ? `<button class="button small" data-mk-other="${esc(k)}">Aside로 다른 이미지 찾기</button>` : ''}
         ${s.path && !AI_KINDS.includes(s.kind) ? `<div class="rv-lowres" data-lr="${esc(k)}" hidden><small class="warn"></small><button class="button small" data-mk-hires="${esc(k)}">Aside로 고해상도 검색</button><button class="button small" data-mk-up="${esc(k)}">힉스필드로 고해상도 보정 · 약 $0.08</button></div>` : ''}</div>`;
