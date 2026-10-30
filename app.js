@@ -1200,7 +1200,8 @@ async function pageReview(pid, start) {
     const pageDoc = ppath ? (PATCH_DOCS[ppath] ||= SB.storage.from('pt-studio').createSignedUrl(ppath, 1800).then(r => PDFJS.getDocument(r.data.signedUrl).promise)).then(x => x.getPage(pn)) : doc.getPage(cur);
     pageDoc.then(pg => { const c = $('#rv-canvas'); if (!c) return; const w = c.parentElement.clientWidth - 2;
       const vp = pg.getViewport({scale: w / pg.getViewport({scale: 1}).width * (window.devicePixelRatio || 1)});
-      c.width = vp.width; c.height = vp.height; return pg.render({canvasContext: c.getContext('2d'), viewport: vp}).promise; })
+      if (c._task) c._task.cancel();      // 앞 페이지를 그리는 중이면 멈춤 — 같이 그리면 페이지가 뒤집혀 섞였다 (10-30)
+      c.width = vp.width; c.height = vp.height; c._task = pg.render({canvasContext: c.getContext('2d'), viewport: vp}); return c._task.promise; })
       .then(() => { if ($('#rv-load')) $('#rv-load').hidden = true; }).catch(() => {});
     const fl = flags.filter(f => +f.slide === cur), keys = Object.keys(S).filter(k => onPage(k, cur)).sort();
     const EW = 12192000, EH = 6858000;            // 960×540pt 페이지 (EMU)
