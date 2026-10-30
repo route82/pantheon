@@ -54,7 +54,30 @@ const toRow = p => {           // 화면 칸 → DB 칸 (보낸 것만)
   const o = {}; for (const [k, v] of Object.entries(p)) if (m[k]) o[m[k]] = v; return o;
 };
 
-function toast(s) { $('#toast').textContent = s; $('#toast').classList.add('visible'); clearTimeout(window.tt); window.tt = setTimeout(() => $('#toast').classList.remove('visible'), 2800); }
+// 알림 — undo 를 주면 「되돌리기」 단추가 붙고 8초 동안 보인다. 창(dialog) 위에도 보이게 popover 로 띄운다
+function toast(s, undo) {
+  const t = $('#toast'); t.textContent = '';
+  const sp = document.createElement('span'); sp.textContent = s; t.appendChild(sp);
+  if (undo) { const b = document.createElement('button'); b.type = 'button'; b.className = 'toast-undo'; b.textContent = undo.label || '되돌리기';
+    b.onclick = async () => { b.disabled = true; t.classList.remove('visible'); clearTimeout(window.tt); try { await undo.fn(); } catch (e) { toast('되돌리지 못했습니다: ' + (e?.message || '')); } }; t.appendChild(b); }
+  t.classList.toggle('has-undo', !!undo);
+  try { if (!t.hasAttribute('popover')) t.setAttribute('popover', 'manual'); t.hidePopover?.(); t.showPopover?.(); } catch {}
+  t.classList.add('visible'); clearTimeout(window.tt);
+  window.tt = setTimeout(() => { t.classList.remove('visible'); setTimeout(() => { try { if (!t.classList.contains('visible')) t.hidePopover?.(); } catch {} }, 300); }, undo ? 8000 : 2800);
+}
+// 확인 창 — 단추에 실제 행동을 적는다(「확인」 금지). 돌려주는 값: true(ok) · false(cancel 단추) · null(Esc·바깥)
+function ask({title, body = '', ok, cancel = '취소', danger = false}) {
+  return new Promise(res => {
+    let d = $('#ask'); if (!d) { d = document.createElement('dialog'); d.id = 'ask'; d.className = 'ask'; document.body.appendChild(d); }
+    d.innerHTML = `<h2>${esc(title)}</h2>${body ? `<p>${body}</p>` : ''}<div class="modal-actions"><button class="button" type="button" data-a="0">${esc(cancel)}</button><button class="button ${danger ? 'danger' : 'primary'}" type="button" data-a="1">${esc(ok)}</button></div>`;
+    const end = v => { d.close(); res(v); };
+    d.querySelector('[data-a="0"]').onclick = () => end(false); d.querySelector('[data-a="1"]').onclick = () => end(true);
+    d.oncancel = ev => { ev.preventDefault(); end(null); };
+    d.showModal(); d.querySelector('[data-a="1"]').focus();
+  });
+}
+// 작성 중인 내용이 있으면 닫기 전에 묻는다 — 「계속 작성」이 기본, 「닫기」를 골라야 닫힌다
+const askLeave = () => ask({title: '작성 중인 내용이 있어요', body: '저장하지 않고 닫으면 입력한 내용이 사라집니다.', ok: '계속 작성', cancel: '저장하지 않고 닫기'}).then(v => v === false);
 
 /* ---------- 이미지 (비공개 저장소 → 잠깐 쓰는 주소) ---------- */
 const imgUrl = {}, imgLoading = new Set();
@@ -180,7 +203,8 @@ const noteOf = e => e.note ?? e.facts.join('\n');
 const noteBlock = e => `<div class="detail-block"><h3>리서치 노트</h3><textarea id="research-note" placeholder="확인한 내용과 출처를 기록하세요." aria-label="리서치 노트">${esc(noteOf(e))}</textarea><button class="button primary" id="save-note">노트 저장</button><p>업무 기록의 내용으로 시작합니다. 저장한 노트는 전 직원에게 공유되며 변경 이력이 기록됩니다.</p></div>`;
 function bindNote(e) { $('#save-note').onclick = async () => { const b = $('#save-note'); b.disabled = true; const ok = await save(e.id, {note: $('#research-note').value}); b.disabled = false; if (ok) toast('리서치 노트를 저장했습니다.'); }; }
 const adminTools = e => isAdmin ? `<button class="button" id="hide-entity">${e.hidden ? '숨김 해제' : '숨기기'}</button>` : '';
-function bindAdminTools(e) { $('#hide-entity')?.addEventListener('click', async () => { const { error } = await SB.rpc('pt_set_hidden', {entity: e.id, value: !e.hidden}); if (error) return toast('변경하지 못했습니다: ' + error.message); await load(); render(); openDetail(e.id); toast(e.hidden ? '숨김을 해제했습니다.' : '숨김 처리했습니다. DB 관리자만 볼 수 있습니다.'); }); }
+function bindAdminTools(e) { $('#hide-entity')?.addEventListener('click', async () => { const { error } = await SB.rpc('pt_set_hidden', {entity: e.id, value: !e.hidden}); if (error) return toast('변경하지 못했습니다: ' + error.message); await load(); render(); openDetail(e.id);
+  toast(e.hidden ? '숨김을 해제했습니다.' : '숨김 처리했습니다. DB 관리자만 볼 수 있습니다.', {fn: async () => { const r = await SB.rpc('pt_set_hidden', {entity: e.id, value: !!e.hidden}); if (r.error) throw r.error; await load(); render(); openDetail(e.id); toast('되돌렸습니다.'); }}); }); }
 
 // 내부 담당자 이력 (10-26) — 최초 등록자 → 주 담당자 지정·변경(인수인계)을 시각과 함께. 변경 기록에서 담당자 항목만 (pt_owner_history)
 function ownerHistoryHtml(rows) {
@@ -285,12 +309,20 @@ const ownersInput = (host, initial) => memberChips(host, initial, {main: '주 �
 const ownersLine = owners => owners.length ? owners.map((o, i) => `${i === 0 ? '<span class="main-badge">주 담당자</span> ' : ''}${esc(o)}`).join(' · ') : '—';
 
 /* ---------- 창 ---------- */
-function modal(content) { $('#modal').innerHTML = content; $('#modal').showModal(); $('#modal').querySelector('[data-cancel]')?.addEventListener('click', () => $('#modal').close()); }
+function modal(content) {
+  const m = $('#modal'); m.innerHTML = content; m.dataset.dirty = ''; m.showModal();
+  m.oninput = ev => { if (!ev.target.matches('[type=search], [data-nodirty]')) m.dataset.dirty = '1'; };
+  const leave = async () => { if (!m.dataset.dirty || await askLeave()) { m.dataset.dirty = ''; m.close(); } };
+  m.oncancel = ev => { if (m.dataset.dirty) { ev.preventDefault(); leave(); } };
+  m.querySelectorAll('[data-cancel]').forEach(b => b.addEventListener('click', leave));
+}
 function companyOptions(selected) { const es = entities().filter(e => e.type !== 'IP·유명인').sort((a, b) => a.name.localeCompare(b.name, 'ko')); return es.map(e => `<option value="${e.id}" ${e.id === selected ? 'selected' : ''}>${esc(e.name)}${e.en ? ' · ' + esc(e.en) : ''} (${esc(e.type)})</option>`).join(''); }
 function linkModal(c) {
   modal(`<form id="link-form"><h2>회사 연결</h2><p>${esc(c.name)} 님의 소속 회사를 선택하세요. 연결하면 회사 상세의 「등록된 담당자」에도 표시됩니다.</p><label>회사 찾기<input id="link-find" type="search" autocomplete="off" placeholder="이름·영문명·별칭"></label><label>회사<select id="link-select" size="8" required>${companyOptions(c.parentId)}</select></label><div id="link-error" style="color:#ba775e;margin-top:12px;font-size:11px" role="alert"></div><p style="font-size:10px">목록에 없으면 「엔티티 등록」으로 회사를 먼저 등록한 뒤 연결하세요.</p><div class="modal-actions">${c.parentId ? '<button class="button" type="button" id="link-clear">연결 해제</button>' : ''}<button class="button" type="button" data-cancel>취소</button><button class="button primary" type="submit">이 회사로 연결</button></div></form>`);
   $('#link-find').oninput = ev => { const q = ev.target.value.toLowerCase(); [...$('#link-select').options].forEach(o => { const e = byId(o.value); o.hidden = !!q && ![e.name, e.en, ...e.aliases].filter(Boolean).join(' ').toLowerCase().includes(q); }); $('#link-error').textContent = [...$('#link-select').options].some(o => !o.hidden) ? '' : '찾는 회사가 없습니다. 「엔티티 등록」으로 먼저 등록해 주세요.'; };
-  const go = async org => { if (!await save(c.id, {parentId: org ? org.id : null, agencyText: org ? org.name : ''})) return; $('#modal').close(); render(); openDetail(c.id); toast(org ? `${c.name} 님을 ${org.name}에 연결했습니다.` : `${c.name} 님의 회사 연결을 해제했습니다.`); };
+  const prevOrg = c.parentId ? byId(c.parentId) : null;
+  const go = async org => { if (!await save(c.id, {parentId: org ? org.id : null, agencyText: org ? org.name : ''})) return; $('#modal').dataset.dirty = ''; $('#modal').close(); render(); openDetail(c.id);
+    toast(org ? `${c.name} 님을 ${org.name}에 연결했습니다.` : `${c.name} 님의 회사 연결을 해제했습니다.`, {fn: async () => { if (!await save(c.id, {parentId: prevOrg ? prevOrg.id : null, agencyText: prevOrg ? prevOrg.name : ''})) return; render(); openDetail(c.id); toast('되돌렸습니다.'); }}); };
   $('#link-clear')?.addEventListener('click', () => go(null));
   $('#link-form').onsubmit = ev => { ev.preventDefault(); const org = byId($('#link-select').value); if (!org) { $('#link-error').textContent = '연결할 회사를 선택해 주세요.'; return; } go(org); };
 }
@@ -892,9 +924,10 @@ function imgViewer(el) {
   const wideBtn = () => { const b = $('#imgv-widen'); if (b && nat.naturalWidth) b.hidden = !shapeOff(nat.naturalWidth, nat.naturalHeight, ar); };
   paint(); wideBtn(); nat.onload = () => { paint(); wideBtn(); };
   if (!canEdit) return;
-  $$('input[name=imgv-fit]').forEach(i => { i.checked = i.value === pos.fit; i.onchange = () => { pos.fit = i.value; paint(); }; });
-  $('#imgv-reset').onclick = () => { pos = defaultPos(s); $$('input[name=imgv-fit]').forEach(i => i.checked = i.value === pos.fit); paint(); };
-  const setZoom = z => { pos.zoom = Math.min(4, Math.max(1, Math.round(z * 100) / 100)); paint(); };
+  const dirty = () => { $('#modal').dataset.dirty = '1'; };
+  $$('input[name=imgv-fit]').forEach(i => { i.checked = i.value === pos.fit; i.onchange = () => { pos.fit = i.value; dirty(); paint(); }; });
+  $('#imgv-reset').onclick = () => { pos = defaultPos(s); dirty(); $$('input[name=imgv-fit]').forEach(i => i.checked = i.value === pos.fit); paint(); };
+  const setZoom = z => { pos.zoom = Math.min(4, Math.max(1, Math.round(z * 100) / 100)); dirty(); paint(); };
   $('#imgv-zoom').oninput = ev => setZoom(ev.target.value / 100);
   bx.onwheel = ev => { if (pos.fit === 'contain') return; ev.preventDefault(); setZoom((pos.zoom || 1) * (ev.deltaY < 0 ? 1.08 : 1 / 1.08)); };
   let drag = null;
@@ -909,6 +942,7 @@ function imgViewer(el) {
     const cl = v => Math.min(1, Math.max(0, v));
     if (drag.ex > 1) pos.x = cl(drag.px - (ev.clientX - drag.x0) / drag.ex);
     if (drag.ey > 1) pos.y = cl(drag.py - (ev.clientY - drag.y0) / drag.ey);
+    dirty();
     paint();
   };
   bx.onpointerup = bx.onpointercancel = () => { drag = null; bx.classList.remove('moving'); };
@@ -978,7 +1012,11 @@ async function replaceSlotImage(p, key, f) {
   const { error } = await SB.from('pt_proposal').update({data: {...d, images: {...d.images, slots}}}).eq('id', p.id);
   if (error) return toast('저장하지 못했습니다: ' + error.message);
   await proposalEvent(p.id, `이미지 ${key} 을(를) 직접 올린 이미지로 바꿨습니다`);
-  studio.list = null; await loadStudio(); toast('이미지를 변경했습니다. 「변경 사항 반영」을 클릭하면 제안서에 반영됩니다.');
+  const was = d.images.slots[key];
+  studio.list = null; await loadStudio(); toast('이미지를 교체했습니다. 「변경 사항 반영」을 누르면 제안서에 들어갑니다.', {fn: async () => {
+    const { data: r2 } = await SB.from('pt_proposal').select('data').eq('id', p.id).single(); const d2 = r2.data;
+    await SB.from('pt_proposal').update({data: {...d2, images: {...d2.images, slots: {...d2.images.slots, [key]: was}}}}).eq('id', p.id);
+    await proposalEvent(p.id, `이미지 ${key} 교체를 되돌렸습니다`); studio.list = null; await loadStudio(); toast('원래 이미지로 되돌렸습니다.'); window.dispatchEvent(new Event('pt-refresh')); }});
   return true;
 }
 const qaBlock = p => { const d = p.data || {}, qa = qaOf(d), busy = studio.jobs.some(j => j.proposal_id === p.id && j.kind === 'qa' && ['wait', 'work'].includes(j.status));
@@ -1022,10 +1060,13 @@ const refOf = (d, key) => { const S = d.images?.slots || {};
 async function quickMake(p, key, mode, prompt, why) {
   const fresh = studio.list?.find(x => x.id === p.id)?.data || p.data, cur = fresh.images.slots[key];
   const ref = mode === 'ai' && refOf(fresh, key), usd = mode === 'ai' && !ref ? 0.02 : 0.1;
-  if (!confirm(mode === 'upscale' ? `${cur.slide}페이지 이미지를 힉스필드로 고해상도 보정합니다. 사람 얼굴이 아주 조금 달라질 수 있습니다. 예상 비용 약 $0.08 입니다. 진행할까요?`
-               : mode === 'widen' ? `${cur.slide}페이지 이미지를 힉스필드로 확장해 이미지 전체가 보이게 합니다. 예상 비용은 약 $0.08입니다. 진행할까요?`
-                                : ref ? `${cur.slide}페이지 이미지를 메인 이미지(${fresh.images.slots[ref]?.slide}페이지 「${whatText(fresh.images.slots[ref]?.what).slice(0, 20)}」)를 참고해 같은 모델로 생성합니다. 예상 비용은 약 $0.08입니다. 진행할까요?`
-                                : `${cur.slide}페이지에 AI 이미지를 생성해 넣습니다. 예상 비용은 약 $0.01입니다. 진행할까요?`)) return false;
+  const cost = mode === 'ai' && !ref ? '$0.01' : '$0.08';
+  const what = mode === 'upscale' ? '이미지를 고해상도로 보정합니다. 사람 얼굴이 아주 조금 달라질 수 있습니다.'
+             : mode === 'widen' ? '이미지 바깥을 확장해 잘리지 않고 전체가 보이게 합니다.'
+             : ref ? `메인 이미지(${esc(fresh.images.slots[ref]?.slide)}페이지 「${esc(whatText(fresh.images.slots[ref]?.what).slice(0, 20))}」)를 참고해 같은 모델로 만듭니다.` : 'AI 이미지를 새로 만듭니다.';
+  if (!(await ask({title: `${cur.slide}페이지 이미지를 새로 만들까요?`,
+      body: `${what}<br>새 이미지는 바로 들어가지 않고 미리보기로 먼저 보여 드립니다. 마음에 들 때만 확정하세요.<br><b>비용 약 ${cost}</b>가 회사 힉스필드 잔액에서 나갑니다.`,
+      ok: `${mode === 'upscale' ? '고해상도 보정' : mode === 'widen' ? '확장' : '새로 만들기'} · 약 ${cost}`}))) return false;
   const prev = [...(cur.prev_paths || []), cur.path].filter(Boolean);
   const { before: _b, cand: _c, ...was } = cur;          // 새 이미지는 바로 넣지 않고 미리보기 → 사람이 확정 (10-30)
   const next0 = mode === 'upscale' ? {...cur, upscale: true, prev_paths: prev, note: '해상도 보정 중'} : mode === 'widen' ? {...cur, path: cur.orig_path || cur.path, widen: true, widened: false, widen_extra: prompt || cur.widen_extra || '', prev_paths: prev, pos: {}, note: '확장 중'}
@@ -1060,12 +1101,21 @@ async function candApply(p, key, ok) {
   if (one) await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'qa', input: {pdf: cand.preview, version: d.build.version, page}});
   else if (ok) await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'finalize', input: {keys: [key]}});      // 여러 페이지에 쓴 이미지 — 그 페이지들만
   await proposalEvent(p.id, `${page}페이지 새 이미지를 ${ok ? (one ? '확정했습니다 → 그 페이지만 반영' : '확정했습니다 → 이 이미지가 든 페이지들만 다시 그립니다') : '취소했습니다 (원래 이미지 유지)'}`);
-  studio.list = null; await loadStudio(); toast(ok ? (one ? `확정했습니다. ${page}페이지만 바꿨고, 그 페이지만 다시 검수합니다.` : '확정했습니다. 이 이미지가 든 페이지들만 다시 그립니다.') : '취소했습니다. 원래 이미지를 그대로 씁니다.');
+  studio.list = null; await loadStudio();
+  // 되돌리기 — 확정은 원래 이미지·페이지·검수 결과로, 버리기는 새 이미지를 다시 후보로 (한 페이지 확정·버리기만)
+  const undo = (one || !ok) ? {fn: async () => {
+    const { data: r2 } = await SB.from('pt_proposal').select('data').eq('id', p.id).single(); const d2 = r2.data;
+    const pt = {...(d2.build.patches || {})}; if (one) { if (d.build.patches?.[page]) pt[page] = d.build.patches[page]; else delete pt[page]; }
+    await SB.from('pt_proposal').update({data: {...d2, build: {...d2.build, patches: pt}, qa: d.qa, images: {...d2.images, slots: {...d2.images.slots, [key]: cur}}}}).eq('id', p.id);
+    await proposalEvent(p.id, `${page}페이지 새 이미지 ${ok ? '확정' : '버리기'}를 되돌렸습니다`);
+    studio.list = null; await loadStudio(); toast('되돌렸습니다.'); window.dispatchEvent(new Event('pt-refresh'));
+  }} : null;
+  toast(ok ? (one ? `확정했습니다. ${page}페이지만 바꿨고, 그 페이지만 다시 검수합니다.` : '확정했습니다. 이 이미지가 든 페이지들만 다시 그립니다.') : '새 이미지를 버렸습니다. 원래 이미지를 그대로 씁니다.', undo);
 }
 async function candPreview(p, key, after) {
   const d = studio.list?.find(x => x.id === p.id)?.data || p.data, s = d.images.slots[key], c = s?.cand; if (!c) return;
   modal(`<h2>${esc(s.slide)}페이지 미리보기 · 새 이미지</h2><div class="pv-box" id="pv-box"><p class="rv-load"><i class="spin" aria-hidden="true"></i><span>미리보기를 불러오는 중입니다</span></p></div>
-    <div class="modal-actions"><button class="button" id="pv-again">다시 만들기</button><button class="button" id="pv-no">취소</button><button class="button primary" id="pv-ok">이 이미지로 확정</button></div>`);
+    <div class="modal-actions"><button class="button" id="pv-again">다시 만들기</button><button class="button" id="pv-no">새 이미지 버리기</button><button class="button primary" id="pv-ok">이 이미지로 확정</button></div>`);
   $('#modal').classList.add('wide'); $('#modal').addEventListener('close', () => $('#modal').classList.remove('wide'), {once: true});
   const done = async ok => { $('#pv-ok').disabled = $('#pv-no').disabled = true; await candApply(p, key, ok); $('#modal').close(); after?.(); };
   $('#pv-ok').onclick = () => done(true); $('#pv-no').onclick = () => done(false);
@@ -1084,6 +1134,7 @@ async function candPreview(p, key, after) {
     }
   } catch (e) { $('#pv-box').innerHTML = `<p>미리보기를 불러오지 못했습니다: ${esc(e?.message || '')}</p>`; }
 }
+window.addEventListener('pt-refresh', () => { if ($('#review')?.open) window.ptRefresh?.(); else if (String(activeDetail || '').startsWith('p:')) openProposal(activeDetail.slice(2), true); });
 async function pageReview(pid, start) {
   let p = studio.list?.find(x => x.id === pid); if (!p?.data?.build?.pdf) return toast('생성된 제안서가 없습니다.');
   let dlg = $('#review');
@@ -1095,7 +1146,11 @@ async function pageReview(pid, start) {
     dlg.showModal();
     dlg.addEventListener('close', () => { if (activeDetail === 'p:' + pid) openProposal(pid, true); }, {once: true});
   }
-  $('#rv-close').onclick = () => dlg.close();
+  dlg.dataset.dirty = '';
+  dlg.oninput = ev => { if (ev.target.matches('[data-mk-prompt], [data-mk-why]')) dlg.dataset.dirty = '1'; };
+  const closeRv = async () => { if (!dlg.dataset.dirty || await askLeave()) { dlg.dataset.dirty = ''; dlg.close(); } };
+  $('#rv-close').onclick = closeRv;
+  dlg.oncancel = ev => { if ($('#modal').open || $('#ask')?.open) return; if (dlg.dataset.dirty) { ev.preventDefault(); closeRv(); } };
   let doc, cur = 1;
   try {
     const { data: su } = await SB.storage.from('pt-studio').createSignedUrl(b.pdf, 1800);
@@ -1118,8 +1173,8 @@ async function pageReview(pid, start) {
     // 비교는 이 창이 연 버전·상태와 — 뒤의 상세 화면이 먼저 목록을 새로 읽어도 놓치지 않게
     if (row.data?.build?.version !== b.version) { studio.list = null; await loadStudio(); toast(`새 버전 v${row.data.build.version}이 생성되었습니다.`); return pageReview(pid, cur); }
     const snap = row.status + JSON.stringify(row.data?.images?.slots || {}) + JSON.stringify(row.data?.qa || {}) + JSON.stringify(row.data?.qa_ok || {}) + JSON.stringify(row.data?.build?.patches || {});
-    if (seen && snap !== seen) { studio.list = null; await loadStudio(); show(cur); }
-    seen = snap;
+    if (seen && snap !== seen && !dlg.dataset.dirty) { studio.list = null; await loadStudio(); show(cur); }      // 프롬프트를 고치는 중이면 새로 고침을 미룬다
+    if (!dlg.dataset.dirty) seen = snap;
     setTimeout(tick, 3000);
   };
   setTimeout(tick, 1500);
@@ -1134,7 +1189,7 @@ async function pageReview(pid, start) {
     const fs = new Set(flags.map(f => +f.slide)), miss = new Set(Object.keys(S).filter(k => ['missing', 'ai'].includes(S[k].status)).flatMap(k => spots(k).length ? spots(k).map(a => +a.page) : [pageOf(k)]));
     $('#rv-qa').textContent = qa ? (flags.length ? `자동 검수 · 확인할 곳 ${flags.length}곳 (빨간 페이지)` : '자동 검수 · 특이 사항 없음') : '자동 검수 전입니다';
     $('#rv-strip').innerHTML = Array.from({length: N}, (_, i) => i + 1).map(n => `<button type="button" class="${n === cur ? 'on ' : ''}${fs.has(n) ? 'flag' : miss.has(n) ? 'miss' : ''}" data-go="${n}" aria-label="${n}페이지">${n}</button>`).join('');
-    $$('#rv-strip [data-go]').forEach(x => x.onclick = () => show(+x.dataset.go));
+    $$('#rv-strip [data-go]').forEach(x => x.onclick = () => nav(+x.dataset.go));
     $('#rv-strip .on')?.scrollIntoView({block: 'nearest', inline: 'center'});
     // 페이지 그림은 기다리지 않고 그린다 — 그림이 늦어도 오른쪽 이미지 자리는 바로 보이게
     if ($('#rv-load')) { $('#rv-load').hidden = false; $('#rv-load span').textContent = `${cur}페이지를 그리는 중입니다`; }
@@ -1152,7 +1207,7 @@ async function pageReview(pid, start) {
       return `<button type="button" class="${bad ? 'flag' : ''}${S[k].path ? '' : ' empty'}${big(b) ? ' bg' : ''}" data-hot="${esc(k)}" style="left:${b.x / EW * 100}%;top:${b.y / EH * 100}%;width:${b.w / EW * 100}%;height:${b.h / EH * 100}%" aria-label="${esc(KIND_KO_IMG[S[k].kind] || '')} ${esc(whatText(S[k].what))}"><span>${esc(KIND_KO_IMG[S[k].kind] || '')}</span></button>`; }).join('');
     const okd = k => !!S[k]?.path && (d.qa_ok || {})[k] === S[k].path;          // 사람이 확정한 이미지 (검수 목록에서 빠짐)
     const card = k => { const s = S[k], [cls, label] = SLOT_ST[s.status] || ['', s.status], bad = fl.filter(f => f.key === k);
-      return `<div class="rv-slot${bad.length ? ' flag' : ''}"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-rk="${esc(k)}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}</span>`}</div><div class="rv-info"><div class="ihead"><b>${esc(KIND_KO_IMG[s.kind] || s.kind)}</b><span class="pill ${cls}">${label}</span></div><small>${esc(whatText(s.what))}</small>${(s.cand ? [] : bad).map(f => `<small class="warn">${esc(QA_KO[f.type] || '확인')} · ${esc(f.detail)}</small>${[...new Set([...String(f.detail).matchAll(/(\d{1,2})\s*페이지/g)].map(m => +m[1]).filter(n => n !== cur && n >= 1 && n <= N))].map(n => `<button class="text-btn go" data-go-page="${n}">${n}페이지 보기 ▶</button>`).join('')}`).join('')}${s.cand ? `<div class="rv-cand"><div class="ithumb" data-cand-thumb="${esc(s.cand.path)}"></div><div><b>새 이미지</b><small>아직 제안서에 반영되지 않았습니다</small><div class="ibtns"><button class="button small" data-cand-view="${esc(k)}">이 이미지로 미리보기</button><button class="button primary small" data-cand-ok="${esc(k)}">이 이미지로 확정</button><button class="text-btn" data-cand-no="${esc(k)}">취소</button></div></div></div>` : ''}<div class="ibtns">${s.path && okd(k) ? `<span class="pill good">확정</span><button class="text-btn" data-rv-unok="${esc(k)}">확정 취소</button>` : bad.length && s.path && !s.cand ? `<button class="text-btn ok" data-rv-ok="${esc(k)}">이 이미지로 확정</button>` : ''}${s.path ? `<button class="text-btn" data-rv-open="${esc(k)}">크게 보기·수정</button>` : ''}<label class="text-btn up">내 이미지로 교체<input type="file" accept="image/png,image/jpeg,image/webp" data-rv-up="${esc(k)}" hidden></label></div>${makeBox(k, s)}</div></div>`; };
+      return `<div class="rv-slot${bad.length ? ' flag' : ''}"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-rk="${esc(k)}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}</span>`}</div><div class="rv-info"><div class="ihead"><b>${esc(KIND_KO_IMG[s.kind] || s.kind)}</b><span class="pill ${cls}">${label}</span></div><small>${esc(whatText(s.what))}</small>${(s.cand ? [] : bad).map(f => `<small class="warn">${esc(QA_KO[f.type] || '확인')} · ${esc(f.detail)}</small>${[...new Set([...String(f.detail).matchAll(/(\d{1,2})\s*페이지/g)].map(m => +m[1]).filter(n => n !== cur && n >= 1 && n <= N))].map(n => `<button class="text-btn go" data-go-page="${n}">${n}페이지 보기 ▶</button>`).join('')}`).join('')}${s.cand ? `<div class="rv-cand"><div class="ithumb" data-cand-thumb="${esc(s.cand.path)}"></div><div><b>새 이미지</b><small>아직 제안서에 반영되지 않았습니다</small><div class="ibtns"><button class="button small" data-cand-view="${esc(k)}">이 이미지로 미리보기</button><button class="button primary small" data-cand-ok="${esc(k)}">이 이미지로 확정</button><button class="text-btn" data-cand-no="${esc(k)}">새 이미지 버리기</button></div></div></div>` : ''}<div class="ibtns">${s.path && okd(k) ? `<span class="pill good">확정</span><button class="text-btn" data-rv-unok="${esc(k)}">확정 취소</button>` : bad.length && s.path && !s.cand ? `<button class="text-btn ok" data-rv-ok="${esc(k)}">이 이미지로 확정</button>` : ''}${s.path ? `<button class="text-btn" data-rv-open="${esc(k)}">크게 보기·수정</button>` : ''}<label class="text-btn up">내 이미지로 교체<input type="file" accept="image/png,image/jpeg,image/webp" data-rv-up="${esc(k)}" hidden></label></div>${makeBox(k, s)}</div></div>`; };
     const canAi = s => AI_KINDS.includes(s.kind) || (!s.path && !['official', 'logo', 'capture'].includes(s.kind));
     function makeBox(k, s) {
       if (p.status === 'working' && (s.widen || s.upscale || s.status === 'ai')) { const live = liveJobs(p.id); return `<div class="rv-busy">${jobsProg(live.length ? live : [null])}</div>`; }
@@ -1199,7 +1254,7 @@ async function pageReview(pid, start) {
     $$('#rv-side [data-rv-up]').forEach(inp => inp.onchange = async () => { const f = inp.files[0]; if (f && await replaceSlotImage(p, inp.dataset.rvUp, f)) show(cur); });
     $$('#rv-side [data-mk-ai]').forEach(x => x.onclick = async () => { const k = x.dataset.mkAi, pr = $(`[data-mk-prompt="${CSS.escape(k)}"]`).value.trim();
       if (!pr) return toast('생성 프롬프트를 입력해 주세요.');
-      x.disabled = true; if (await quickMake(p, k, 'ai', pr, $(`[data-mk-why="${CSS.escape(k)}"]`).value.trim())) show(cur); else x.disabled = false; });
+      x.disabled = true; if (await quickMake(p, k, 'ai', pr, $(`[data-mk-why="${CSS.escape(k)}"]`).value.trim())) { dlg.dataset.dirty = ''; show(cur); } else x.disabled = false; });
     $$('#rv-side [data-mk-wide]').forEach(x => { const k = x.dataset.mkWide, b = d.build?.boxes?.[k], el = $(`#rv-side [data-rk="${CSS.escape(k)}"]`);
       x.onclick = async () => { x.disabled = true; if (await quickMake(p, k, 'widen', '', '')) show(cur); else x.disabled = false; };
       if (b && el?.dataset.src) { const im = new Image(); im.onload = () => { x.hidden = !shapeOff(im.naturalWidth, im.naturalHeight, b.w / b.h); }; im.src = el.dataset.src; } });
@@ -1207,7 +1262,7 @@ async function pageReview(pid, start) {
       if (!b || !el?.dataset.src) return;
       const im = new Image(); im.onload = () => { if (lowRes(im.naturalWidth, im.naturalHeight, need, b.w / b.h) || S[k].lowres) { box.hidden = false;
         box.querySelector('small').textContent = `해상도가 낮아 깨져 보입니다 (지금 ${im.naturalWidth}px · 필요 약 ${need}px)`; } }; im.src = el.dataset.src; });
-    $$('#rv-side [data-go-page]').forEach(x => x.onclick = () => show(+x.dataset.goPage));
+    $$('#rv-side [data-go-page]').forEach(x => x.onclick = () => nav(+x.dataset.goPage));
     const cps = keys.map(k => S[k].cand?.path).filter(Boolean);
     if (cps.length) SB.storage.from('pt-studio').createSignedUrls(cps, 900).then(({ data }) => (data || []).forEach(x => { if (x.signedUrl) $$(`#rv-side [data-cand-thumb="${CSS.escape(x.path)}"]`).forEach(el => { el.style.backgroundImage = `url("${x.signedUrl}")`; }); }));
     $$('#rv-side [data-cand-view]').forEach(x => x.onclick = () => candPreview(p, x.dataset.candView, () => show(cur)));
@@ -1217,12 +1272,14 @@ async function pageReview(pid, start) {
     $$('#rv-side [data-mk-hires]').forEach(x => x.onclick = async () => { x.disabled = true; await asideHires(p, x.dataset.mkHires); show(cur); });
     $$('#rv-side [data-mk-up]').forEach(x => x.onclick = async () => { x.disabled = true; if (await quickMake(p, x.dataset.mkUp, 'upscale', '', '')) show(cur); else x.disabled = false; });
   };
-  $('#rv-prev').onclick = () => show(cur - 1); $('#rv-next').onclick = () => show(cur + 1);
-  dlg.onkeydown = ev => { if ($('#modal').open) return; if (ev.key === 'ArrowLeft') show(cur - 1); if (ev.key === 'ArrowRight') show(cur + 1); };
+  const nav = async n => { if (n !== cur && dlg.dataset.dirty && !(await askLeave())) return; dlg.dataset.dirty = ''; show(n); };
+  window.ptRefresh = () => { dlg.dataset.dirty = ''; studio.list = null; loadStudio().then(() => show(cur)); };
+  $('#rv-prev').onclick = () => nav(cur - 1); $('#rv-next').onclick = () => nav(cur + 1);
+  dlg.onkeydown = ev => { if ($('#modal').open || $('#ask')?.open || ev.target.matches('input, textarea')) return; if (ev.key === 'ArrowLeft') nav(cur - 1); if (ev.key === 'ArrowRight') nav(cur + 1); };      // 글을 쓰는 중에는 화살표로 넘기지 않음
   // 폰에서는 페이지 그림을 옆으로 밀어 넘긴다 (10-30 모바일)
   const pg = dlg.querySelector('.rv-page'); let sx = null, sy = 0;
   pg.ontouchstart = ev => { sx = ev.touches[0].clientX; sy = ev.touches[0].clientY; };
-  pg.ontouchend = ev => { if (sx === null) return; const dx = ev.changedTouches[0].clientX - sx, dy = ev.changedTouches[0].clientY - sy; sx = null; if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) show(cur + (dx < 0 ? 1 : -1)); };
+  pg.ontouchend = ev => { if (sx === null) return; const dx = ev.changedTouches[0].clientX - sx, dy = ev.changedTouches[0].clientY - sy; sx = null; if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) nav(cur + (dx < 0 ? 1 : -1)); };
   await show(start || 1);
 }
 async function proposalEvent(id, message) { await SB.from('pt_proposal_event').insert({proposal_id: id, message}); }
@@ -1268,7 +1325,7 @@ async function openProposal(id, keep) {
   // 같은 IP 조합으로 제안서 하나 더 — 리서치·팬·SNS 조사·컨셉 후보를 이어받아 컨셉 고르기부터
   $('#prop-more')?.addEventListener('click', async ev => {
     const no = propNo(p);
-    if (!confirm(`${pTitle(p)} 제안서를 하나 더 생성합니다. 리서치와 컨셉 후보는 그대로 사용하고, 컨셉을 새로 선택해 진행합니다.`)) return;
+    if (!(await ask({title: '같은 IP로 제안서를 하나 더 만들까요?', body: `${esc(pTitle(p))}의 리서치와 컨셉 후보를 그대로 가져와 새 제안서를 만들고, 컨셉 선택부터 시작합니다. 지금 제안서는 그대로 남습니다.`, ok: '새 제안서 만들기'}))) return;
     ev.target.disabled = true;
     const keep = Object.fromEntries(['research', 'social', 'concepts', 'accent', 'partners', 'partner_selected'].filter(k => d[k] !== undefined).map(k => [k, d[k]]));
     const row = {mode: p.mode, ip_a_name: p.ip_a_name, ip_a_id: p.ip_a_id, ip_b_name: p.ip_b_name, ip_b_id: p.ip_b_id, recipient: p.recipient, ref_id: p.ref_id,
@@ -1308,11 +1365,13 @@ async function openProposal(id, keep) {
     if (await replaceSlotImage(p, inp.dataset.upimg, f)) openProposal(p.id, true);
   });
   $$('#drawer [data-review]').forEach(x => x.onclick = () => pageReview(p.id, +x.dataset.review || 1));
-  $('#redesign')?.addEventListener('click', ev => { ev.target.disabled = true; go({status: 'working'}, {kind: 'finalize', input: {redesign: true}}, '원본 제안서 디자인 적용을 요청했습니다(이미지는 유지)', '새 디자인을 적용합니다. 진행률은 화면에서 볼 수 있습니다.'); });
+  $('#redesign')?.addEventListener('click', async ev => {
+    if (!(await ask({title: '새 디자인을 적용할까요?', body: '원고를 원본 제안서 디자인 레이아웃으로 다시 씁니다. 이미지는 그대로 쓰지만 페이지 구성과 문장 배치가 바뀔 수 있습니다. 지금 버전은 기록에 남습니다.', ok: '새 디자인 적용'}))) return;
+    ev.target.disabled = true; go({status: 'working'}, {kind: 'finalize', input: {redesign: true}}, '원본 제안서 디자인 적용을 요청했습니다(이미지는 유지)', '새 디자인을 적용합니다. 진행률은 화면에서 볼 수 있습니다.'); });
   $('#ai-est')?.addEventListener('click', ev => { ev.target.disabled = true; go({status: 'working'}, {kind: 'generate', input: {estimate_only: true}}, 'AI 이미지 견적을 요청했습니다'); });
-  $('#ai-go')?.addEventListener('click', ev => {
+  $('#ai-go')?.addEventListener('click', async ev => {
     const usd = +ev.target.dataset.usd, n = d.images.ai_estimate.count;
-    if (!confirm(`이미지 ${n}장(AI 이미지·좌우 확장)을 힉스필드로 생성합니다. 예상 비용 약 $${usd} 가 회사 힉스필드 API 잔액에서 차감됩니다. 진행할까요?`)) return;
+    if (!(await ask({title: `이미지 ${n}장을 만들까요?`, body: `<b>예상 비용 약 $${usd}</b>가 회사 힉스필드 잔액에서 나갑니다. 실패하거나 부적절 판정된 이미지는 청구되지 않습니다. 만든 이미지는 들어갈 페이지만 다시 그립니다.`, ok: `${n}장 만들기 · 약 $${usd}`}))) return;
     ev.target.disabled = true;
     go({status: 'working'}, {kind: 'generate', input: {approved_usd: usd}}, `AI 이미지 ${n}장 생성을 승인했습니다 (예상 $${usd})`, '승인했습니다. 판테온 봇이 생성을 시작합니다.');
   });
@@ -1328,8 +1387,13 @@ async function openProposal(id, keep) {
     ev.target.disabled = true;
     go({status: 'working'}, {kind: 'finalize', input: {instruction: t}}, `수정 버전을 요청했습니다 · ${t.slice(0, 120)}`, '수정 버전을 만듭니다. 진행률은 화면에서 볼 수 있습니다.');
   });
-  $('#img-rerender')?.addEventListener('click', ev => { ev.target.disabled = true; go({status: 'working'}, {kind: 'finalize', input: {}}, '변경 사항 반영을 요청했습니다'); });
-  $('#img-done')?.addEventListener('click', ev => {
+  $('#img-rerender')?.addEventListener('click', async ev => {
+    if (!(await ask({title: '변경 사항을 제안서 전체에 반영할까요?', body: '교체한 이미지와 위치 조정을 넣어 제안서 전체를 다시 그리고, 자동 검수도 처음부터 다시 합니다. 그동안은 수정할 수 없습니다.', ok: '전체에 반영'}))) return;
+    ev.target.disabled = true; go({status: 'working'}, {kind: 'finalize', input: {}}, '변경 사항 반영을 요청했습니다'); });
+  $('#img-done')?.addEventListener('click', async ev => {
+    if (!(await ask({title: `v${d.build.version}으로 제안서를 완료할까요?`,
+        body: `완료하면 상태가 「완료」로 바뀌고 이미지 수정 단계가 닫힙니다.${patched ? ` 수정한 ${patched}개 페이지를 전체 파일에 반영한 뒤 완료합니다.` : ''} 이후 고칠 일이 생기면 「수정 버전 만들기」로 다음 버전을 만듭니다.`,
+        ok: `v${d.build.version}으로 완료`}))) return;
     ev.target.disabled = true;
     // 완료한 버전에 남은 AI 이미지·좌우 넓힌 이미지 = 사람이 통과시킨 것 → good_images (10-29 · 다음 원고가 이 수준을 따르게)
     const S = d.images?.slots || {}, at = new Date().toISOString();
@@ -1339,7 +1403,8 @@ async function openProposal(id, keep) {
     const keep = new Set(good.map(g => g.key));
     const log = (d.prompt_log || []).map(x => keep.has(x.key) ? {...x, kept: true} : x);
     if (patched) return go({status: 'working', data: {...d, good_images: good, prompt_log: log}}, {kind: 'finalize', input: {then_done: true}}, `수정한 ${patched}개 페이지를 전체에 반영한 뒤 완료합니다 (통과한 AI 이미지 ${good.length}장 기록)`, '수정한 페이지를 전체에 반영한 뒤 완료합니다.');
-    go({status: 'done', data: {...d, good_images: good, prompt_log: log}}, null, `v${d.build.version} 으로 제안서를 완료했습니다 (통과한 AI 이미지 ${good.length}장 기록)`, '제안서를 완료했습니다.');
+    go({status: 'done', data: {...d, good_images: good, prompt_log: log}}, null, `v${d.build.version} 으로 제안서를 완료했습니다 (통과한 AI 이미지 ${good.length}장 기록)`).then(() =>
+      toast('제안서를 완료했습니다.', {fn: async () => { await SB.from('pt_proposal').update({status: 'waiting'}).eq('id', p.id); await proposalEvent(p.id, '완료를 되돌렸습니다'); studio.list = null; await loadStudio(); openProposal(p.id, true); toast('완료를 되돌렸습니다.'); }}));
   });
   if (d.images && $('#img-board')) loadImgThumbs(d.images.slots);
   if (d.social?.captures?.length) loadImgThumbs(Object.fromEntries(d.social.captures.map((c, i) => [i, c])));
@@ -1422,7 +1487,7 @@ function studioRefModal() {
   <div class="field"><span class="flabel">IP</span><div id="sr-ip"></div></div>
   <label>수신사<input id="sr-to" list="sr-ents" maxlength="80"></label>
   <div class="field"><span class="flabel">작성자</span><div id="sr-author"></div></div>
-  <div id="sr-error" style="color:#ba775e;margin-top:14px;font-size:11px" role="alert"></div><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="submit">등록</button></div></form>`);
+  <div id="sr-error" style="color:#ba775e;margin-top:14px;font-size:11px" role="alert"></div><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="submit">레퍼런스 등록</button></div></form>`);
   const ips = ipChips($('#sr-ip'), [], 'sr-ents');
   const authors = memberChips($('#sr-author'), [], {note: '<span class="err">빨간 이름</span>은 헤임달에 등록되지 않은 사람입니다.'});
   $('#sr-file').onchange = () => { const f = $('#sr-file').files[0]; if (f && !$('#sr-title').value) $('#sr-title').value = f.name.replace(/\.(pdf|pptx)$/i, ''); };

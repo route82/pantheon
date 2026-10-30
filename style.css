@@ -308,7 +308,16 @@ footer{display:none}
 .rv-hot button.empty{border:2px dashed #e0a77c}
 .rv-hot button.bg{border-width:3px}.rv-hot button.bg:hover{background:transparent}.rv-hot button.bg span{left:auto;right:6px;top:auto;bottom:6px}
 .rv-slot.hl{border-color:#3fbf7f;box-shadow:0 0 0 3px #3fbf7f33}
-.rv-slot .ithumb{background-color:#9aa39d}.rv-cand{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;border:1px solid #9fc1ab;background:#f4f9f5;border-radius:8px;padding:8px;margin:8px 0}.rv-cand b{font-size:13px;color:#285541}.rv-cand .ibtns{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.rv-cand .ibtns .button{flex:1 1 auto}.rv-cand small{display:block;font-size:11px;color:#6b776f}.rv-cand .ithumb{aspect-ratio:16/9;width:100%;border-radius:6px;background-size:cover;background-position:center}.pv-box{min-height:200px;display:grid;place-items:center;background:#f1f3f0;border-radius:8px;overflow:hidden}.rv-fix{display:block;color:#285541;font-weight:600;margin-bottom:4px}
+.rv-slot .ithumb{background-color:#9aa39d}
+/* UX 4원칙 (10-30): 행동을 적은 확인 창 · 되돌리기 알림 */
+dialog.ask{width:min(420px,calc(100vw - 32px));padding:24px 24px 18px;border-radius:12px}
+dialog.ask h2{font-size:17px;margin:0 0 8px}dialog.ask p{font-size:13.5px;line-height:1.65;color:#4d5a52;margin:0 0 4px}dialog.ask b{color:#1f2d24}
+dialog.ask .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;flex-wrap:wrap}
+.button.danger{background:#c2412a;border-color:#c2412a;color:#fff}.button.danger:hover{background:#a8361f}
+#toast{top:auto;right:auto;margin:0;border:0;color:#fff;background:#244c39;overflow:visible;inset-block-start:auto}
+#toast.has-undo{pointer-events:auto;display:flex;align-items:center;gap:16px}
+.toast-undo{background:none;border:0;color:#c3e4a2;font:inherit;font-weight:700;text-decoration:underline;cursor:pointer;padding:4px 2px;white-space:nowrap}
+@media(max-width:600px){dialog.ask .modal-actions .button{flex:1 1 auto;min-height:44px}#toast.has-undo{max-width:calc(100% - 24px)}}.rv-cand{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;border:1px solid #9fc1ab;background:#f4f9f5;border-radius:8px;padding:8px;margin:8px 0}.rv-cand b{font-size:13px;color:#285541}.rv-cand .ibtns{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.rv-cand .ibtns .button{flex:1 1 auto}.rv-cand small{display:block;font-size:11px;color:#6b776f}.rv-cand .ithumb{aspect-ratio:16/9;width:100%;border-radius:6px;background-size:cover;background-position:center}.pv-box{min-height:200px;display:grid;place-items:center;background:#f1f3f0;border-radius:8px;overflow:hidden}.rv-fix{display:block;color:#285541;font-weight:600;margin-bottom:4px}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes indet{0%{left:-35%}100%{left:100%}}.bar.indet{position:relative;overflow:hidden}.bar.indet i{position:absolute;top:0;bottom:0;width:35%!important;animation:indet 1.3s ease-in-out infinite}@media (prefers-reduced-motion:reduce){.bar.indet i{animation-duration:3s}}
 .spin{display:inline-block;width:18px;height:18px;border-radius:50%;border:2px solid #cfe0d4;border-top-color:#285541;animation:spin .8s linear infinite;vertical-align:-4px;flex:none}
