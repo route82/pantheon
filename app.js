@@ -702,8 +702,12 @@ async function pollRefJobs() {
 }
 // 목록에서도 진행이 보이게 — 작업 중인 프로젝트가 있으면 3초마다 진행률·상태를 다시 읽는다
 function rowProg(p) {
-  const j = studio.jobs.find(x => x.proposal_id === p.id), g = j?.result;
-  if (!j || j.status === 'wait' || !g) return `<small class="row-prog">${j?.kind === 'aside' ? 'Aside 작업 대기 중' : '판테온 봇 작업 대기 중'}<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></small>`;
+  // 도는 작업(진행률 있는 것 먼저)을 보여 준다 — 예전엔 아무 작업이나 잡아 「작업 대기 중」으로 보여 멈춘 줄 알았다 (10-30)
+  const js = studio.jobs.filter(x => x.proposal_id === p.id && ['wait', 'work'].includes(x.status));
+  const j = js.find(x => x.status === 'work' && x.result?.progress) || js.find(x => x.status === 'work') || js[0], g = j?.result;
+  if (!j) return `<small class="row-prog">다음 작업을 준비하는 중<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></small>`;
+  if (j.status === 'wait') return `<small class="row-prog">${esc(jobName(j))} 시작을 기다리는 중<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></small>`;
+  if (!g?.progress) return `<span class="ref-prog row-prog"><span class="row"><span class="bar indet"><i></i></span></span><small>${esc(jobName(j))} 진행 중</small></span>`;
   return `<span class="ref-prog row-prog"><span class="row"><span class="bar"><i style="width:${g.progress}%"></i></span><b>${g.progress}%</b></span><small>${esc(g.step || '')}</small></span>`;
 }
 let listPoll;
@@ -1077,7 +1081,9 @@ const refOf = (d, key) => { const S = d.images?.slots || {};
 const logoRefs = (d, key) => { const S = d.images?.slots || {}, s = S[key] || {};
   const r = (s.refs || []).filter(k => S[k]?.path).map(k => S[k].what || k);
   if (r.length || s.kind !== 'mockup' || refOf(d, key)) return r;
-  return Object.values(S).filter(v => v.kind === 'logo' && v.path && !v.ref_only && !/ALMIGHTY|올마이티/i.test(v.what || '')).slice(0, 2).map(v => v.what || '로고'); };
+  const L = Object.values(S).filter(v => v.kind === 'logo' && v.path && !v.ref_only && !/ALMIGHTY|올마이티|[·×,&+/]|나란히|함께|와 |과 |및 /i.test(v.what || ''));
+  const P = studio.list?.find(x => x.data === d) || {};
+  return [...new Set([P.ip_a_name, P.ip_b_name].filter(Boolean).map(n => L.filter(v => (v.what || '').replace(/ /g, '').includes(n.replace(/ /g, ''))).sort((a, b) => (a.what || '').length - (b.what || '').length)[0]?.what).filter(Boolean))]; };
 async function quickMake(p, key, mode, prompt, why) {
   const fresh = studio.list?.find(x => x.id === p.id)?.data || p.data, cur = fresh.images.slots[key];
   const ref = mode === 'ai' && (refOf(fresh, key) || logoRefs(fresh, key).length), usd = mode === 'ai' && !ref ? 0.02 : 0.1;
@@ -1427,7 +1433,7 @@ async function openProposal(id, keep) {
   let action = '';
   if (p.status === 'waiting' && p.stage === 2) action = `<div class="detail-block"><h3>결정 · 기본 정보 확정</h3><p>아래 내용으로 시작합니다. 확정하면 ${p.mode === 'collab' && !p.ip_b_name ? '판테온 봇이 파트너 IP 후보를 추천합니다.' : '판테온 봇이 IP 리서치를 시작합니다.'}</p><div class="drawer-actions"><button class="button primary" id="intake-ok">인테이크 확정</button><button class="button" id="intake-edit">내용 수정</button></div></div>`;
   else if (p.status === 'working' && p.stage >= 7 && job && !['image_plan', 'finalize', 'generate', 'aside', 'qa'].includes(job.kind)) action = `<div class="detail-block"><h3>진행 중 · ${esc(STAGES[p.stage - 1])}</h3><p>이 단계는 준비 중입니다. 완성되면 여기서 이어서 진행됩니다.</p></div>`;
-  else if (p.status === 'working') { const live = liveJobs(id); action = `<div class="detail-block"><h3>진행 중 · ${esc(STAGES[p.stage - 1])}</h3>${jobsProg(live.length ? live : [job])}</div>`; }
+  else if (p.status === 'working') { const live = liveJobs(id); action = `<div class="detail-block"><h3>진행 중 · ${esc(STAGES[p.stage - 1])}</h3>${jobsProg(live.length ? live : [job])}<p class="muted-box">화면을 나가거나 새로 고침해도 작업은 계속 진행됩니다.</p><div class="drawer-actions"><button class="button danger" id="job-cancel">작업 취소</button></div></div>`; }
   else if (p.status === 'failed') action = `<div class="detail-block"><h3>작업 실패</h3><p>${esc(d.error || '판테온 봇이 작업을 끝내지 못했습니다.')}</p><div class="drawer-actions"><button class="button primary" id="job-retry">다시 시도</button></div></div>`;
   else if (p.status === 'waiting' && p.stage === 3 && d.partners) action = partnersPanel(p);
   else if (p.status === 'waiting' && p.stage === 5 && d.concepts) action = conceptsPanel(p);
@@ -1453,6 +1459,24 @@ async function openProposal(id, keep) {
     studio.list = null; await loadStudio(); openProposal(p.id, true); if (okMsg) toast(okMsg);
   };
   $('#intake-edit')?.addEventListener('click', () => studioProjectModal(p));
+  // 작업 취소 (10-30 김현우) — 8초 안에 「되돌리기」를 누르면 취소하지 않는다. 봇은 apply_at(8초 뒤)이 지나야 멈춘다 → 화면을 나가도 그대로 적용
+  $('#job-cancel')?.addEventListener('click', async ev => {
+    if (!(await confirmBox({title: '정말 취소하시겠어요?', body: '지금 진행 중인 작업을 멈추고 직전 결정 단계로 돌아갑니다. 이미 만든 결과(원고·이미지)는 그대로 남습니다.', ok: '작업 취소', cancel: '계속 진행', danger: true}))) return;
+    ev.target.disabled = true;
+    const now = new Date(), req = {at: now.toISOString(), apply_at: new Date(now.getTime() + 8000).toISOString(), by: myName || ''};
+    const { data: row, error: e0 } = await SB.from('pt_proposal').select('data').eq('id', p.id).single();
+    if (e0) { ev.target.disabled = false; return toast('취소하지 못했습니다: ' + e0.message); }
+    const { error } = await SB.from('pt_proposal').update({data: {...row.data, cancel_req: req}}).eq('id', p.id);
+    if (error) { ev.target.disabled = false; return toast('취소하지 못했습니다: ' + error.message); }
+    let undone = false;
+    setTimeout(async () => { if (!undone) await proposalEvent(p.id, `진행 중인 작업을 취소했습니다 (${STAGES[p.stage - 1]})`); }, 8200);
+    toast('취소되었습니다.', {fn: async () => {
+      undone = true;
+      const { data: r2 } = await SB.from('pt_proposal').select('data').eq('id', p.id).single();
+      const { cancel_req: _c, ...rest } = r2.data || {};
+      await SB.from('pt_proposal').update({data: rest}).eq('id', p.id);
+      toast('취소를 되돌렸습니다. 작업을 계속 진행합니다.'); studio.list = null; await loadStudio(); openProposal(p.id, true); }});
+  });
   // 같은 IP 조합으로 제안서 하나 더 — 리서치·팬·SNS 조사·컨셉 후보를 이어받아 컨셉 고르기부터
   $('#prop-more')?.addEventListener('click', async ev => {
     const no = propNo(p);
