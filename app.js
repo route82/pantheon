@@ -681,7 +681,7 @@ async function pollProjects() {
   if (!ids.length) return;
   const [ps, js] = await Promise.all([SB.from('pt_proposal').select('id,status,stage').in('id', ids),
     SB.from('pt_proposal_job').select('id,proposal_id,ref_id,kind,status,at,error,result,input').in('proposal_id', ids).in('status', ['wait', 'work'])]);
-  if (ps.error || js.error || page !== 'studio') return;
+  if (ps.error || js.error || page !== 'studio' || !studio.list) return;          // 그 사이 목록을 새로 읽는 중이면 그쪽에 맡긴다
   if (ps.data.some(x => { const o = studio.list.find(p => p.id === x.id); return o && (o.status !== x.status || o.stage !== x.stage); })) { studio.list = null; return loadStudio(); }
   studio.jobs = [...studio.jobs.filter(j => !ids.includes(j.proposal_id)), ...js.data];
   ids.forEach(id => { const el = document.querySelector(`[data-prow="${id}"]`), p = studio.list.find(x => x.id === id); if (el && p) el.innerHTML = rowProg(p); });
