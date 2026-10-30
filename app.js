@@ -649,14 +649,21 @@ function studioRefs() {
 // 레퍼런스 분석 진행률 — 판테온 봇이 pt_proposal_job.result 에 3초마다 적는 값(1~100% · 남은 초)을 읽어 막대로
 const refJob = r => studio.jobs.find(j => j.ref_id === r.id && j.kind === 'analyze_reference');
 const leftText = t => { const s = Math.round(t); return s >= 60 ? `약 ${Math.floor(s / 60)}분 ${String(s % 60).padStart(2, '0')}초 남음` : s > 0 ? `약 ${s}초 남음` : '곧 완료됩니다'; };
+const ETA = {};
+function etaText(k, g) {
+  const now = Date.now(), left = g.eta - (now - Date.parse(g.at)) / 1000;
+  let e = ETA[k]; if (!e || e.step !== g.step) e = ETA[k] = {step: g.step, t0: new Date().toISOString(), best: Infinity, bad: false};
+  if (left > e.best + 3 || left < -10) e.bad = true;
+  e.best = Math.min(e.best, left);
+  return e.bad ? sinceText(e.t0) : leftText(Math.max(0, left));
+}
 function refProg(r) {
   const j = refJob(r), g = j?.result;
   if (!j || j.status === 'wait' || !g) {
     const long = j && Date.now() - Date.parse(j.at) > 120000;
     return `<span class="ref-prog" data-ref-prog="${r.id}"><span class="pill">분석 대기</span><small>판테온 봇 작업 대기 중<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></small>${long ? '<small class="warn">2분 넘게 대기 중입니다. DB 관리에서 판테온 봇을 재시작해 주세요.</small>' : ''}</span>`;
   }
-  const left = Math.max(0, g.eta - (Date.now() - Date.parse(g.at)) / 1000);
-  return `<span class="ref-prog" data-ref-prog="${r.id}" data-eta="${g.eta}" data-at="${esc(g.at)}"><span class="row"><span class="bar" role="progressbar" aria-valuenow="${g.progress}" aria-valuemin="0" aria-valuemax="100"><i style="width:${g.progress}%"></i></span><b>${g.progress}%</b></span><small>${esc(g.step || '분석 중')}</small><small class="eta">${leftText(left)}</small></span>`;
+  return `<span class="ref-prog" data-ref-prog="${r.id}" data-k="r${r.id}" data-eta="${g.eta}" data-at="${esc(g.at)}" data-step="${esc(g.step || '')}"><span class="row"><span class="bar" role="progressbar" aria-valuenow="${g.progress}" aria-valuemin="0" aria-valuemax="100"><i style="width:${g.progress}%"></i></span><b>${g.progress}%</b></span><small>${esc(g.step || '분석 중')}</small><small class="eta">${etaText('r' + r.id, g)}</small></span>`;
 }
 let studioPoll, studioTick;
 async function pollRefJobs() {
@@ -674,8 +681,7 @@ async function pollRefJobs() {
 function rowProg(p) {
   const j = studio.jobs.find(x => x.proposal_id === p.id), g = j?.result;
   if (!j || j.status === 'wait' || !g) return `<small class="row-prog">${j?.kind === 'aside' ? 'Aside 작업 대기 중' : '판테온 봇 작업 대기 중'}<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></small>`;
-  const left = Math.max(0, g.eta - (Date.now() - Date.parse(g.at)) / 1000);
-  return `<span class="ref-prog row-prog"><span class="row"><span class="bar"><i style="width:${g.progress}%"></i></span><b>${g.progress}%</b></span><small>${esc(g.step || '')} · ${leftText(left)}</small></span>`;
+  return `<span class="ref-prog row-prog"><span class="row"><span class="bar"><i style="width:${g.progress}%"></i></span><b>${g.progress}%</b></span><small>${esc(g.step || '')} · ${etaText('j' + j.id, g)}</small></span>`;
 }
 let listPoll;
 async function pollProjects() {
@@ -697,7 +703,7 @@ function bindStudio() {
     studioPoll = setTimeout(pollRefJobs, 3000);
     studioTick = setInterval(() => {            // 남은 시간은 1초마다 줄여 보여 준다
       if (page !== 'studio') return clearInterval(studioTick);
-      $$('[data-ref-prog][data-eta]').forEach(el => { const left = Math.max(0, +el.dataset.eta - (Date.now() - Date.parse(el.dataset.at)) / 1000); const t = el.querySelector('.eta'); if (t) t.textContent = leftText(left); });
+      $$('[data-ref-prog][data-eta]').forEach(el => { const t = el.querySelector('.eta'); if (t) t.textContent = etaText(el.dataset.k, {eta: +el.dataset.eta, at: el.dataset.at, step: el.dataset.step}); });
     }, 1000);
   }
   $$('[data-ref-view]').forEach(b => b.onclick = ev => { ev.stopPropagation(); openRef(b.dataset.refView); });
@@ -749,8 +755,7 @@ function jobProg(j) {
   // 진행률을 남기지 않는 작업(자동 검수·Aside 등)도 돌고 있으면 움직이는 막대 + 경과 시간 (10-30)
   if (j && j.status === 'work' && !g) return `<div class="ref-prog wide job-prog run" data-since="${esc(j.claimed_at || j.at)}"><span class="row"><span class="bar indet" role="progressbar" aria-label="진행 중"><i></i></span></span><small>${esc(jobName(j) || '작업')} 진행 중</small><small class="since">${sinceText(j.claimed_at || j.at)}</small></div>`;
   if (!j || j.status === 'wait' || !g) return `<p class="job-wait">${j?.kind === 'aside' ? 'Aside 작업 대기 중' : '판테온 봇 작업 대기 중'}<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></p>`;
-  const left = Math.max(0, g.eta - (Date.now() - Date.parse(g.at)) / 1000);
-  return `<div class="ref-prog wide job-prog" data-eta="${g.eta}" data-at="${esc(g.at)}"><span class="row"><span class="bar" role="progressbar" aria-valuenow="${g.progress}" aria-valuemin="0" aria-valuemax="100"><i style="width:${g.progress}%"></i></span><b>${g.progress}%</b></span><small>${esc(g.step || '진행 중')}</small><small class="eta">${leftText(left)}</small></div>`;
+  return `<div class="ref-prog wide job-prog" data-k="j${j.id}" data-eta="${g.eta}" data-at="${esc(g.at)}" data-step="${esc(g.step || '')}"><span class="row"><span class="bar" role="progressbar" aria-valuenow="${g.progress}" aria-valuemin="0" aria-valuemax="100"><i style="width:${g.progress}%"></i></span><b>${g.progress}%</b></span><small>${esc(g.step || '진행 중')}</small><small class="eta">${etaText('j' + j.id, g)}</small></div>`;
 }
 // 한 단계에 작업이 둘일 때(리서치 = 공개 웹 + 팬·SNS) 막대를 이름과 함께 나란히 (10-28)
 const JOB_KO = {qa: '자동 검수', partners: '파트너 추천', research: '공개 웹 리서치', concepts: '컨셉 설계', build: '제안서 생성', image_plan: '이미지 수급', finalize: '제안서 다시 생성', generate: 'AI 이미지 생성'};
@@ -790,7 +795,7 @@ async function checkVersion() {
 setInterval(checkVersion, 300000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkVersion(); });
 setInterval(() => $$('.job-prog.run').forEach(el => { const t = el.querySelector('.since'); if (t) t.textContent = sinceText(el.dataset.since); }), 1000);
-setInterval(() => $$('.job-prog').forEach(el => { const t = el.querySelector('.eta'); if (t) t.textContent = leftText(Math.max(0, +el.dataset.eta - (Date.now() - Date.parse(el.dataset.at)) / 1000)); }), 1000);
+setInterval(() => $$('.job-prog[data-eta]').forEach(el => { const t = el.querySelector('.eta'); if (t) t.textContent = etaText(el.dataset.k, {eta: +el.dataset.eta, at: el.dataset.at, step: el.dataset.step}); }), 1000);
 function partnersPanel(p) {
   const P = p.data.partners;
   const cats = (P.categories || []).map(cat => {
