@@ -271,7 +271,7 @@ footer{display:none}
 #close-drawer{min-width:44px;min-height:44px}
 .drawer.big .detail-sub{font-size:12.5px}
 .drawer.big a.src,.drawer.big li time{font-size:12px}
-.drawer.big a.src{display:inline-block;padding:7px 0}
+.drawer.big a.src{display:inline-block;padding:7px 14px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
 .drawer.big .ihead b,.drawer.big .ihead .pill{font-size:13px}
 .drawer.big .ibtns{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .drawer.big .ibtns .text-btn{font-size:13px;min-height:40px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;color:#285541;cursor:pointer}
