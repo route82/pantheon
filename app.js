@@ -998,6 +998,16 @@ async function asideHires(p, key) {
   await proposalEvent(p.id, `${s.slide}페이지 「${s.what || key}」 고해상도 원본을 Aside 로 다시 찾도록 요청했습니다`);
   studio.list = null; await loadStudio(); toast('Aside에 요청했습니다. 몇 분 걸립니다. 찾지 못하면 힉스필드로 보정할 수 있습니다.');
 }
+// Aside로 다른 이미지 찾기 (10-30 김현우) — 공식 이미지·로고·참고 사례·캡처를 지금 것과 다른 실제 이미지로
+async function asideOther(p, key) {
+  const d = studio.list?.find(x => x.id === p.id)?.data || p.data, s = d.images.slots[key];
+  const im = (d.build?.deck?.slides || []).flatMap(x => x.images || []).find(x => x.key === key) || {};
+  const avoid = [s.source_page, s.image_url].filter(Boolean);
+  await SB.from('pt_proposal').update({status: 'working'}).eq('id', p.id);
+  await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'aside', input: {slots: [{key, kind: s.kind, what: s.what || '', ratio: s.ratio || '', search: im.search || '', avoid}], ips: [p.ip_a_name, p.ip_b_name].filter(Boolean)}});
+  await proposalEvent(p.id, `${s.slide}페이지 「${whatText(s.what) || key}」 다른 이미지를 Aside에 요청했습니다`);
+  studio.list = null; await loadStudio(); toast('Aside에 요청했습니다. 몇 분 걸립니다. 찾으면 제안서에 자동 반영됩니다.');
+}
 const shapeOff = (w, h, ar) => ar && w && h && (w / h < ar / 1.3 || w / h > ar * 1.3);
 async function quickMake(p, key, mode, prompt, why) {
   const fresh = studio.list?.find(x => x.id === p.id)?.data || p.data, cur = fresh.images.slots[key];
@@ -1061,7 +1071,7 @@ async function pageReview(pid, start) {
       return `<button type="button" class="${bad ? 'flag' : ''}${S[k].path ? '' : ' empty'}${big(b) ? ' bg' : ''}" data-hot="${esc(k)}" style="left:${b.x / EW * 100}%;top:${b.y / EH * 100}%;width:${b.w / EW * 100}%;height:${b.h / EH * 100}%" aria-label="${esc(KIND_KO_IMG[S[k].kind] || '')} ${esc(whatText(S[k].what))}"><span>${esc(KIND_KO_IMG[S[k].kind] || '')}</span></button>`; }).join('');
     const okd = k => !!S[k]?.path && (d.qa_ok || {})[k] === S[k].path;          // 사람이 확정한 이미지 (검수 목록에서 빠짐)
     const card = k => { const s = S[k], [cls, label] = SLOT_ST[s.status] || ['', s.status], bad = fl.filter(f => f.key === k);
-      return `<div class="rv-slot${bad.length ? ' flag' : ''}"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-rk="${esc(k)}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}</span>`}</div><div class="rv-info"><div class="ihead"><b>${esc(KIND_KO_IMG[s.kind] || s.kind)}</b><span class="pill ${cls}">${label}</span></div><small>${esc(whatText(s.what))}</small>${bad.map(f => `<small class="warn">${esc(QA_KO[f.type] || '확인')} · ${esc(f.detail)}</small>`).join('')}<div class="ibtns">${s.path && okd(k) ? `<span class="pill good">확정</span><button class="text-btn" data-rv-unok="${esc(k)}">확정 취소</button>` : bad.length && s.path ? `<button class="text-btn ok" data-rv-ok="${esc(k)}">이 이미지로 확정</button>` : ''}${s.path ? `<button class="text-btn" data-rv-open="${esc(k)}">크게 보기·수정</button>` : ''}<label class="text-btn up">내 이미지로 교체<input type="file" accept="image/png,image/jpeg,image/webp" data-rv-up="${esc(k)}" hidden></label></div>${makeBox(k, s)}</div></div>`; };
+      return `<div class="rv-slot${bad.length ? ' flag' : ''}"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-rk="${esc(k)}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}</span>`}</div><div class="rv-info"><div class="ihead"><b>${esc(KIND_KO_IMG[s.kind] || s.kind)}</b><span class="pill ${cls}">${label}</span></div><small>${esc(whatText(s.what))}</small>${bad.map(f => `<small class="warn">${esc(QA_KO[f.type] || '확인')} · ${esc(f.detail)}</small>${[...new Set([...String(f.detail).matchAll(/(\d{1,2})\s*페이지/g)].map(m => +m[1]).filter(n => n !== cur && n >= 1 && n <= N))].map(n => `<button class="text-btn go" data-go-page="${n}">${n}페이지 보기 ▶</button>`).join('')}`).join('')}<div class="ibtns">${s.path && okd(k) ? `<span class="pill good">확정</span><button class="text-btn" data-rv-unok="${esc(k)}">확정 취소</button>` : bad.length && s.path ? `<button class="text-btn ok" data-rv-ok="${esc(k)}">이 이미지로 확정</button>` : ''}${s.path ? `<button class="text-btn" data-rv-open="${esc(k)}">크게 보기·수정</button>` : ''}<label class="text-btn up">내 이미지로 교체<input type="file" accept="image/png,image/jpeg,image/webp" data-rv-up="${esc(k)}" hidden></label></div>${makeBox(k, s)}</div></div>`; };
     const canAi = s => AI_KINDS.includes(s.kind) || (!s.path && !['official', 'logo', 'capture'].includes(s.kind));
     function makeBox(k, s) {
       if (p.status === 'working' && (s.widen || s.upscale || s.status === 'ai')) return '<p class="rv-busy">생성 중입니다…</p>';
@@ -1069,6 +1079,7 @@ async function pageReview(pid, start) {
       return `<div class="rv-make">${ai ? `<textarea data-mk-prompt="${esc(k)}" rows="3" placeholder="생성 프롬프트(영문) — 피사체·장면·분위기">${esc(s.prompt || '')}</textarea>
         <input data-mk-why="${esc(k)}" maxlength="200" placeholder="개선할 점(재생성 시 반영)"><button class="button primary small" data-mk-ai="${esc(k)}">${s.status === 'generated' ? 'AI로 다시 생성' : 'AI로 생성'} · 약 $0.01</button>` : ''}
         ${s.path ? `<button class="button small" data-mk-wide="${esc(k)}" hidden>힉스필드로 확장해 전체 표시 · 약 $0.08</button>` : ''}
+        ${['official', 'logo', 'reference', 'capture'].includes(s.kind) ? `<button class="button small" data-mk-other="${esc(k)}">Aside로 다른 이미지 찾기</button>` : ''}
         ${s.path && !AI_KINDS.includes(s.kind) ? `<div class="rv-lowres" data-lr="${esc(k)}" hidden><small class="warn"></small><button class="button small" data-mk-hires="${esc(k)}">Aside로 고해상도 검색</button><button class="button small" data-mk-up="${esc(k)}">힉스필드로 고해상도 보정 · 약 $0.08</button></div>` : ''}</div>`;
     }
     const loose = fl.filter(f => !f.key || !keys.includes(f.key));
@@ -1110,6 +1121,8 @@ async function pageReview(pid, start) {
       if (!b || !el?.dataset.src) return;
       const im = new Image(); im.onload = () => { if (lowRes(im.naturalWidth, im.naturalHeight, need, b.w / b.h) || S[k].lowres) { box.hidden = false;
         box.querySelector('small').textContent = `해상도가 낮아 깨져 보입니다 (지금 ${im.naturalWidth}px · 필요 약 ${need}px)`; } }; im.src = el.dataset.src; });
+    $$('#rv-side [data-go-page]').forEach(x => x.onclick = () => show(+x.dataset.goPage));
+    $$('#rv-side [data-mk-other]').forEach(x => x.onclick = async () => { x.disabled = true; await asideOther(p, x.dataset.mkOther); show(cur); });
     $$('#rv-side [data-mk-hires]').forEach(x => x.onclick = async () => { x.disabled = true; await asideHires(p, x.dataset.mkHires); show(cur); });
     $$('#rv-side [data-mk-up]').forEach(x => x.onclick = async () => { x.disabled = true; if (await quickMake(p, x.dataset.mkUp, 'upscale', '', '')) show(cur); else x.disabled = false; });
   };
