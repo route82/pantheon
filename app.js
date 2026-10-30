@@ -1144,7 +1144,7 @@ async function pageReview(pid, start) {
   if (!dlg) { dlg = document.createElement('dialog'); dlg.id = 'review'; dlg.className = 'review'; document.body.appendChild(dlg); }
   const b = p.data.build;
   dlg.innerHTML = `<div class="rv-head"><div><h2>${p.status === 'waiting' ? '이미지 확인·수정' : '페이지별 보기'} · v${b.version}</h2><small id="rv-qa"></small></div><div class="rv-nav"><button class="button" id="rv-prev">◀ 이전 페이지</button><b id="rv-n"></b><button class="button" id="rv-next">다음 페이지 ▶</button><button class="button" id="rv-close">닫기</button></div></div>
-  <div class="rv-live" id="rv-live" hidden></div><div class="rv-strip" id="rv-strip"></div><div class="rv-body"><div class="rv-page"><div class="rv-canvas-wrap"><canvas id="rv-canvas"></canvas><div class="rv-hot" id="rv-hot"></div></div><p id="rv-load" class="rv-load"><i class="spin" aria-hidden="true"></i><span>제안서를 불러오는 중입니다 <b id="rv-load-pct">0%</b></span></p></div><div class="rv-side" id="rv-side"></div></div>`;
+  <div class="rv-live" id="rv-live" hidden></div><div class="rv-strip" id="rv-strip"></div><div class="rv-body"><div class="rv-page"><div class="rv-canvas-wrap"><canvas id="rv-canvas"></canvas><div class="rv-hot" id="rv-hot"></div></div><div class="rv-tools" id="rv-tools"></div><p id="rv-load" class="rv-load"><i class="spin" aria-hidden="true"></i><span>제안서를 불러오는 중입니다 <b id="rv-load-pct">0%</b></span></p></div><div class="rv-side" id="rv-side"></div></div>`;
   if (!dlg.open) {           // 새 버전으로 다시 열 때는 이미 떠 있다
     dlg.showModal();
     dlg.addEventListener('close', () => { if (activeDetail === 'p:' + pid) openProposal(pid, true); }, {once: true});
@@ -1206,7 +1206,12 @@ async function pageReview(pid, start) {
     const EW = 12192000, EH = 6858000;            // 960×540pt 페이지 (EMU)
     // 페이지 전체를 덮는 배경 이미지는 맨 아래에 깔아, 그 위 사진들을 먼저 누를 수 있게 (10-30)
     const big = b => b.w * b.h / (EW * EH) > 0.8;
-    $('#rv-sizebar')?.remove();
+    $('#rv-sizebar')?.remove(); $('#rv-txtbar')?.remove(); $('.rv-tlayer')?.remove();
+    // 글자 위치 옮기기 (10-30 김현우 「텍스트도 선택해서 드래그로 위치 옮길 수 있게」) — 렌더러가 남긴 글상자 위치(boxes 「t:…」)
+    const tOn = id => (B[id]?.at || [B[id]]).some(a => +a?.page === cur);
+    const tids = Object.keys(B).filter(id => id.startsWith('t:') && tOn(id));
+    $('#rv-tools').innerHTML = tids.length ? '<button class="button small" id="rv-txt">글자 위치 옮기기</button>' : '';
+    if ($('#rv-txt')) $('#rv-txt').onclick = () => textMode(tids);
     $('#rv-hot').innerHTML = keys.flatMap(k => spots(k).filter(a => +a.page === cur && a.w).map(b => [k, b])).sort((x, y) => big(y[1]) - big(x[1])).map(([k, b]) => { const bad = fl.some(f => f.key === k);
       return `<button type="button" class="${bad ? 'flag' : ''}${S[k].path ? '' : ' empty'}${big(b) ? ' bg' : ''}" data-hot="${esc(k)}" style="left:${b.x / EW * 100}%;top:${b.y / EH * 100}%;width:${b.w / EW * 100}%;height:${b.h / EH * 100}%" aria-label="${esc(KIND_KO_IMG[S[k].kind] || '')} ${esc(whatText(S[k].what))}"><span>${esc(KIND_KO_IMG[S[k].kind] || '')}</span></button>`; }).join('');
     const okd = k => !!S[k]?.path && (d.qa_ok || {})[k] === S[k].path;          // 사람이 확정한 이미지 (검수 목록에서 빠짐)
@@ -1227,6 +1232,52 @@ async function pageReview(pid, start) {
         ${spots(k).length === 1 && +spots(k)[0].page === cur && !(spots(k)[0].w * spots(k)[0].h / (12192000 * 6858000) > 0.8) ? `<button class="button small" data-rv-size="${esc(k)}">상자 크기 조절</button>` : ''}
         ${['official', 'logo', 'reference', 'capture'].includes(s.kind) ? `<button class="button small" data-mk-other="${esc(k)}">Aside로 다른 이미지 찾기</button>` : ''}
         ${s.path && !AI_KINDS.includes(s.kind) ? `<div class="rv-lowres" data-lr="${esc(k)}" hidden><small class="warn"></small><button class="button small" data-mk-hires="${esc(k)}">Aside로 고해상도 검색</button><button class="button small" data-mk-up="${esc(k)}">힉스필드로 고해상도 보정 · 약 $0.08</button></div>` : ''}</div>`;
+    }
+    function textMode(tids) {
+      if ($('.rv-tlayer')) return;
+      const wrap = $('.rv-canvas-wrap'), EW = 12192000, EH = 6858000, tp = d.build?.deck?.text_pos || {};
+      $('#rv-hot').style.pointerEvents = 'none'; dlg.dataset.dirty = '1'; $('#rv-txt').disabled = true;
+      wrap.insertAdjacentHTML('beforeend', `<div class="rv-tlayer">${tids.map(id => { const a = (B[id].at || [B[id]]).find(z => +z.page === cur);
+        return `<div class="tbox${tp[id] ? ' moved' : ''}" data-t="${esc(id)}" title="${esc(B[id].t || '')}" style="left:${a.x / EW * 100}%;top:${a.y / EH * 100}%;width:${a.w / EW * 100}%;height:${a.h / EH * 100}%"></div>`; }).join('')}</div>`);
+      const moved = {};
+      $$('.rv-tlayer .tbox').forEach(t => {
+        t.ontouchstart = ev => ev.stopPropagation();
+        t.onpointerdown = ev => { ev.preventDefault(); ev.stopPropagation(); t.setPointerCapture(ev.pointerId);
+          $$('.rv-tlayer .tbox.sel').forEach(o => o.classList.remove('sel')); t.classList.add('sel');
+          const W = wrap.clientWidth, H = wrap.clientHeight, sx = ev.clientX, sy = ev.clientY, l = parseFloat(t.style.left), tt = parseFloat(t.style.top), w = parseFloat(t.style.width), h = parseFloat(t.style.height);
+          t.onpointermove = e => { const L = Math.min(100 - w, Math.max(0, l + (e.clientX - sx) / W * 100)), T = Math.min(100 - h, Math.max(0, tt + (e.clientY - sy) / H * 100));
+            t.style.left = L + '%'; t.style.top = T + '%'; if (Math.abs(L - l) + Math.abs(T - tt) > 0.2) { t.classList.add('moved'); moved[t.dataset.t] = [L, T]; } };
+          t.onpointerup = () => { t.onpointermove = null; }; };
+      });
+      const had = tids.some(id => tp[id]);
+      wrap.insertAdjacentHTML('afterend', `<div class="rv-sizebar" id="rv-txtbar"><small>점선 상자가 이 페이지의 글입니다. 옮길 글을 끌어 놓으세요. 반영하면 이 페이지만 다시 그립니다.</small><div class="ibtns"><button class="button primary small" id="tx-ok">이 위치로 반영</button>${had ? '<button class="button small" id="tx-reset">글자 원래 위치로</button>' : ''}<button class="text-btn" id="tx-no">옮기기 취소</button></div></div>`);
+      $('#tx-no').onclick = () => { dlg.dataset.dirty = ''; show(cur); };
+      const save = async reset => {
+        const ids = reset ? tids.filter(id => tp[id]) : Object.keys(moved);
+        if (!ids.length) return toast('옮긴 글이 없습니다. 점선 상자를 끌어 옮겨 주세요.');
+        $('#tx-ok').disabled = true;
+        const { data: row, error: e0 } = await SB.from('pt_proposal').select('data').eq('id', p.id).single();
+        if (e0) { $('#tx-ok').disabled = false; return toast('불러오지 못했습니다: ' + e0.message); }
+        const f = row.data, deck0 = f.build.deck, pos = {...(deck0.text_pos || {})}, orig = {...(deck0.text_orig || {})}, boxes = {...f.build.boxes};
+        ids.forEach(id => { const b = boxes[id]; if (!b) return; const a = (b.at || [b])[0];
+          if (!orig[id]) orig[id] = {x: a.x, y: a.y};
+          const xy = reset ? orig[id] : {x: Math.round(moved[id][0] / 100 * EW), y: Math.round(moved[id][1] / 100 * EH)};
+          if (reset) { delete pos[id]; delete orig[id]; } else pos[id] = {x: +(xy.x / 12700).toFixed(1), y: +(xy.y / 12700).toFixed(1)};
+          boxes[id] = {...b, ...xy, at: [{...a, ...xy}]}; });
+        const { error } = await SB.from('pt_proposal').update({data: {...f, build: {...f.build, boxes, deck: {...deck0, text_pos: pos, text_orig: orig}}}, status: 'working'}).eq('id', p.id);
+        if (error) { $('#tx-ok').disabled = false; return toast('저장하지 못했습니다: ' + error.message); }
+        await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'finalize', input: {keys: ids}});
+        await proposalEvent(p.id, `${cur}페이지 글 ${ids.length}개 위치를 ${reset ? '원래대로 되돌렸습니다' : '옮겼습니다'} → 이 페이지만 다시 그립니다`);
+        dlg.dataset.dirty = ''; studio.list = null; await loadStudio(); show(cur);
+        toast(reset ? '글을 원래 위치로 되돌립니다. 이 페이지를 다시 그리는 중입니다.' : '글 위치를 반영합니다. 이 페이지를 다시 그리는 중입니다.', {fn: async () => {
+          const { data: r2 } = await SB.from('pt_proposal').select('data').eq('id', p.id).single(); const d2 = r2.data;
+          await SB.from('pt_proposal').update({data: {...d2, build: {...d2.build, boxes: {...d2.build.boxes, ...Object.fromEntries(ids.map(id => [id, f.build.boxes[id]]))}, deck: {...d2.build.deck, text_pos: deck0.text_pos || {}, text_orig: deck0.text_orig || {}}}}, status: 'working'}).eq('id', p.id);
+          await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'finalize', input: {keys: ids}});
+          await proposalEvent(p.id, `${cur}페이지 글 위치 변경을 되돌렸습니다`);
+          studio.list = null; await loadStudio(); toast('되돌렸습니다. 이 페이지를 다시 그리는 중입니다.'); window.dispatchEvent(new Event('pt-refresh')); }});
+      };
+      $('#tx-ok').onclick = () => save(false);
+      if ($('#tx-reset')) $('#tx-reset').onclick = () => save(true);
     }
     // 상자 크기 조절 — 페이지 위 상자 가장자리·모서리를 끌어 늘리고 줄인다 → 그 페이지만 다시 그림 (10-30 김현우)
     function sizeBox(k) {
