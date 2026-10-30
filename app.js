@@ -1012,11 +1012,18 @@ async function asideOther(p, key) {
   studio.list = null; await loadStudio(); toast('Aside에 요청했습니다. 찾으면 제안서에 자동 반영됩니다.');
 }
 const shapeOff = (w, h, ar) => ar && w && h && (w / h < ar / 1.3 || w / h > ar * 1.3);
+// 메인 이미지 참고 (10-30) — 같은 페이지에 「메인」 이미지가 있거나 제품 페이지의 첫 이미지면, 나머지 컷은 그 이미지를 붙여 같은 인형·캐릭터로 만든다 (봇 hf.ref_of 와 같은 규칙)
+const refOf = (d, key) => { const S = d.images?.slots || {};
+  for (const sl of d.build?.deck?.slides || []) { const ims = (sl.images || []).filter(i => i.key); if (ims.length < 2 || !ims.some(i => i.key === key)) continue;
+    const main = ims.find(i => (i.what || '').includes('메인')) || (sl.layout === 'product' ? ims[0] : null);
+    if (main && main.key !== key && S[main.key]?.path) return main.key; }
+  return ''; };
 async function quickMake(p, key, mode, prompt, why) {
   const fresh = studio.list?.find(x => x.id === p.id)?.data || p.data, cur = fresh.images.slots[key];
-  const usd = mode === 'ai' ? 0.02 : 0.1;
+  const ref = mode === 'ai' && refOf(fresh, key), usd = mode === 'ai' && !ref ? 0.02 : 0.1;
   if (!confirm(mode === 'upscale' ? `${cur.slide}페이지 이미지를 힉스필드로 고해상도 보정합니다. 사람 얼굴이 아주 조금 달라질 수 있습니다. 예상 비용 약 $0.08 입니다. 진행할까요?`
                : mode === 'widen' ? `${cur.slide}페이지 이미지를 힉스필드로 확장해 이미지 전체가 보이게 합니다. 예상 비용은 약 $0.08입니다. 진행할까요?`
+                                : ref ? `${cur.slide}페이지 이미지를 메인 이미지(${fresh.images.slots[ref]?.slide}페이지 「${whatText(fresh.images.slots[ref]?.what).slice(0, 20)}」)를 참고해 같은 모델로 생성합니다. 예상 비용은 약 $0.08입니다. 진행할까요?`
                                 : `${cur.slide}페이지에 AI 이미지를 생성해 넣습니다. 예상 비용은 약 $0.01입니다. 진행할까요?`)) return false;
   const prev = [...(cur.prev_paths || []), cur.path].filter(Boolean);
   const { before: _b, cand: _c, ...was } = cur;          // 새 이미지는 바로 넣지 않고 미리보기 → 사람이 확정 (10-30)
@@ -1029,7 +1036,7 @@ async function quickMake(p, key, mode, prompt, why) {
   const { error } = await SB.from('pt_proposal').update({data, status: 'working'}).eq('id', p.id);
   if (error) { toast('저장하지 못했습니다: ' + error.message); return false; }
   await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'generate', input: {approved_usd: usd, keys: [key], preview: true}});
-  await proposalEvent(p.id, `${cur.slide}페이지 ${mode === 'upscale' ? '고해상도 보정' : mode === 'widen' ? '이미지 확장' : 'AI 이미지 생성'}를 승인했습니다 (예상 $${mode === 'ai' ? '0.01' : '0.08'})${why ? ' · ' + why : ''}`);
+  await proposalEvent(p.id, `${cur.slide}페이지 ${mode === 'upscale' ? '고해상도 보정' : mode === 'widen' ? '이미지 확장' : (ref ? 'AI 이미지 생성(메인 이미지 참고)' : 'AI 이미지 생성')}를 승인했습니다 (예상 $${mode === 'ai' && !ref ? '0.01' : '0.08'})${why ? ' · ' + why : ''}`);
   studio.list = null; await loadStudio();
   toast('생성을 시작했습니다. 끝나면 「이 이미지로 미리보기」로 제안서에 들어간 모습을 보고 확정해 주세요.');
   return true;
@@ -1147,7 +1154,7 @@ async function pageReview(pid, start) {
       // 자동 검수가 고친 프롬프트·고칠 점이 있으면 미리 채운다 (10-30 김현우 「개선할 점에 자동으로 개선 프롬프트」)
       const fx = fl.find(f => f.key === k && f.prompt_fix);
       return `<div class="rv-make">${ai ? `${fx ? '<small class="rv-fix">자동 검수가 고친 프롬프트입니다. 확인 후 다시 생성하세요.</small>' : ''}<textarea data-mk-prompt="${esc(k)}" rows="${fx ? 5 : 3}" placeholder="생성 프롬프트(영문) — 피사체·장면·분위기">${esc(fx ? fx.prompt_fix : s.prompt || '')}</textarea>
-        <input data-mk-why="${esc(k)}" maxlength="200" placeholder="개선할 점(재생성 시 반영)" value="${esc(fx ? (fx.why || fx.detail) : '')}"><button class="button primary small" data-mk-ai="${esc(k)}">${s.status === 'generated' ? 'AI로 다시 생성' : 'AI로 생성'} · 약 $0.01</button>` : ''}
+        <input data-mk-why="${esc(k)}" maxlength="200" placeholder="개선할 점(재생성 시 반영)" value="${esc(fx ? (fx.why || fx.detail) : '')}">${refOf(d, k) ? `<small class="rv-fix">메인 이미지(「${esc(whatText(S[refOf(d, k)]?.what).slice(0, 20))}」)를 참고해 같은 모델로 만듭니다</small>` : ''}<button class="button primary small" data-mk-ai="${esc(k)}">${s.status === 'generated' ? 'AI로 다시 생성' : 'AI로 생성'} · 약 $${refOf(d, k) ? '0.08' : '0.01'}</button>` : ''}
         ${s.path ? `<button class="button small" data-mk-wide="${esc(k)}" hidden>힉스필드로 확장해 전체 표시 · 약 $0.08</button>` : ''}
         ${['official', 'logo', 'reference', 'capture'].includes(s.kind) ? `<button class="button small" data-mk-other="${esc(k)}">Aside로 다른 이미지 찾기</button>` : ''}
         ${s.path && !AI_KINDS.includes(s.kind) ? `<div class="rv-lowres" data-lr="${esc(k)}" hidden><small class="warn"></small><button class="button small" data-mk-hires="${esc(k)}">Aside로 고해상도 검색</button><button class="button small" data-mk-up="${esc(k)}">힉스필드로 고해상도 보정 · 약 $0.08</button></div>` : ''}</div>`;
