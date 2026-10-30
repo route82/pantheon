@@ -1063,22 +1063,25 @@ async function quickMake(p, key, mode, prompt, why) {
   const cost = mode === 'ai' && !ref ? '$0.01' : '$0.08';
   const what = mode === 'upscale' ? '이미지를 고해상도로 보정합니다. 사람 얼굴이 아주 조금 달라질 수 있습니다.'
              : mode === 'widen' ? '이미지 바깥을 확장해 잘리지 않고 전체가 보이게 합니다.'
+             : mode === 'fit' ? '인물 얼굴과 핵심이 모두 보이게 상자 비율로 다시 잡고, 모자라는 부분은 힉스필드로 자연스럽게 채웁니다. 잘라서 맞으면 비용이 들지 않습니다.'
              : ref ? `메인 이미지(${esc(fresh.images.slots[ref]?.slide)}페이지 「${esc(whatText(fresh.images.slots[ref]?.what).slice(0, 20))}」)를 참고해 같은 모델로 만듭니다.` : 'AI 이미지를 새로 만듭니다.';
   if (!(await confirmBox({title: `${cur.slide}페이지 이미지를 새로 만들까요?`,
       body: `${what}<br>새 이미지는 바로 들어가지 않고 미리보기로 먼저 보여 드립니다. 마음에 들 때만 확정하세요.<br><b>비용 약 ${cost}</b>가 회사 힉스필드 잔액에서 나갑니다.`,
-      ok: `${mode === 'upscale' ? '고해상도 보정' : mode === 'widen' ? '확장' : '새로 만들기'} · 약 ${cost}`}))) return false;
+      ok: `${mode === 'upscale' ? '고해상도 보정' : mode === 'widen' ? '확장' : mode === 'fit' ? '상자에 맞춘 이미지 만들기' : '새로 만들기'} · 약 ${cost}`}))) return false;
   const prev = [...(cur.prev_paths || []), cur.path].filter(Boolean);
   const { before: _b, cand: _c, ...was } = cur;          // 새 이미지는 바로 넣지 않고 미리보기 → 사람이 확정 (10-30)
-  const next0 = mode === 'upscale' ? {...cur, upscale: true, prev_paths: prev, note: '해상도 보정 중'} : mode === 'widen' ? {...cur, path: cur.orig_path || cur.path, widen: true, widened: false, widen_extra: prompt || cur.widen_extra || '', prev_paths: prev, pos: {}, note: '확장 중'}
+  const next0 = mode === 'upscale' ? {...cur, upscale: true, prev_paths: prev, note: '해상도 보정 중'}
+              : mode === 'fit' ? {...cur, path: cur.orig_path || cur.path, widen: true, fit: true, widened: false, prev_paths: prev, pos: {}, note: '상자에 맞춘 이미지 만드는 중'}
+              : mode === 'widen' ? {...cur, path: cur.orig_path || cur.path, widen: true, widened: false, widen_extra: prompt || cur.widen_extra || '', prev_paths: prev, pos: {}, note: '확장 중'}
                                 : {...cur, status: 'ai', prompt, prev_paths: prev, pos: {}, note: 'AI 이미지 생성 중'};
   const next = {...next0, before: was, cand: undefined};
-  const log = mode === 'upscale' || (mode === 'widen' && !prompt && !why) || (mode === 'ai' && prompt === (cur.prompt || '') && !why) ? [] :
+  const log = mode === 'upscale' || mode === 'fit' || (mode === 'widen' && !prompt && !why) || (mode === 'ai' && prompt === (cur.prompt || '') && !why) ? [] :
     [{at: new Date().toISOString(), key, slide: cur.slide, kind: cur.kind, what: cur.what || '', mode, before: mode === 'widen' ? (cur.widen_extra || '') : (cur.prompt || ''), after: prompt, why, by: myName || ''}];
   const data = {...fresh, images: {...fresh.images, slots: {...fresh.images.slots, [key]: next}}, prompt_log: [...(fresh.prompt_log || []), ...log]};
   const { error } = await SB.from('pt_proposal').update({data, status: 'working'}).eq('id', p.id);
   if (error) { toast('저장하지 못했습니다: ' + error.message); return false; }
   await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'generate', input: {approved_usd: usd, keys: [key], preview: true}});
-  await proposalEvent(p.id, `${cur.slide}페이지 ${mode === 'upscale' ? '고해상도 보정' : mode === 'widen' ? '이미지 확장' : (ref ? 'AI 이미지 생성(메인 이미지 참고)' : 'AI 이미지 생성')}를 승인했습니다 (예상 $${mode === 'ai' && !ref ? '0.01' : '0.08'})${why ? ' · ' + why : ''}`);
+  await proposalEvent(p.id, `${cur.slide}페이지 ${mode === 'upscale' ? '고해상도 보정' : mode === 'widen' ? '이미지 확장' : mode === 'fit' ? '상자에 맞춘 이미지 생성' : (ref ? 'AI 이미지 생성(메인 이미지 참고)' : 'AI 이미지 생성')}를 승인했습니다 (예상 $${mode === 'ai' && !ref ? '0.01' : '0.08'})${why ? ' · ' + why : ''}`);
   studio.list = null; await loadStudio();
   toast('생성을 시작했습니다. 끝나면 「이 이미지로 미리보기」로 제안서에 들어간 모습을 보고 확정해 주세요.');
   return true;
@@ -1089,7 +1092,7 @@ async function candApply(p, key, ok) {
   if (e0) return toast('불러오지 못했습니다: ' + e0.message);
   const d = row.data, cur = d.images.slots[key]; if (!cur?.cand) return;
   const { cand, before, ...base } = cur;
-  const slot = ok ? {...base, ...cand, preview: undefined, prev_paths: [...(base.prev_paths || []), base.path].filter(Boolean), pos: {}, note: ''} : base;
+  const slot = ok ? {...base, ...cand, preview: undefined, prev_paths: [...(base.prev_paths || []), base.path].filter(Boolean), pos: cand.pos || {}, note: ''} : base;
   delete slot.preview;
   // 확정하면 그 페이지만 미리보기로 그려 둔 것으로 갈아 끼우고 그 페이지만 검수 — 전체는 PDF·PPTX 를 받거나 완료할 때 한 번 (10-30 김현우 「그 부분만 다시 그리면 되잖아」)
   const at = d.build?.boxes?.[key]?.at || [], page = +(d.build?.boxes?.[key]?.page || cur.slide), one = ok && cand.preview && at.length <= 1;
@@ -1219,9 +1222,62 @@ async function pageReview(pid, start) {
       const fx = fl.find(f => f.key === k && f.prompt_fix);
       return `<div class="rv-make">${ai ? `${fx ? '<small class="rv-fix">자동 검수가 고친 프롬프트입니다. 확인 후 다시 생성하세요.</small>' : ''}<textarea data-mk-prompt="${esc(k)}" rows="${fx ? 5 : 3}" placeholder="생성 프롬프트(영문) — 피사체·장면·분위기">${esc(fx ? fx.prompt_fix : s.prompt || '')}</textarea>
         <input data-mk-why="${esc(k)}" maxlength="200" placeholder="개선할 점(재생성 시 반영)" value="${esc(fx ? (fx.why || fx.detail) : '')}">${refOf(d, k) ? `<small class="rv-fix">메인 이미지(「${esc(whatText(S[refOf(d, k)]?.what).slice(0, 20))}」)를 참고해 같은 모델로 만듭니다</small>` : ''}<button class="button primary small" data-mk-ai="${esc(k)}">${s.status === 'generated' ? 'AI로 다시 생성' : 'AI로 생성'} · 약 $${refOf(d, k) ? '0.08' : '0.01'}</button>` : ''}
-        ${s.path ? `<button class="button small" data-mk-wide="${esc(k)}" hidden>힉스필드로 확장해 전체 표시 · 약 $0.08</button>` : ''}
+        ${s.path && !['logo', 'texture'].includes(s.kind) ? `<button class="button small" data-mk-fit="${esc(k)}">힉스필드로 상자에 맞춘 이미지 만들기 · 약 $0.08</button>` : ''}
+        ${spots(k).length === 1 && +spots(k)[0].page === cur && !(spots(k)[0].w * spots(k)[0].h / (12192000 * 6858000) > 0.8) ? `<button class="button small" data-rv-size="${esc(k)}">상자 크기 조절</button>` : ''}
         ${['official', 'logo', 'reference', 'capture'].includes(s.kind) ? `<button class="button small" data-mk-other="${esc(k)}">Aside로 다른 이미지 찾기</button>` : ''}
         ${s.path && !AI_KINDS.includes(s.kind) ? `<div class="rv-lowres" data-lr="${esc(k)}" hidden><small class="warn"></small><button class="button small" data-mk-hires="${esc(k)}">Aside로 고해상도 검색</button><button class="button small" data-mk-up="${esc(k)}">힉스필드로 고해상도 보정 · 약 $0.08</button></div>` : ''}</div>`;
+    }
+    // 상자 크기 조절 — 페이지 위 상자 가장자리·모서리를 끌어 늘리고 줄인다 → 그 페이지만 다시 그림 (10-30 김현우)
+    function sizeBox(k) {
+      const h = $(`#rv-hot [data-hot="${CSS.escape(k)}"]`), wrap = $('.rv-canvas-wrap'); if (!h) return;
+      $$('#rv-hot [data-hot]').forEach(o => { if (o !== h) o.style.pointerEvents = 'none'; });
+      h.classList.add('edit'); h.onclick = null; dlg.dataset.dirty = '1';
+      h.insertAdjacentHTML('beforeend', ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].map(d => `<i class="hd ${d}" data-hd="${d}"></i>`).join(''));
+      const r0 = ['left', 'top', 'width', 'height'].map(z => parseFloat(h.style[z]));
+      h.querySelectorAll('[data-hd]').forEach(hd => {
+        hd.ontouchstart = ev => ev.stopPropagation();
+        hd.onpointerdown = ev => { ev.preventDefault(); ev.stopPropagation(); hd.setPointerCapture(ev.pointerId);
+          const W = wrap.clientWidth, H = wrap.clientHeight, sx = ev.clientX, sy = ev.clientY, d = hd.dataset.hd;
+          const [l, t, w, hh] = ['left', 'top', 'width', 'height'].map(z => parseFloat(h.style[z]));
+          hd.onpointermove = e => { const dx = (e.clientX - sx) / W * 100, dy = (e.clientY - sy) / H * 100; let L = l, T = t, Wd = w, Ht = hh;
+            if (d.includes('e')) Wd = Math.min(100 - l, Math.max(3, w + dx));
+            if (d.includes('s')) Ht = Math.min(100 - t, Math.max(3, hh + dy));
+            if (d.includes('w')) { L = Math.min(l + w - 3, Math.max(0, l + dx)); Wd = w + l - L; }
+            if (d.includes('n')) { T = Math.min(t + hh - 3, Math.max(0, t + dy)); Ht = hh + t - T; }
+            Object.assign(h.style, {left: L + '%', top: T + '%', width: Wd + '%', height: Ht + '%'}); };
+          hd.onpointerup = () => { hd.onpointermove = null; }; };
+      });
+      const had = !!S[k].box;
+      $('#rv-sizebar')?.remove();
+      wrap.insertAdjacentHTML('afterend', `<div class="rv-sizebar" id="rv-sizebar"><small>상자 가장자리나 모서리를 끌어 크기를 조절하세요. 반영하면 이 페이지만 다시 그립니다.</small><div class="ibtns"><button class="button primary small" id="sz-ok">이 크기로 반영</button>${had ? '<button class="button small" id="sz-reset">원래 크기로</button>' : ''}<button class="text-btn" id="sz-no">조절 취소</button></div></div>`);
+      $('#sz-no').onclick = () => { dlg.dataset.dirty = ''; show(cur); };
+      const save = async reset => {
+        const v = ['left', 'top', 'width', 'height'].map(z => parseFloat(h.style[z]));
+        if (!reset && v.every((x, i) => Math.abs(x - r0[i]) < 0.2)) return toast('상자 크기가 그대로입니다. 가장자리를 끌어 조절해 주세요.');
+        $('#sz-ok').disabled = true;
+        const { data: row, error: e0 } = await SB.from('pt_proposal').select('data').eq('id', p.id).single();
+        if (e0) { $('#sz-ok').disabled = false; return toast('불러오지 못했습니다: ' + e0.message); }
+        const f = row.data, s0 = f.images.slots[k], b0 = f.build.boxes[k], at0 = (b0.at || [b0])[0];
+        const orig = s0.box_orig || {x: at0.x, y: at0.y, w: at0.w, h: at0.h};
+        const pt = reset ? null : {x: +(v[0] * 9.6).toFixed(1), y: +(v[1] * 5.4).toFixed(1), w: +(v[2] * 9.6).toFixed(1), h: +(v[3] * 5.4).toFixed(1)};
+        const emu = reset ? orig : {x: Math.round(pt.x * 12700), y: Math.round(pt.y * 12700), w: Math.round(pt.w * 12700), h: Math.round(pt.h * 12700)};
+        const { box: _x, box_orig: _o, ...rest } = s0, slot = reset ? rest : {...s0, box: pt, box_orig: orig};
+        const boxes = {...f.build.boxes, [k]: {...b0, ...emu, at: [{...at0, ...emu}]}};
+        const { error } = await SB.from('pt_proposal').update({data: {...f, build: {...f.build, boxes}, images: {...f.images, slots: {...f.images.slots, [k]: slot}}}, status: 'working'}).eq('id', p.id);
+        if (error) { $('#sz-ok').disabled = false; return toast('저장하지 못했습니다: ' + error.message); }
+        await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'finalize', input: {keys: [k]}});
+        await proposalEvent(p.id, `${cur}페이지 「${whatText(s0.what) || k}」 이미지 상자를 ${reset ? '원래 크기로 되돌렸습니다' : '조절했습니다'} → 이 페이지만 다시 그립니다`);
+        dlg.dataset.dirty = ''; studio.list = null; await loadStudio(); show(cur);
+        toast(reset ? '원래 크기로 되돌립니다. 이 페이지를 다시 그리는 중입니다.' : '상자 크기를 반영합니다. 이 페이지를 다시 그리는 중입니다.', {fn: async () => {
+          const { data: r2 } = await SB.from('pt_proposal').select('data').eq('id', p.id).single(); const d2 = r2.data;
+          await SB.from('pt_proposal').update({data: {...d2, build: {...d2.build, boxes: {...d2.build.boxes, [k]: b0}}, images: {...d2.images, slots: {...d2.images.slots, [k]: s0}}}, status: 'working'}).eq('id', p.id);
+          await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'finalize', input: {keys: [k]}});
+          await proposalEvent(p.id, `${cur}페이지 이미지 상자 조절을 되돌렸습니다`);
+          studio.list = null; await loadStudio(); toast('되돌렸습니다. 이 페이지를 다시 그리는 중입니다.'); window.dispatchEvent(new Event('pt-refresh')); }});
+      };
+      $('#sz-ok').onclick = () => save(false);
+      if ($('#sz-reset')) $('#sz-reset').onclick = () => save(true);
+      h.scrollIntoView({block: 'center', behavior: 'smooth'});
     }
     const loose = fl.filter(f => !f.key || !keys.includes(f.key));
     $('#rv-side').innerHTML = `${loose.map(f => `<div class="rv-flag"><b>${esc(QA_KO[f.type] || '확인')}</b> ${esc(f.detail)}</div>`).join('')}${keys.length ? keys.map(card).join('') : '<p class="muted-box">이 페이지에는 이미지가 없습니다.</p>'}`;
@@ -1255,9 +1311,8 @@ async function pageReview(pid, start) {
     $$('#rv-side [data-mk-ai]').forEach(x => x.onclick = async () => { const k = x.dataset.mkAi, pr = $(`[data-mk-prompt="${CSS.escape(k)}"]`).value.trim();
       if (!pr) return toast('생성 프롬프트를 입력해 주세요.');
       x.disabled = true; if (await quickMake(p, k, 'ai', pr, $(`[data-mk-why="${CSS.escape(k)}"]`).value.trim())) { dlg.dataset.dirty = ''; show(cur); } else x.disabled = false; });
-    $$('#rv-side [data-mk-wide]').forEach(x => { const k = x.dataset.mkWide, b = d.build?.boxes?.[k], el = $(`#rv-side [data-rk="${CSS.escape(k)}"]`);
-      x.onclick = async () => { x.disabled = true; if (await quickMake(p, k, 'widen', '', '')) show(cur); else x.disabled = false; };
-      if (b && el?.dataset.src) { const im = new Image(); im.onload = () => { x.hidden = !shapeOff(im.naturalWidth, im.naturalHeight, b.w / b.h); }; im.src = el.dataset.src; } });
+    $$('#rv-side [data-mk-fit]').forEach(x => x.onclick = async () => { x.disabled = true; if (await quickMake(p, x.dataset.mkFit, 'fit', '', '')) show(cur); else x.disabled = false; });
+    $$('#rv-side [data-rv-size]').forEach(x => x.onclick = () => sizeBox(x.dataset.rvSize));
     $$('#rv-side [data-lr]').forEach(box => { const k = box.dataset.lr, b = d.build?.boxes?.[k], el = $(`#rv-side [data-rk="${CSS.escape(k)}"]`), need = needPx(d, k);
       if (!b || !el?.dataset.src) return;
       const im = new Image(); im.onload = () => { if (lowRes(im.naturalWidth, im.naturalHeight, need, b.w / b.h) || S[k].lowres) { box.hidden = false;
