@@ -137,7 +137,7 @@ function searchView() {
 function render() {
   if (page !== 'search' && !navMenus().some(m => m[0] === page)) page = 'home';
   $('#nav').innerHTML = navMenus().map(([key, title]) => `<button class="nav-item ${page === key ? 'active' : ''}" data-page="${key}">${icon(key)}<span>${title}</span>${key === 'contacts' ? `<span class="nav-count">${contacts().length}</span>` : ''}</button>`).join('');
-  const title = {home:['대시보드','거래처·IP·담당자 정보를 한곳에서 확인하세요.'], entities:['엔티티 DB','더올마이티·골포스트·사운드스루의 거래처·브랜드·기관·IP 목록입니다.'], contacts:['연락처','거래처 담당자의 연락처를 확인하고 바로 연락할 수 있습니다.'], studio:['제안서 스튜디오','IP 하나를 넣으면 사람은 결정 단계에서만 확인하고, 리서치·제안서·이미지는 판테온 봇이 이어서 만듭니다.'], search:['검색 결과', `「${query.trim()}」 검색 결과 ${searchHits(query).length}건입니다. 하나만 나오면 Enter로 바로 상세를 엽니다.`], admin:['DB 관리','누가 언제 무엇을 수정했는지 확인하고, 필요하면 이전 내용으로 복원할 수 있습니다.']}[page];
+  const title = {home:['대시보드','거래처·IP·담당자 정보를 한곳에서 확인하세요.'], entities:['엔티티 DB','더올마이티·골포스트·사운드스루의 거래처·브랜드·기관·IP 목록입니다.'], contacts:['연락처','거래처 담당자의 연락처를 확인하고 바로 연락할 수 있습니다.'], studio:['제안서 스튜디오','IP를 입력하면 리서치·제안서·이미지는 판테온 봇이 진행하고, 담당자는 결정 단계에서만 확인합니다.'], search:['검색 결과', `「${query.trim()}」 검색 결과 ${searchHits(query).length}건입니다. 하나만 나오면 Enter로 바로 상세를 엽니다.`], admin:['DB 관리','누가 언제 무엇을 수정했는지 확인하고, 필요하면 이전 내용으로 복원할 수 있습니다.']}[page];
   $('#crumb').textContent = page === 'search' ? '검색 결과' : menus.find(m => m[0] === page)?.[1];
   $('#page-title').innerHTML = title[0] + '<span class="title-dot">.</span>';
   $('#page-subtitle').textContent = title[1];
@@ -586,8 +586,8 @@ function bindAdmin() {
    사람은 게이트에서만 결정하고, 단계 작업은 pt_proposal_job 대기열에 넣어 판테온 봇(서버 PC)이 처리한다. 엔티티는 판테온 pt_entity 를 쓴다 */
 let studioCan = false;
 const studio = {tab: 'projects', filter: 'all', list: null, refs: null, jobs: [], loading: false, err: ''};
-const STAGES = ['IP 입력', '인테이크', '파트너 IP 추천', '리서치', '컨셉 설계', '제안서 생성', '이미지 계획', '생성·삽입·QA'];
-const GATES = {2: '인테이크 확정', 3: '파트너 IP 선택', 5: '컨셉 확정', 7: '이미지 수급·크레딧 승인', 8: '반려 이미지 최종 판단'};
+const STAGES = ['IP 입력', '기본 정보', '파트너 IP 추천', '리서치', '컨셉 설계', '제안서 생성', '이미지 계획', '생성·삽입·검수'];
+const GATES = {2: '기본 정보 확정', 3: '파트너 IP 선택', 5: '컨셉 확정', 7: '이미지 수급·크레딧 승인', 8: '반려 이미지 최종 판단'};
 const JOB_OF = {3: 'partners', 4: 'research', 5: 'concepts', 6: 'build', 7: 'image_plan', 8: 'generate'};
 // 같은 IP 조합·수신사로 만든 제안서는 한 프로젝트로 보고, 만든 순서대로 「제안서 1 · 2 · 3」 (10-29 김현우)
 const pKey = p => [p.mode, p.ip_a_name, p.ip_b_name || '', (p.recipient || '').trim().toLowerCase()].join('|');
@@ -600,11 +600,11 @@ const propSub = p => { const no = propNo(p), c = p.data?.concept_selected?.name;
 const pTitle = p => p.mode === 'single' ? `${p.ip_a_name} 단독` : `${p.ip_a_name} × ${p.ip_b_name || '파트너 선택 전'}`;
 const pStatus = p => p.status === 'done' ? '완료' : p.status === 'failed' ? '작업 실패' : p.status === 'working' ? `${STAGES[p.stage - 1]} 진행 중` : `${GATES[p.stage] || '확인'} 대기`;
 const pPill = p => `<span class="pill ${p.status === 'done' ? 'good' : p.status === 'failed' ? 'bad' : p.status === 'waiting' ? 'wait' : ''}">${esc(pStatus(p))}</span>`;
-const contactPoint = e => e ? '컨택포인트 있음' : '컨택포인트 없음';
+const contactPoint = e => e ? '등록된 연락처 있음' : '등록된 연락처 없음';
 const ipChips = (host, initial, list) => chipInput(host, initial, {list, find: entityByName, badge: contactPoint,
   sub: e => [e.type, contactsOf(e).length ? `등록된 담당자 ${contactsOf(e).length}명` : ''].filter(Boolean).join(' · '),
   title: e => e ? `판테온 엔티티 「${e.name}」` : '판테온 엔티티에 등록되지 않은 IP입니다',
-  note: '판테온 엔티티에 등록된 IP는 <b>컨택포인트 있음</b>, <span class="err">빨간 칩</span>은 등록되지 않은 IP입니다.'});
+  note: '판테온 엔티티에 등록된 IP는 <b>등록된 연락처 있음</b>, <span class="err">빨간 칩</span>은 등록되지 않은 IP입니다.'});
 const entityByName = name => { const n = normCo(name); return n.length < 2 ? null : entities().find(e => [e.name, e.en, ...e.aliases].some(x => x && normCo(x) === n)) || null; };
 
 async function loadStudio() {
@@ -635,25 +635,25 @@ function studioProjects() {
   const stat = (key, n, unit, bottom, hi) => `<div class="stat${hi ? ' highlight' : ''}${studio.filter === key ? ' on' : ''}" data-pfilter="${key}" role="button" tabindex="0" aria-pressed="${studio.filter === key}" aria-label="${F[key][0]} 프로젝트만 보기"><div class="stat-label">${F[key][0]}</div><div class="stat-value">${n}<small>${unit}</small></div><div class="stat-bottom">${bottom}</div></div>`;
   const decide = wait.length ? wait.map(p => `<button class="alert-row" data-proposal="${p.id}"><span class="alert-symbol">${icon('warning')}</span><span class="alert-text">${esc(pTitle(p))}<small>${esc(GATES[p.stage] || '확인')} 대기 · ${esc(kst(p.updated_at))}</small></span></button>`).join('') : '<p class="panel-caption" style="padding:0 0 18px">지금 결정할 프로젝트가 없습니다.</p>';
   const rows = ps.map(p => `<tr class="clickable" data-proposal="${p.id}" tabindex="0"><td>${esc(pTitle(p))}${propSub(p) ? ` <span class="prop-no">${esc(propSub(p))}</span>` : ''}<small class="cell-sub">${esc(p.recipient || '수신사 미정')}</small></td><td data-label="단계">${p.stage}. ${esc(STAGES[p.stage - 1])}</td><td data-label="버전">${p.data?.build ? `<b class="ver">v${p.data.build.version}</b>` : '—'}</td><td data-label="상태">${pPill(p)}${p.status === 'working' ? `<div data-prow="${p.id}">${rowProg(p)}</div>` : ''}</td><td data-label="업데이트" style="white-space:nowrap">${esc(kst(p.updated_at))}</td></tr>`).join('');
-  return `<div class="stats">${stat('live', live.length, '건', `전체 ${all.length}건`)}${stat('wait', wait.length, '건', '게이트에서 사람이 결정할 것')}${stat('work', work.length, '건', '리서치·생성 등 자동 단계')}${stat('done', done.length, '건', '제안서 전달 완료', true)}</div>
+  return `<div class="stats">${stat('live', live.length, '건', `전체 ${all.length}건`)}${stat('wait', wait.length, '건', '담당자 확인이 필요한 단계')}${stat('work', work.length, '건', '리서치·생성 등 자동 단계')}${stat('done', done.length, '건', '제안서 전달 완료', true)}</div>
   <div class="main-grid"><section class="panel"><div class="panel-head"><div class="panel-title">${F[studio.filter] ? `${F[studio.filter][0]} 프로젝트 <small>${ps.length}건 · 최근 업데이트 순</small>` : '전체 프로젝트 <small>최근 업데이트 순</small>'}</div>${F[studio.filter] ? '<button class="text-btn" data-pfilter="all">전체 보기</button>' : ''}</div>${!ps.length && F[studio.filter] ? `<div class="empty"><p>${F[studio.filter][0]}인 프로젝트가 없습니다.</p></div>` : ps.length ? `<div class="table-wrap"><table class="ct"><thead><tr><th>프로젝트</th><th>현재 단계</th><th>버전</th><th>상태</th><th>업데이트</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="empty"><p>아직 프로젝트가 없습니다.<br>오른쪽 위 「새 프로젝트」에서 IP 하나로 시작하세요.</p></div>`}</section>
-  <section class="panel"><div class="panel-head"><div class="panel-title">지금 결정할 것</div>${wait.length ? `<span class="alert-count">${wait.length}건</span>` : ''}</div><div class="alert-list">${decide}</div></section></div>`;
+  <section class="panel"><div class="panel-head"><div class="panel-title">지금 결정할 항목</div>${wait.length ? `<span class="alert-count">${wait.length}건</span>` : ''}</div><div class="alert-list">${decide}</div></section></div>`;
 }
 
 function studioRefs() {
   const rs = studio.refs, st = {uploaded: '분석 대기', analyzing: '분석 중', ready: '분석 완료', failed: '분석 실패'};
-  return `<section class="panel"><div class="panel-head"><div><div class="panel-title">레퍼런스 라이브러리 <small>${rs.length}건</small></div><p class="panel-caption">팀이 만든 완성 제안서입니다. 새 제안서는 고른 레퍼런스의 구성과 이미지 배치를 그대로 따릅니다.</p></div></div>
-  ${rs.length ? `<div class="table-wrap"><table class="ct"><thead><tr><th>제안서</th><th>IP</th><th>수신사</th><th>작성</th><th>분석</th><th>기본 포맷</th><th>파일</th></tr></thead><tbody>${rs.map(r => `<tr${r.status === 'ready' ? ` class="clickable" data-ref-view="${r.id}"` : ''}><td class="wrap-cell">${esc(r.title)}</td><td data-label="IP">${esc(r.ip_names || '—')}</td><td data-label="수신사">${esc(r.recipient || '—')}</td><td data-label="작성">${esc(r.author || '—')}</td><td data-label="분석">${r.status === 'ready' ? `<button class="text-btn" data-ref-view="${r.id}"><span class="pill good">분석 완료</span> 보기</button>` : r.status === 'failed' ? `<span class="pill bad" title="${esc(r.profile?.error || '')}">분석 실패</span> <button class="text-btn" data-ref-retry="${r.id}">다시 분석</button>` : refProg(r)}</td><td data-label="기본 포맷">${r.is_default ? '<span class="pill good">기본</span>' : `<button class="text-btn" data-ref-default="${r.id}">기본으로 지정</button>`}</td><td data-label="파일"><button class="text-btn" data-ref-open="${r.id}">열기 ↗</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty"><p>등록된 레퍼런스가 없습니다.<br>오른쪽 위 「레퍼런스 등록」에서 완성 제안서 PDF를 올려 주세요.</p></div>'}</section>`;
+  return `<section class="panel"><div class="panel-head"><div><div class="panel-title">레퍼런스 라이브러리 <small>${rs.length}건</small></div><p class="panel-caption">팀이 작성한 완성 제안서입니다. 새 제안서는 선택한 레퍼런스의 구성과 이미지 배치를 따릅니다.</p></div></div>
+  ${rs.length ? `<div class="table-wrap"><table class="ct"><thead><tr><th>제안서</th><th>IP</th><th>수신사</th><th>작성</th><th>분석</th><th>기본 포맷</th><th>파일</th></tr></thead><tbody>${rs.map(r => `<tr${r.status === 'ready' ? ` class="clickable" data-ref-view="${r.id}"` : ''}><td class="wrap-cell">${esc(r.title)}</td><td data-label="IP">${esc(r.ip_names || '—')}</td><td data-label="수신사">${esc(r.recipient || '—')}</td><td data-label="작성">${esc(r.author || '—')}</td><td data-label="분석">${r.status === 'ready' ? `<button class="text-btn" data-ref-view="${r.id}"><span class="pill good">분석 완료</span> 보기</button>` : r.status === 'failed' ? `<span class="pill bad" title="${esc(r.profile?.error || '')}">분석 실패</span> <button class="text-btn" data-ref-retry="${r.id}">다시 분석</button>` : refProg(r)}</td><td data-label="기본 포맷">${r.is_default ? '<span class="pill good">기본</span>' : `<button class="text-btn" data-ref-default="${r.id}">기본으로 지정</button>`}</td><td data-label="파일"><button class="text-btn" data-ref-open="${r.id}">열기 ↗</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty"><p>등록된 레퍼런스가 없습니다.<br>오른쪽 위 「레퍼런스 등록」에서 완성 제안서 PDF를 업로드해 주세요.</p></div>'}</section>`;
 }
 
 // 레퍼런스 분석 진행률 — 판테온 봇이 pt_proposal_job.result 에 3초마다 적는 값(1~100% · 남은 초)을 읽어 막대로
 const refJob = r => studio.jobs.find(j => j.ref_id === r.id && j.kind === 'analyze_reference');
-const leftText = t => { const s = Math.round(t); return s >= 60 ? `약 ${Math.floor(s / 60)}분 ${String(s % 60).padStart(2, '0')}초 남음` : s > 0 ? `약 ${s}초 남음` : '곧 끝납니다'; };
+const leftText = t => { const s = Math.round(t); return s >= 60 ? `약 ${Math.floor(s / 60)}분 ${String(s % 60).padStart(2, '0')}초 남음` : s > 0 ? `약 ${s}초 남음` : '곧 완료됩니다'; };
 function refProg(r) {
   const j = refJob(r), g = j?.result;
   if (!j || j.status === 'wait' || !g) {
     const long = j && Date.now() - Date.parse(j.at) > 120000;
-    return `<span class="ref-prog" data-ref-prog="${r.id}"><span class="pill">분석 대기</span><small>판테온 봇 차례를 기다리는 중<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></small>${long ? '<small class="warn">2분 넘게 대기 중입니다. DB 관리에서 판테온 봇을 재시작해 주세요.</small>' : ''}</span>`;
+    return `<span class="ref-prog" data-ref-prog="${r.id}"><span class="pill">분석 대기</span><small>판테온 봇 작업 대기 중<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></small>${long ? '<small class="warn">2분 넘게 대기 중입니다. DB 관리에서 판테온 봇을 재시작해 주세요.</small>' : ''}</span>`;
   }
   const left = Math.max(0, g.eta - (Date.now() - Date.parse(g.at)) / 1000);
   return `<span class="ref-prog" data-ref-prog="${r.id}" data-eta="${g.eta}" data-at="${esc(g.at)}"><span class="row"><span class="bar" role="progressbar" aria-valuenow="${g.progress}" aria-valuemin="0" aria-valuemax="100"><i style="width:${g.progress}%"></i></span><b>${g.progress}%</b></span><small>${esc(g.step || '분석 중')}</small><small class="eta">${leftText(left)}</small></span>`;
@@ -673,7 +673,7 @@ async function pollRefJobs() {
 // 목록에서도 진행이 보이게 — 작업 중인 프로젝트가 있으면 3초마다 진행률·상태를 다시 읽는다
 function rowProg(p) {
   const j = studio.jobs.find(x => x.proposal_id === p.id), g = j?.result;
-  if (!j || j.status === 'wait' || !g) return `<small class="row-prog">${j?.kind === 'aside' ? 'Aside 차례를 기다리는 중' : '판테온 봇 차례를 기다리는 중'}<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></small>`;
+  if (!j || j.status === 'wait' || !g) return `<small class="row-prog">${j?.kind === 'aside' ? 'Aside 작업 대기 중' : '판테온 봇 작업 대기 중'}<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></small>`;
   const left = Math.max(0, g.eta - (Date.now() - Date.parse(g.at)) / 1000);
   return `<span class="ref-prog row-prog"><span class="row"><span class="bar"><i style="width:${g.progress}%"></i></span><b>${g.progress}%</b></span><small>${esc(g.step || '')} · ${leftText(left)}</small></span>`;
 }
@@ -732,10 +732,10 @@ function openRef(id) {
   const pages = (f.pages || []).map(x => `<tr><td>${esc(x.page)}</td><td>${esc(x.role || '')}<small class="cell-sub">${esc(x.title || '')}</small></td><td>${esc(x.layout || '')}${(x.images || []).length ? `<small class="cell-sub">${x.images.map(i => esc(`${IMG_KIND[i.kind] || i.kind} ${i.ratio || ''}${i.what ? ' · ' + i.what : ''}`)).join('<br>')}</small>` : ''}</td></tr>`).join('');
   showDrawer(`<span class="entity-avatar">${icon('studio')}</span><h2>${esc(r.title)}</h2><span class="detail-sub">${esc([r.ip_names, r.recipient, r.author].filter(Boolean).join(' · '))}</span>
   <div class="detail-block"><h3>구성 요약</h3><p>${esc(f.summary || '')}</p><div class="detail-row"><span>페이지</span><b>${esc(f.page_count || (f.pages || []).length)}페이지</b></div><div class="detail-row"><span>이미지</span><b>${esc(f.image_pattern?.total || 0)}장</b></div>${r.is_default ? '<div class="detail-row"><span>기본 포맷</span><b><span class="pill good">기본</span></b></div>' : ''}</div>
-  ${(f.acts || []).length ? `<div class="detail-block"><h3>막 구성</h3><ol class="rule-list">${f.acts.map(a => `<li><b>${esc(a.name || '')}</b> <span class="muted">· ${esc(a.pages || '')}페이지</span><br><small>${esc(a.purpose || '')}</small></li>`).join('')}</ol></div>` : ''}
+  ${(f.acts || []).length ? `<div class="detail-block"><h3>섹션 구성</h3><ol class="rule-list">${f.acts.map(a => `<li><b>${esc(a.name || '')}</b> <span class="muted">· ${esc(a.pages || '')}페이지</span><br><small>${esc(a.purpose || '')}</small></li>`).join('')}</ol></div>` : ''}
   ${kinds.length ? `<div class="detail-block"><h3>이미지 사용</h3>${kinds.map(([k, n]) => `<div class="detail-row"><span>${esc(IMG_KIND[k] || k)}</span><b>${n}장</b></div>`).join('')}${f.image_pattern?.note ? `<p>${esc(f.image_pattern.note)}</p>` : ''}</div>` : ''}
   <div class="detail-block"><h3>문체·디자인</h3>${st.tone ? `<div class="detail-row"><span>문체</span><b>${esc(st.tone)}</b></div>` : ''}${st.type ? `<div class="detail-row"><span>글꼴</span><b>${esc(st.type)}</b></div>` : ''}${st.emphasis ? `<div class="detail-row"><span>강조</span><b>${esc(st.emphasis)}</b></div>` : ''}${(st.colors || []).length ? `<div class="detail-row"><span>주요 색</span><b>${st.colors.filter(c => /^#[0-9a-f]{3,8}$/i.test(c)).map(c => `<i class="swatch" style="background:${c}" title="${c}"></i>`).join('')}</b></div>` : ''}</div>
-  ${(f.rules || []).length ? `<div class="detail-block"><h3>새 제안서가 따를 규칙</h3><ol class="rule-list">${f.rules.map(x => `<li>${esc(x)}</li>`).join('')}</ol></div>` : ''}
+  ${(f.rules || []).length ? `<div class="detail-block"><h3>새 제안서 작성 기준</h3><ol class="rule-list">${f.rules.map(x => `<li>${esc(x)}</li>`).join('')}</ol></div>` : ''}
   ${pages ? `<div class="detail-block"><h3>페이지별 구성</h3><div class="table-wrap"><table class="ref-pages"><thead><tr><th>페이지</th><th>역할</th><th>배치·이미지</th></tr></thead><tbody>${pages}</tbody></table></div></div>` : ''}`);
 }
 
@@ -745,13 +745,13 @@ const srcLinks = urls => (urls || []).map(u => `<a class="src" href="${esc(u)}" 
 // 단계 작업 진행률 — 판테온 봇이 job.result 에 3초마다 적는 값을 막대로 (레퍼런스 분석과 같은 모양)
 function jobProg(j) {
   const g = j?.result;
-  if (!j || j.status === 'wait' || !g) return `<p class="job-wait">${j?.kind === 'aside' ? 'Aside 차례를 기다리는 중' : '판테온 봇 차례를 기다리는 중'}<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></p>`;
+  if (!j || j.status === 'wait' || !g) return `<p class="job-wait">${j?.kind === 'aside' ? 'Aside 작업 대기 중' : '판테온 봇 작업 대기 중'}<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></p>`;
   const left = Math.max(0, g.eta - (Date.now() - Date.parse(g.at)) / 1000);
   return `<div class="ref-prog wide job-prog" data-eta="${g.eta}" data-at="${esc(g.at)}"><span class="row"><span class="bar" role="progressbar" aria-valuenow="${g.progress}" aria-valuemin="0" aria-valuemax="100"><i style="width:${g.progress}%"></i></span><b>${g.progress}%</b></span><small>${esc(g.step || '진행 중')}</small><small class="eta">${leftText(left)}</small></div>`;
 }
 // 한 단계에 작업이 둘일 때(리서치 = 공개 웹 + 팬·SNS) 막대를 이름과 함께 나란히 (10-28)
-const JOB_KO = {qa: '자동 검수', partners: '파트너 추천', research: '공개 웹 리서치', concepts: '컨셉 설계', build: '제안서 생성', image_plan: '이미지 찾기', finalize: '다시 그리기', generate: 'AI 이미지 만들기'};
-const jobName = j => j.kind === 'aside' ? (j.input?.task === 'social' ? '팬·SNS 조사 · Aside' : '이미지 찾기 · Aside') : (JOB_KO[j.kind] || '');
+const JOB_KO = {qa: '자동 검수', partners: '파트너 추천', research: '공개 웹 리서치', concepts: '컨셉 설계', build: '제안서 생성', image_plan: '이미지 수급', finalize: '제안서 다시 생성', generate: 'AI 이미지 생성'};
+const jobName = j => j.kind === 'aside' ? (j.input?.task === 'social' ? '팬·SNS 조사 · Aside' : '이미지 검색 · Aside') : (JOB_KO[j.kind] || '');
 const jobsProg = list => `<div id="job-progs">${list.length > 1 ? list.map(j => `<p class="sub-label">${esc(jobName(j))}</p>${jobProg(j)}`).join('') : jobProg(list[0])}</div>`;
 const liveJobs = id => studio.jobs.filter(j => j.proposal_id === id && ['wait', 'work'].includes(j.status)).sort((a, b) => a.id - b.id);
 let propPoll;
@@ -778,7 +778,7 @@ async function checkVersion() {
     const v = (html.match(/app\.js\?v=([\w]+)/) || [])[1];
     if (v && v !== MY_VER) {
       const bar = document.createElement('div'); bar.id = 'new-ver';
-      bar.innerHTML = '판테온이 새 버전으로 바뀌었습니다. <button class="button primary small" type="button">새로고침</button>';
+      bar.innerHTML = '판테온이 업데이트되었습니다. <button class="button primary small" type="button">새로고침</button>';
       bar.querySelector('button').onclick = () => location.reload();
       document.body.appendChild(bar);
     }
@@ -792,48 +792,48 @@ function partnersPanel(p) {
   const cats = (P.categories || []).map(cat => {
     const cards = P.candidates.map((c, i) => [c, i]).filter(([c]) => c.category === cat.name).map(([c, i]) => {
       const e = entityByName(c.ip);
-      return `<div class="pcard"><div class="pcard-head"><b>${esc(c.ip)}</b><span class="pill ${e ? 'good' : 'bad'}">${contactPoint(e)}</span></div><p>${esc(c.one_line_concept || '')}</p><div class="scores">${Object.entries(SCORE_KO).map(([k, n]) => `<span class="${k === 'risk' ? 'risk' : ''}" title="${n} ${c.scores?.[k] ?? '-'}/5">${n} <b>${c.scores?.[k] ?? '-'}</b><i style="--v:${(c.scores?.[k] || 0) * 20}%"></i></span>`).join('')}</div><div class="pcard-foot"><span>${srcLinks(c.evidence_urls)}</span><button class="button primary small" data-pick="${i}">이 파트너로 선택</button></div></div>`;
+      return `<div class="pcard"><div class="pcard-head"><b>${esc(c.ip)}</b><span class="pill ${e ? 'good' : 'bad'}">${contactPoint(e)}</span></div><p>${esc(c.one_line_concept || '')}</p><div class="scores">${Object.entries(SCORE_KO).map(([k, n]) => `<span class="${k === 'risk' ? 'risk' : ''}" title="${n} ${c.scores?.[k] ?? '-'}/5">${n} <b>${c.scores?.[k] ?? '-'}</b><i style="--v:${(c.scores?.[k] || 0) * 20}%"></i></span>`).join('')}</div><div class="pcard-foot"><span>${srcLinks(c.evidence_urls)}</span><button class="button primary small" data-pick="${i}">이 파트너 선택</button></div></div>`;
     }).join('');
     return `<div class="pcat"><div class="pcat-head"><div><b>${esc(cat.name)}</b><small>${esc(cat.reason || '')}</small></div><button class="text-btn" data-reroll="${esc(cat.name)}">다른 후보</button></div>${cards}</div>`;
   }).join('');
-  return `<div class="detail-block"><h3>결정 · 파트너 IP 선택</h3><p>카드 하나를 고르면 판테온 봇이 두 IP 리서치를 시작합니다. 점수는 1~5이며, 리스크는 높을수록 위험합니다.</p>${P.ip_a_card?.summary ? `<p class="muted-box">${esc(p.ip_a_name)} · ${esc(P.ip_a_card.summary)}</p>` : ''}${cats}<div class="pcat"><div class="pcat-head"><div><b>직접 넣기</b><small>추천 중에 마음에 드는 IP가 없으면 원하는 IP를 직접 넣어 진행합니다.</small></div></div><datalist id="pb-ents">${entities().filter(e => !e.hidden).map(e => `<option value="${esc(e.name)}">`).join('')}</datalist><div class="ask-row"><input id="pb-own" list="pb-ents" maxlength="80" placeholder="예: 산리오" aria-label="파트너 IP"><button class="button primary" id="pb-own-go" type="button">이 IP로 진행</button></div><small class="atnote" id="pb-own-note"></small></div><div class="drawer-actions"><button class="button" id="recategorize">카테고리 바꿔 다시 추천</button></div></div>`;
+  return `<div class="detail-block"><h3>결정 · 파트너 IP 선택</h3><p>카드 하나를 선택하면 판테온 봇이 두 IP 리서치를 시작합니다. 점수는 1~5점이며, 리스크 점수가 높을수록 위험합니다.</p>${P.ip_a_card?.summary ? `<p class="muted-box">${esc(p.ip_a_name)} · ${esc(P.ip_a_card.summary)}</p>` : ''}${cats}<div class="pcat"><div class="pcat-head"><div><b>직접 입력</b><small>추천 IP 중 적합한 IP가 없으면 원하는 IP를 직접 입력해 진행합니다.</small></div></div><datalist id="pb-ents">${entities().filter(e => !e.hidden).map(e => `<option value="${esc(e.name)}">`).join('')}</datalist><div class="ask-row"><input id="pb-own" list="pb-ents" maxlength="80" placeholder="예: 산리오" aria-label="파트너 IP"><button class="button primary" id="pb-own-go" type="button">이 IP로 진행</button></div><small class="atnote" id="pb-own-note"></small></div><div class="drawer-actions"><button class="button" id="recategorize">카테고리 변경 후 재추천</button></div></div>`;
 }
-const conceptCard = (c, i) => `<div class="pcard"><div class="pcard-head"><b>${esc(c.name)}</b></div>${c.key_copy ? `<p class="key-copy">“${esc(c.key_copy)}”</p>` : ''}<p>${esc(c.summary || '')}</p>${c.world ? `<details><summary>세계관</summary><p>${esc(c.world)}</p></details>` : ''}${(c.axes || []).length ? `<p class="sub-label">연결 축</p><ul class="axes">${c.axes.map(a => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}${(c.formats || []).length ? `<p class="sub-label">실행 포맷</p><ul class="axes">${c.formats.map(f => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}${c.why ? `<small class="why">${esc(c.why)}</small>` : ''}${i !== undefined ? `<div class="pcard-foot"><span></span><button class="button primary small" data-concept="${i}">이 컨셉으로 확정</button></div>` : ''}</div>`;
-const conceptsPanel = p => `<div class="detail-block"><h3>결정 · 컨셉 확정</h3><p>하나를 확정하면 레퍼런스 포맷에 맞춰 제안서를 만듭니다.</p>${p.data.concepts.candidates.map((c, i) => conceptCard(c, i)).join('')}</div>`;
+const conceptCard = (c, i) => `<div class="pcard"><div class="pcard-head"><b>${esc(c.name)}</b></div>${c.key_copy ? `<p class="key-copy">“${esc(c.key_copy)}”</p>` : ''}<p>${esc(c.summary || '')}</p>${c.world ? `<details><summary>세계관</summary><p>${esc(c.world)}</p></details>` : ''}${(c.axes || []).length ? `<p class="sub-label">연결 포인트</p><ul class="axes">${c.axes.map(a => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}${(c.formats || []).length ? `<p class="sub-label">실행 포맷</p><ul class="axes">${c.formats.map(f => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}${c.why ? `<small class="why">${esc(c.why)}</small>` : ''}${i !== undefined ? `<div class="pcard-foot"><span></span><button class="button primary small" data-concept="${i}">이 컨셉으로 확정</button></div>` : ''}</div>`;
+const conceptsPanel = p => `<div class="detail-block"><h3>결정 · 컨셉 확정</h3><p>하나를 확정하면 레퍼런스 포맷에 맞춰 제안서를 생성합니다.</p>${p.data.concepts.candidates.map((c, i) => conceptCard(c, i)).join('')}</div>`;
 // 팬·SNS 조사 — Aside 가 인스타그램·틱톡·X·유튜브·팬 커뮤니티에서 읽은 것 (10-28)
 const PLAT_KO = {instagram: '인스타그램', tiktok: '틱톡', x: 'X', youtube: '유튜브', naver: '네이버', community: '커뮤니티'};
 function socialBlock(S) {
-  if (S.failed) return `<div class="detail-block"><h3>팬·SNS</h3><p>${esc(S.error || '이번에는 팬·SNS 조사를 하지 못했습니다.')}</p></div>`;
+  if (S.failed) return `<div class="detail-block"><h3>팬·SNS</h3><p>${esc(S.error || '이번에는 팬·SNS 조사를 진행하지 못했습니다.')}</p></div>`;
   if (!S.ips) return '';
   const fact = f => `<li>${esc(f.text)} ${f.url ? `<a class="src" href="${esc(f.url)}" target="_blank" rel="noopener">${esc(host(f.url))}${f.as_of ? ' · ' + esc(f.as_of) : ''}</a>` : ''}</li>`;
   const theme = (v, key, body) => `<li><b>${esc(v[key])}</b> ${esc(v[body] || '')} ${srcLinks(v.urls)}</li>`;
   const list = (title, arr, fn) => (arr || []).length ? `<p><b>${title}</b></p><ul class="facts">${arr.map(fn).join('')}</ul>` : '';
   const ips = S.ips.map(x => `<details class="research"><summary><b>${esc(x.name)}</b> <small>채널 ${x.channels.length}개 · 반응 ${x.loves.length + x.dislikes.length + x.collab_reactions.length}개</small></summary>
     ${list('채널', x.channels, c => `<li>${esc(PLAT_KO[c.platform] || c.platform)} · ${esc(c.name || '')}${c.followers ? ` <b>${esc(c.followers)}</b>` : ''}${c.note ? ` · ${esc(c.note)}` : ''} <a class="src" href="${esc(c.url)}" target="_blank" rel="noopener">${esc(host(c.url))}${c.as_of ? ' · ' + esc(c.as_of) : ''}</a></li>`)}
-    ${list('수치', x.metrics, fact)}${list('팬이 쓰는 말', x.fan_terms, t => `<li><b>${esc(t.term)}</b> ${esc(t.meaning || '')} ${t.url ? srcLinks([t.url]) : ''}</li>`)}
-    ${list('좋아하는 것', x.loves, v => theme(v, 'theme', 'detail'))}${list('싫어하는 것', x.dislikes, v => theme(v, 'theme', 'detail'))}
+    ${list('수치', x.metrics, fact)}${list('팬 용어', x.fan_terms, t => `<li><b>${esc(t.term)}</b> ${esc(t.meaning || '')} ${t.url ? srcLinks([t.url]) : ''}</li>`)}
+    ${list('좋아하는 점', x.loves, v => theme(v, 'theme', 'detail'))}${list('싫어하는 점', x.dislikes, v => theme(v, 'theme', 'detail'))}
     ${list('지난 협업 반응', x.collab_reactions, v => theme(v, 'collab', 'reaction'))}${list('도입에 쓸 장면', x.hooks, fact)}</details>`).join('');
   const caps = (S.captures || []).length ? `<p><b>캡처 ${S.captures.length}장</b></p><div class="iboard">${S.captures.map(c => `<div class="icard"><div class="ithumb" data-thumb="${esc(c.path)}" data-label="팬·SNS 캡처"></div></div>`).join('')}</div>` : '';
-  const locked = (S.locked || []).length ? `<p><b>가입이 필요해 못 본 곳</b></p><ul class="facts">${S.locked.map(l => `<li>${esc(l.site)} · ${esc(l.need || '')} ${l.url ? srcLinks([l.url]) : ''}</li>`).join('')}</ul>` : '';
+  const locked = (S.locked || []).length ? `<p><b>가입이 필요해 확인하지 못한 채널</b></p><ul class="facts">${S.locked.map(l => `<li>${esc(l.site)} · ${esc(l.need || '')} ${l.url ? srcLinks([l.url]) : ''}</li>`).join('')}</ul>` : '';
   return `<div class="detail-block"><h3>팬·SNS</h3>${ips}${caps}${locked}</div>`;
 }
 function researchBlock(R) {
   const fact = f => `<li>${esc(f.text)} ${f.url ? `<a class="src" href="${esc(f.url)}" target="_blank" rel="noopener">${esc(host(f.url))}${f.as_of ? ' · ' + esc(f.as_of) : ''}</a>` : ''}</li>`;
-  return `<div class="detail-block"><h3>리서치</h3>${(R.ips || []).map(x => `<details class="research"><summary><b>${esc(x.name)}</b> <small>출처 있는 사실 ${x.facts.length}개</small></summary><p>${esc(x.summary || '')}</p>${x.fandom ? `<p><b>팬덤</b> ${esc(x.fandom)}</p>` : ''}${x.world ? `<p><b>세계관·정서</b> ${esc(x.world)}</p>` : ''}<ul class="facts">${x.facts.map(fact).join('')}</ul>${(x.collabs || []).length ? `<p><b>지난 협업</b></p><ul class="facts">${x.collabs.map(fact).join('')}</ul>` : ''}${(x.hooks || []).length ? `<p><b>도입에 쓸 장면</b></p><ul class="facts">${x.hooks.map(h => fact({...h, text: h.text + (h.note ? ` (${h.note})` : '')})).join('')}</ul>` : ''}${(x.risks || []).length ? `<p><b>유의점</b> ${x.risks.map(esc).join(' · ')}</p>` : ''}</details>`).join('')}${(R.common_ground || []).length ? `<p><b>공통점</b></p><ul class="facts">${R.common_ground.map(c => `<li>${esc(c)}</li>`).join('')}</ul>` : ''}</div>`;
+  return `<div class="detail-block"><h3>리서치</h3>${(R.ips || []).map(x => `<details class="research"><summary><b>${esc(x.name)}</b> <small>출처가 확인된 사실 ${x.facts.length}개</small></summary><p>${esc(x.summary || '')}</p>${x.fandom ? `<p><b>팬덤</b> ${esc(x.fandom)}</p>` : ''}${x.world ? `<p><b>세계관·정서</b> ${esc(x.world)}</p>` : ''}<ul class="facts">${x.facts.map(fact).join('')}</ul>${(x.collabs || []).length ? `<p><b>지난 협업</b></p><ul class="facts">${x.collabs.map(fact).join('')}</ul>` : ''}${(x.hooks || []).length ? `<p><b>도입에 쓸 장면</b></p><ul class="facts">${x.hooks.map(h => fact({...h, text: h.text + (h.note ? ` (${h.note})` : '')})).join('')}</ul>` : ''}${(x.risks || []).length ? `<p><b>유의 사항</b> ${x.risks.map(esc).join(' · ')}</p>` : ''}</details>`).join('')}${(R.common_ground || []).length ? `<p><b>공통점</b></p><ul class="facts">${R.common_ground.map(c => `<li>${esc(c)}</li>`).join('')}</ul>` : ''}</div>`;
 }
 
-const SLOT_ST = {found: ['good', '채움'], uploaded: ['good', '직접 올림'], generated: ['good', 'AI 생성'], missing: ['bad', '못 찾음'], ai: ['wait', 'AI 생성 대기']};
+const SLOT_ST = {found: ['good', '확보'], uploaded: ['good', '직접 업로드'], generated: ['good', 'AI 생성'], missing: ['bad', '미확보'], ai: ['wait', 'AI 생성 대기']};
 function imagesPanel(p) {
   const S = p.data.images.slots, keys = Object.keys(S).sort();
   const n = st => keys.filter(k => S[k].status === st).length;
   const card = k => { const s = S[k], [cls, label] = SLOT_ST[s.status] || ['', s.status];
-    return `<div class="icard"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-key="${esc(k)}" data-ratio="${esc(s.ratio || '')}" data-label="${esc(s.slide)}페이지 · ${esc(KIND_KO_IMG[s.kind] || s.kind)} · ${esc(s.what || '')}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}<br>${esc(s.ratio || '')}</span>`}</div><div class="ibody"><div class="ihead"><b>${esc(s.slide)}페이지</b><span class="pill ${cls}">${label}</span></div><small>${esc(KIND_KO_IMG[s.kind] || s.kind)} · ${esc(s.what || '')}</small>${s.source_page ? `<a class="src" href="${esc(s.source_page)}" target="_blank" rel="noopener">${s.via === 'aside' ? 'Aside · ' : ''}${esc(host(s.source_page))}</a>` : ''}${s.note ? `<small class="warn">${esc(s.note)}</small>` : ''}${s.status === 'ai' && s.prompt ? `<details><summary>생성 프롬프트</summary><p class="prompt">${esc(s.prompt)}</p></details>` : ''}<div class="ibtns"><label class="text-btn up">내 이미지로 바꾸기<input type="file" accept="image/png,image/jpeg,image/webp" data-upimg="${esc(k)}" hidden></label>${s.status !== 'ai' ? `<button class="text-btn" data-aside="${esc(k)}">Aside로 다시 찾기</button>` : ''}</div></div></div>`; };
+    return `<div class="icard"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-key="${esc(k)}" data-ratio="${esc(s.ratio || '')}" data-label="${esc(s.slide)}페이지 · ${esc(KIND_KO_IMG[s.kind] || s.kind)} · ${esc(s.what || '')}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}<br>${esc(s.ratio || '')}</span>`}</div><div class="ibody"><div class="ihead"><b>${esc(s.slide)}페이지</b><span class="pill ${cls}">${label}</span></div><small>${esc(KIND_KO_IMG[s.kind] || s.kind)} · ${esc(s.what || '')}</small>${s.source_page ? `<a class="src" href="${esc(s.source_page)}" target="_blank" rel="noopener">${s.via === 'aside' ? 'Aside · ' : ''}${esc(host(s.source_page))}</a>` : ''}${s.note ? `<small class="warn">${esc(s.note)}</small>` : ''}${s.status === 'ai' && s.prompt ? `<details><summary>생성 프롬프트</summary><p class="prompt">${esc(s.prompt)}</p></details>` : ''}<div class="ibtns"><label class="text-btn up">내 이미지로 교체<input type="file" accept="image/png,image/jpeg,image/webp" data-upimg="${esc(k)}" hidden></label>${s.status !== 'ai' ? `<button class="text-btn" data-aside="${esc(k)}">Aside로 다시 검색</button>` : ''}</div></div></div>`; };
   const E = p.data.images.ai_estimate, nW = keys.filter(k => S[k].widen && S[k].status === 'found').length, nAi = n('ai') + nW;
-  const aiWhat = [n('ai') ? `AI 이미지 ${n('ai')}장` : '', nW ? `세로 사진 좌우 넓히기 ${nW}장` : ''].filter(Boolean).join(' + ');
-  const ai = nAi ? (E && E.count === nAi ? `<div class="ai-box"><b>${aiWhat} · 예상 약 $${E.usd}</b><small>힉스필드 ${esc((E.model || '').replace('higgsfield-ai/', ''))} · 실패하거나 부적절 판정된 이미지는 청구되지 않습니다</small><div class="drawer-actions"><button class="button primary" id="ai-go" data-usd="${E.usd}">승인하고 만들기</button><button class="text-btn" id="ai-est">견적 다시 받기</button></div></div>` : `<div class="ai-box"><b>${aiWhat}</b><small>만들기 전에 힉스필드 견적을 먼저 받습니다 (비용 없음)</small><div class="drawer-actions"><button class="button" id="ai-est">견적 받기</button></div></div>`) : '';
-  return `<div class="detail-block"><h3>결정 · ${p.stage >= 8 ? '최종 확인' : '이미지 수급·AI 이미지 승인'}</h3><p>공식 이미지·로고·참고 사례는 판테온 봇이 찾아 넣었습니다. 잘못 들어갔거나 비어 있으면 「내 이미지로 바꾸기」로 바꾼 뒤 다시 그려 주세요.${nAi ? ' AI 컨셉 이미지·목업·질감은 견적을 보고 승인하면 힉스필드로 만듭니다.' : ''}</p>${ai}
-  <div class="detail-row"><span>채움</span><b>${n('found') + n('uploaded') + n('generated')}개</b></div><div class="detail-row"><span>못 찾음</span><b>${n('missing')}개</b></div><div class="detail-row"><span>AI 생성 대기</span><b>${n('ai')}개</b></div>
-  <div class="drawer-actions"><button class="button" id="img-rerender">바꾼 이미지로 다시 그리기</button><button class="button primary" id="img-done">이 버전으로 완료</button></div>
+  const aiWhat = [n('ai') ? `AI 이미지 ${n('ai')}장` : '', nW ? `세로 사진 좌우 확장 ${nW}장` : ''].filter(Boolean).join(' + ');
+  const ai = nAi ? (E && E.count === nAi ? `<div class="ai-box"><b>${aiWhat} · 예상 약 $${E.usd}</b><small>힉스필드 ${esc((E.model || '').replace('higgsfield-ai/', ''))} · 실패하거나 부적절 판정된 이미지는 청구되지 않습니다</small><div class="drawer-actions"><button class="button primary" id="ai-go" data-usd="${E.usd}">승인 후 생성</button><button class="text-btn" id="ai-est">견적 다시 받기</button></div></div>` : `<div class="ai-box"><b>${aiWhat}</b><small>생성 전에 힉스필드 견적을 먼저 받습니다(비용 없음)</small><div class="drawer-actions"><button class="button" id="ai-est">견적 받기</button></div></div>`) : '';
+  return `<div class="detail-block"><h3>결정 · ${p.stage >= 8 ? '최종 확인' : '이미지 수급·AI 이미지 승인'}</h3><p>공식 이미지·로고·참고 사례는 판테온 봇이 찾아 넣었습니다. 잘못 들어갔거나 비어 있으면 「내 이미지로 교체」로 변경한 뒤 「변경 사항 반영」을 클릭해 주세요.${nAi ? ' AI 컨셉 이미지·목업·질감은 견적 확인 후 승인하면 힉스필드로 생성합니다.' : ''}</p>${ai}
+  <div class="detail-row"><span>확보</span><b>${n('found') + n('uploaded') + n('generated')}개</b></div><div class="detail-row"><span>미확보</span><b>${n('missing')}개</b></div><div class="detail-row"><span>AI 생성 대기</span><b>${n('ai')}개</b></div>
+  <div class="drawer-actions"><button class="button" id="img-rerender">변경 사항 반영</button><button class="button primary" id="img-done">이 버전으로 완료</button></div>
   <div class="iboard" id="img-board">${keys.filter(k => S[k].status !== 'ai').map(card).join('')}</div>
   <details class="research"><summary><b>AI 생성 대기 ${n('ai')}개</b> <small>프롬프트 보기</small></summary><div class="iboard">${keys.filter(k => S[k].status === 'ai').map(card).join('')}</div></details></div>`;
 }
@@ -849,17 +849,17 @@ async function loadImgThumbs(slots) {
 }
 // 이미지 크게 보기 (10-29 김현우) — 원본 전체 + 제안서 자리 비율로 가운데를 잘라 넣은 모양(실제 제안서와 같은 방식)
 // 이미지 크게 보기 · 위치 맞추기 (10-29 김현우) — 원본 전체 + 제안서 상자(실제 그려진 크기) 안에서 끌어 옮기기
-// 판테온 봇이 그릴 때와 같은 방식: 꽉 채우기는 x·y(0~1) 위치를 남기고 자르고, 전체 넣기는 자르지 않는다
+// 판테온 봇이 그릴 때와 같은 방식: 채우기는 x·y(0~1) 위치를 남기고 자르고, 맞춤는 자르지 않는다
 const POS_TOP = ['official', 'capture', 'reference'];
 const defaultPos = s => ({x: 0.5, y: POS_TOP.includes(s?.kind) ? 0.15 : 0.5, fit: s?.kind === 'logo' ? 'contain' : 'cover', zoom: 1});
 // 다시 만들기 (10-29 김현우) — 고친 프롬프트·아쉬운 점은 제안서 데이터(prompt_log)에 쌓이고, 다음 원고를 쓸 때 판테온 봇이 참고한다
 const AI_KINDS = ['ai_concept', 'mockup', 'texture'];
 const regenBox = s => { const ai = AI_KINDS.includes(s.kind) && !s.widened;
-  return `<details class="regen"><summary>마음에 안 들면 다시 만들기</summary>
+  return `<details class="regen"><summary>이미지 다시 생성</summary>
   <label>아쉬운 점<input id="rg-why" maxlength="200" placeholder="예: 얼굴이 너무 크게 나옴 · 배경이 너무 밝음"></label>
   ${ai ? `<label>생성 프롬프트 (영문)<textarea id="rg-prompt" rows="5">${esc(s.prompt || '')}</textarea></label>`
-       : `<label>좌우 넓히기에 덧붙일 지시 (영문 권장)<textarea id="rg-prompt" rows="3" placeholder="예: extend as a dark concert stage with purple haze">${esc(s.widen_extra || '')}</textarea></label>`}
-  <button class="button" type="button" id="rg-go">${ai ? '이 프롬프트로 다시 만들기' : '이 지시로 다시 넓히기'}</button><small>견적을 받은 뒤 승인하면 만듭니다. 고친 내용은 다음 제안서 원고에 반영됩니다.</small></details>`; };
+       : `<label>좌우 확장 추가 지시(영문 권장)<textarea id="rg-prompt" rows="3" placeholder="예: extend as a dark concert stage with purple haze">${esc(s.widen_extra || '')}</textarea></label>`}
+  <button class="button" type="button" id="rg-go">${ai ? '이 프롬프트로 다시 생성' : '이 지시로 다시 확장'}</button><small>견적 확인 후 승인하면 생성합니다. 수정한 내용은 다음 제안서 원고에도 반영됩니다.</small></details>`; };
 function imgViewer(el) {
   const src = el.dataset.src, key = el.dataset.key;
   const p = studio.list?.find(x => activeDetail === 'p:' + x.id), d = p?.data || {}, s = key && d.images?.slots?.[key];
@@ -867,7 +867,7 @@ function imgViewer(el) {
   const ar = box ? box.w / box.h : (r.length === 2 && r[0] > 0 && r[1] > 0 ? r[0] / r[1] : 0);
   const canEdit = !!(s && ar && p.status === 'waiting');
   let pos = {...defaultPos(s), ...(s?.pos || {})};
-  modal(`<h2>${esc(el.dataset.label || '이미지')}</h2><div class="imgv${ar ? '' : ' one'}"><figure><figcaption>원본 전체</figcaption><img src="${esc(src)}" alt="원본 이미지"></figure>${ar ? `<figure><figcaption>제안서에 들어가는 모양${box ? '' : ' (예상)'}</figcaption><div class="imgv-crop${canEdit ? ' drag' : ''}" id="imgv-box" style="aspect-ratio:${ar};width:min(100%,calc(64vh * ${ar}));background-image:url('${esc(src)}')"></div>${canEdit ? `${canEdit && (AI_KINDS.includes(s.kind) || s.widened) ? regenBox(s) : ''}<small>이미지를 끌어서 보일 부분을 옮기고, 아래 막대(PC에서는 마우스 휠도)로 확대·축소하세요. 「전체 넣기」는 자르지 않고 다 보이게 넣습니다.</small><div class="imgv-zoom"><span>확대</span><input type="range" id="imgv-zoom" min="100" max="400" step="5" aria-label="확대"><b id="imgv-zoom-v"></b></div><div class="imgv-tools"><div class="seg-pick"><label><input type="radio" name="imgv-fit" value="cover"> 꽉 채우기</label><label><input type="radio" name="imgv-fit" value="contain"> 전체 넣기</label></div><button class="text-btn" type="button" id="imgv-reset">처음 위치로</button></div>` : ''}</figure>` : ''}</div><div class="modal-actions"><a class="button" href="${esc(src)}" target="_blank" rel="noopener">새 창에서 열기</a>${canEdit && s.widen ? '<span class="imgv-wide-on">좌우 넓히기 대기 · 견적 승인 때 함께 만듭니다</span>' : ''}${canEdit && !s.widen ? '<button class="button" id="imgv-widen" hidden>힉스필드로 넓혀 전체 넣기</button>' : ''}${canEdit ? '<button class="button" data-cancel>취소</button><button class="button primary" id="imgv-save">위치 저장</button>' : '<button class="button primary" data-cancel>닫기</button>'}</div>`);
+  modal(`<h2>${esc(el.dataset.label || '이미지')}</h2><div class="imgv${ar ? '' : ' one'}"><figure><figcaption>원본 전체</figcaption><img src="${esc(src)}" alt="원본 이미지"></figure>${ar ? `<figure><figcaption>제안서 적용 미리보기${box ? '' : ' (예상)'}</figcaption><div class="imgv-crop${canEdit ? ' drag' : ''}" id="imgv-box" style="aspect-ratio:${ar};width:min(100%,calc(64vh * ${ar}));background-image:url('${esc(src)}')"></div>${canEdit ? `${canEdit && (AI_KINDS.includes(s.kind) || s.widened) ? regenBox(s) : ''}<small>이미지를 드래그해 보일 부분을 조정하고, 아래 막대(PC에서는 마우스 휠도)로 확대·축소하세요. 「맞춤」은 이미지를 자르지 않고 전체를 보여 줍니다.</small><div class="imgv-zoom"><span>확대</span><input type="range" id="imgv-zoom" min="100" max="400" step="5" aria-label="확대"><b id="imgv-zoom-v"></b></div><div class="imgv-tools"><div class="seg-pick"><label><input type="radio" name="imgv-fit" value="cover"> 채우기</label><label><input type="radio" name="imgv-fit" value="contain"> 맞춤</label></div><button class="text-btn" type="button" id="imgv-reset">위치 초기화</button></div>` : ''}</figure>` : ''}</div><div class="modal-actions"><a class="button" href="${esc(src)}" target="_blank" rel="noopener">새 창에서 열기</a>${canEdit && s.widen ? '<span class="imgv-wide-on">좌우 확장 대기 · 견적 승인 시 함께 생성합니다</span>' : ''}${canEdit && !s.widen ? '<button class="button" id="imgv-widen" hidden>힉스필드로 확장해 전체 표시</button>' : ''}${canEdit ? '<button class="button" data-cancel>취소</button><button class="button primary" id="imgv-save">위치 저장</button>' : '<button class="button primary" data-cancel>닫기</button>'}</div>`);
   $('#modal').classList.add('wide'); $('#modal').addEventListener('close', () => $('#modal').classList.remove('wide'), {once: true});
   const bx = $('#imgv-box'); if (!bx) return;
   const nat = new Image(); nat.src = src;
@@ -906,29 +906,29 @@ function imgViewer(el) {
   $('#imgv-widen')?.addEventListener('click', async ev => {
     ev.target.disabled = true;
     const fresh = studio.list?.find(x => x.id === p.id)?.data || d;
-    const slots = {...fresh.images.slots, [key]: {...fresh.images.slots[key], widen: true, pos: {}, note: '좌우 배경을 넓혀 넣습니다 (견적 승인 때 함께)'}};
+    const slots = {...fresh.images.slots, [key]: {...fresh.images.slots[key], widen: true, pos: {}, note: '좌우 배경을 확장해 넣습니다(견적 승인 시 함께 생성)'}};
     const { error } = await SB.from('pt_proposal').update({data: {...fresh, images: {...fresh.images, slots}}, status: 'working'}).eq('id', p.id);
     if (error) { ev.target.disabled = false; return toast('저장하지 못했습니다: ' + error.message); }
     await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'generate', input: {estimate_only: true}});
-    await proposalEvent(p.id, `${s.slide}페이지 이미지 좌우 넓히기를 요청했습니다 · 견적을 받습니다`);
+    await proposalEvent(p.id, `${s.slide}페이지 이미지 좌우 확장을 요청했습니다 · 견적을 받습니다`);
     $('#modal').close(); studio.list = null; await loadStudio(); openProposal(p.id, true);
-    toast('좌우 넓히기 견적을 받습니다. 견적이 나오면 승인해 주세요.');
+    toast('좌우 확장 견적을 받습니다. 견적이 나오면 승인해 주세요.');
   });
   $('#rg-go')?.addEventListener('click', async ev => {
     const why = $('#rg-why').value.trim(), txt = $('#rg-prompt').value.trim(), ai = AI_KINDS.includes(s.kind) && !s.widened;
-    if (ai && !txt) return toast('프롬프트를 적어 주세요.');
+    if (ai && !txt) return toast('프롬프트를 입력해 주세요.');
     ev.target.disabled = true;
     const fresh = studio.list?.find(x => x.id === p.id)?.data || d, cur = fresh.images.slots[key];
     const prev = [...(cur.prev_paths || []), cur.path].filter(Boolean);
-    const next = ai ? {...cur, status: 'ai', prompt: txt, prev_paths: prev, pos: {}, note: '다시 만들기 대기'}
-                    : {...cur, path: cur.orig_path || cur.path, widen: true, widened: false, widen_extra: txt, prev_paths: prev, pos: {}, note: '좌우 넓히기 다시 하기 대기'};
+    const next = ai ? {...cur, status: 'ai', prompt: txt, prev_paths: prev, pos: {}, note: '재생성 대기'}
+                    : {...cur, path: cur.orig_path || cur.path, widen: true, widened: false, widen_extra: txt, prev_paths: prev, pos: {}, note: '좌우 확장 재생성 대기'};
     const log = {at: new Date().toISOString(), key, slide: s.slide, kind: s.kind, what: s.what || '', mode: ai ? 'ai' : 'widen',
                  before: ai ? (cur.prompt || '') : (cur.widen_extra || ''), after: txt, why, by: myName || ''};
     const data = {...fresh, images: {...fresh.images, slots: {...fresh.images.slots, [key]: next}}, prompt_log: [...(fresh.prompt_log || []), log]};
     const { error } = await SB.from('pt_proposal').update({data, status: 'working'}).eq('id', p.id);
     if (error) { ev.target.disabled = false; return toast('저장하지 못했습니다: ' + error.message); }
     await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'generate', input: {estimate_only: true}});
-    await proposalEvent(p.id, `${s.slide}페이지 이미지 다시 만들기를 요청했습니다${why ? ' · ' + why : ''}`);
+    await proposalEvent(p.id, `${s.slide}페이지 이미지 재생성을 요청했습니다${why ? ' · ' + why : ''}`);
     $('#modal').close(); studio.list = null; await loadStudio(); openProposal(p.id, true);
     toast('견적을 받습니다. 견적이 나오면 승인해 주세요.');
   });
@@ -941,14 +941,14 @@ function imgViewer(el) {
     if (error) { $('#imgv-save').disabled = false; return toast('저장하지 못했습니다: ' + error.message); }
     await proposalEvent(p.id, `${s.slide}페이지 이미지 위치를 맞췄습니다`);
     $('#modal').close(); studio.list = null; await loadStudio(); openProposal(p.id, true);
-    toast('위치를 저장했습니다. 「바꾼 이미지로 다시 그리기」를 누르면 제안서에 반영됩니다.');
+    toast('위치를 저장했습니다. 「변경 사항 반영」을 클릭하면 제안서에 반영됩니다.');
   };
 }
 document.addEventListener('click', ev => { const el = ev.target.closest('#drawer .ithumb.zoom'); if (el) imgViewer(el); });
 document.addEventListener('keydown', ev => { const el = ev.target.closest?.('#drawer .ithumb.zoom'); if (el && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); imgViewer(el); } });
 
 // ── 페이지별 검토 · 자동 검수 표시 (10-29 김현우) — 실제 그려진 페이지(PDF)를 한 페이지씩 보며 그 페이지 이미지 자리를 바로 고친다
-const QA_KO = {wrong: '다른 대상', brand_text: '다른 회사 글자·로고', cropped: '잘림', empty: '비어 있음', quality: '품질', mismatch: '페이지 내용과 안 맞음', duplicate: '같은 이미지 반복'};
+const QA_KO = {wrong: '다른 대상', brand_text: '타사 글자·로고 노출', cropped: '잘림', empty: '비어 있음', quality: '품질', mismatch: '페이지 내용과 불일치', duplicate: '같은 이미지 반복'};
 let PDFJS = null;
 async function loadPdfjs() {
   if (PDFJS) return PDFJS;
@@ -958,24 +958,24 @@ async function loadPdfjs() {
   return PDFJS;
 }
 async function replaceSlotImage(p, key, f) {
-  if (f.size > 15e6) return toast('15MB 이하 이미지를 골라 주세요.');
+  if (f.size > 15e6) return toast('15MB 이하 이미지를 선택해 주세요.');
   const d = studio.list?.find(x => x.id === p.id)?.data || p.data;
   const ext = (f.name.match(/\.(jpe?g|png|webp)$/i)?.[1] || 'jpg').toLowerCase().replace('jpeg', 'jpg');
   const path = `proposals/${p.id}/img/${key}-u${Date.now()}.${ext}`;
   const up = await SB.storage.from('pt-studio').upload(path, f, {contentType: f.type || 'image/jpeg', upsert: false});
-  if (up.error) return toast('올리지 못했습니다: ' + up.error.message);
+  if (up.error) return toast('업로드하지 못했습니다: ' + up.error.message);
   const slots = {...d.images.slots, [key]: {...d.images.slots[key], status: 'uploaded', path, source_page: '', image_url: '', pos: {}}};
   const { error } = await SB.from('pt_proposal').update({data: {...d, images: {...d.images, slots}}}).eq('id', p.id);
   if (error) return toast('저장하지 못했습니다: ' + error.message);
   await proposalEvent(p.id, `이미지 ${key} 을(를) 직접 올린 이미지로 바꿨습니다`);
-  studio.list = null; await loadStudio(); toast('이미지를 바꿨습니다. 「바꾼 이미지로 다시 그리기」를 누르면 제안서에 반영됩니다.');
+  studio.list = null; await loadStudio(); toast('이미지를 변경했습니다. 「변경 사항 반영」을 클릭하면 제안서에 반영됩니다.');
   return true;
 }
 const qaBlock = p => { const d = p.data || {}, qa = qaOf(d), busy = studio.jobs.some(j => j.proposal_id === p.id && j.kind === 'qa' && ['wait', 'work'].includes(j.status));
   if (!qa) return busy ? '<p class="qa-line">자동 검수 중입니다 · 1~3분 걸립니다</p>' : '';
   if (qa.error) return `<p class="qa-line">${esc(qa.error)}</p>`;
-  if (!qa.flags.length) return '<p class="qa-line good">자동 검수 · 눈에 띄는 문제 없음</p>';
-  return `<div class="qa-box"><b>자동 검수 · 확인할 곳 ${qa.flags.length}곳</b><small>누르면 그 페이지로 가서 바로 고칠 수 있습니다</small>${qa.flags.map(f => `<button class="qa-flag" data-review="${f.slide}"><span>${f.slide}페이지</span><b>${esc(QA_KO[f.type] || '확인')}</b> ${esc(f.detail)}</button>`).join('')}</div>`; };
+  if (!qa.flags.length) return '<p class="qa-line good">자동 검수 · 특이 사항 없음</p>';
+  return `<div class="qa-box"><b>자동 검수 · 확인할 곳 ${qa.flags.length}곳</b><small>클릭하면 해당 페이지로 이동해 바로 수정할 수 있습니다</small>${qa.flags.map(f => `<button class="qa-flag" data-review="${f.slide}"><span>${f.slide}페이지</span><b>${esc(QA_KO[f.type] || '확인')}</b> ${esc(f.detail)}</button>`).join('')}</div>`; };
 const qaOf = d => d.qa && d.build && d.qa.version === d.build.version ? d.qa : null;
 // 페이지별 검토에서 바로 만들어 넣기 (10-29 김현우) — 단추에 금액을 보이고 누르면 그 자리 하나만 승인해 힉스필드로 만든다
 const needPx = (d, k) => { const b = d.build?.boxes?.[k]; return b ? Math.round(b.w / 914400 * 150) : 0; };
@@ -987,31 +987,31 @@ async function asideHires(p, key) {
   await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'aside', input: {slots: [{key, kind: s.kind, what: s.what || '', ratio: s.ratio || '', search: im.search || '',
     min_px: needPx(d, key), have_px: s.w || 0}], ips: [p.ip_a_name, p.ip_b_name].filter(Boolean)}});
   await proposalEvent(p.id, `${s.slide}페이지 「${s.what || key}」 고해상도 원본을 Aside 로 다시 찾도록 요청했습니다`);
-  studio.list = null; await loadStudio(); toast('Aside 에 맡겼습니다. 몇 분 걸립니다. 못 찾으면 힉스필드로 보정할 수 있습니다.');
+  studio.list = null; await loadStudio(); toast('Aside에 요청했습니다. 몇 분 걸립니다. 찾지 못하면 힉스필드로 보정할 수 있습니다.');
 }
 const shapeOff = (w, h, ar) => ar && w && h && (w / h < ar / 1.3 || w / h > ar * 1.3);
 async function quickMake(p, key, mode, prompt, why) {
   const fresh = studio.list?.find(x => x.id === p.id)?.data || p.data, cur = fresh.images.slots[key];
   const usd = mode === 'ai' ? 0.02 : 0.1;
   if (!confirm(mode === 'upscale' ? `${cur.slide}페이지 이미지를 힉스필드로 고해상도 보정합니다. 사람 얼굴이 아주 조금 달라질 수 있습니다. 예상 비용 약 $0.08 입니다. 진행할까요?`
-               : mode === 'widen' ? `${cur.slide}페이지 이미지를 힉스필드로 넓혀 상자에 전체가 들어가게 만듭니다. 예상 비용 약 $0.08 입니다. 진행할까요?`
-                                : `${cur.slide}페이지 자리에 AI 이미지를 만들어 넣습니다. 예상 비용 약 $0.01 입니다. 진행할까요?`)) return false;
+               : mode === 'widen' ? `${cur.slide}페이지 이미지를 힉스필드로 확장해 이미지 전체가 보이게 합니다. 예상 비용은 약 $0.08입니다. 진행할까요?`
+                                : `${cur.slide}페이지에 AI 이미지를 생성해 넣습니다. 예상 비용은 약 $0.01입니다. 진행할까요?`)) return false;
   const prev = [...(cur.prev_paths || []), cur.path].filter(Boolean);
-  const next = mode === 'upscale' ? {...cur, upscale: true, prev_paths: prev, note: '해상도 보정 중'} : mode === 'widen' ? {...cur, path: cur.orig_path || cur.path, widen: true, widened: false, widen_extra: prompt || cur.widen_extra || '', prev_paths: prev, pos: {}, note: '넓히는 중'}
-                                : {...cur, status: 'ai', prompt, prev_paths: prev, pos: {}, note: 'AI 이미지 만드는 중'};
+  const next = mode === 'upscale' ? {...cur, upscale: true, prev_paths: prev, note: '해상도 보정 중'} : mode === 'widen' ? {...cur, path: cur.orig_path || cur.path, widen: true, widened: false, widen_extra: prompt || cur.widen_extra || '', prev_paths: prev, pos: {}, note: '확장 중'}
+                                : {...cur, status: 'ai', prompt, prev_paths: prev, pos: {}, note: 'AI 이미지 생성 중'};
   const log = mode === 'upscale' || (mode === 'widen' && !prompt && !why) || (mode === 'ai' && prompt === (cur.prompt || '') && !why) ? [] :
     [{at: new Date().toISOString(), key, slide: cur.slide, kind: cur.kind, what: cur.what || '', mode, before: mode === 'widen' ? (cur.widen_extra || '') : (cur.prompt || ''), after: prompt, why, by: myName || ''}];
   const data = {...fresh, images: {...fresh.images, slots: {...fresh.images.slots, [key]: next}}, prompt_log: [...(fresh.prompt_log || []), ...log]};
   const { error } = await SB.from('pt_proposal').update({data, status: 'working'}).eq('id', p.id);
   if (error) { toast('저장하지 못했습니다: ' + error.message); return false; }
   await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'generate', input: {approved_usd: usd, keys: [key]}});
-  await proposalEvent(p.id, `${cur.slide}페이지 ${mode === 'upscale' ? '고해상도 보정' : mode === 'widen' ? '이미지 넓히기' : 'AI 이미지 만들기'}를 승인했습니다 (예상 $${mode === 'ai' ? '0.01' : '0.08'})${why ? ' · ' + why : ''}`);
+  await proposalEvent(p.id, `${cur.slide}페이지 ${mode === 'upscale' ? '고해상도 보정' : mode === 'widen' ? '이미지 확장' : 'AI 이미지 생성'}를 승인했습니다 (예상 $${mode === 'ai' ? '0.01' : '0.08'})${why ? ' · ' + why : ''}`);
   studio.list = null; await loadStudio();
-  toast('만들기 시작했습니다. 3~5분 뒤 제안서가 다시 그려지고 자동 검수까지 돌아갑니다.');
+  toast('생성을 시작했습니다. 3~5분 뒤 제안서에 반영되고 자동 검수까지 진행됩니다.');
   return true;
 }
 async function pageReview(pid, start) {
-  let p = studio.list?.find(x => x.id === pid); if (!p?.data?.build?.pdf) return toast('그려진 제안서가 없습니다.');
+  let p = studio.list?.find(x => x.id === pid); if (!p?.data?.build?.pdf) return toast('생성된 제안서가 없습니다.');
   let dlg = $('#review');
   if (!dlg) { dlg = document.createElement('dialog'); dlg.id = 'review'; dlg.className = 'review'; document.body.appendChild(dlg); }
   const b = p.data.build;
@@ -1032,7 +1032,7 @@ async function pageReview(pid, start) {
     cur = Math.min(Math.max(1, n), N);
     $('#rv-n').textContent = `${cur} / ${N}페이지`; $('#rv-prev').disabled = cur <= 1; $('#rv-next').disabled = cur >= N;
     const fs = [...new Set(flags.map(f => f.slide))];
-    $('#rv-qa').innerHTML = qa ? (fs.length ? `자동 검수 · 확인할 곳 ${flags.length}곳 ${fs.map(s => `<button class="rv-jump${s === cur ? ' on' : ''}" data-go="${s}">${s}페이지</button>`).join('')}` : '자동 검수 · 눈에 띄는 문제 없음') : '자동 검수 전입니다';
+    $('#rv-qa').innerHTML = qa ? (fs.length ? `자동 검수 · 확인할 곳 ${flags.length}곳 ${fs.map(s => `<button class="rv-jump${s === cur ? ' on' : ''}" data-go="${s}">${s}페이지</button>`).join('')}` : '자동 검수 · 특이 사항 없음') : '자동 검수 전입니다';
     $$('#rv-qa [data-go]').forEach(x => x.onclick = () => show(+x.dataset.go));
     // 페이지 그림은 기다리지 않고 그린다 — 그림이 늦어도 오른쪽 이미지 자리는 바로 보이게
     doc.getPage(cur).then(pg => { const c = $('#rv-canvas'); if (!c) return; const w = c.parentElement.clientWidth - 2;
@@ -1041,18 +1041,18 @@ async function pageReview(pid, start) {
       .then(() => { if ($('#rv-load')) $('#rv-load').hidden = true; }).catch(() => {});
     const fl = flags.filter(f => f.slide === cur), keys = Object.keys(S).filter(k => +S[k].slide === cur).sort();
     const card = k => { const s = S[k], [cls, label] = SLOT_ST[s.status] || ['', s.status], bad = fl.filter(f => f.key === k);
-      return `<div class="rv-slot${bad.length ? ' flag' : ''}"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-rk="${esc(k)}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}</span>`}</div><div class="rv-info"><div class="ihead"><b>${esc(KIND_KO_IMG[s.kind] || s.kind)}</b><span class="pill ${cls}">${label}</span></div><small>${esc(s.what || '')}</small>${bad.map(f => `<small class="warn">${esc(QA_KO[f.type] || '확인')} · ${esc(f.detail)}</small>`).join('')}<div class="ibtns">${s.path ? `<button class="text-btn" data-rv-open="${esc(k)}">크게 보기·고치기</button>` : ''}<label class="text-btn up">내 이미지로 바꾸기<input type="file" accept="image/png,image/jpeg,image/webp" data-rv-up="${esc(k)}" hidden></label></div>${makeBox(k, s)}</div></div>`; };
+      return `<div class="rv-slot${bad.length ? ' flag' : ''}"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-rk="${esc(k)}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}</span>`}</div><div class="rv-info"><div class="ihead"><b>${esc(KIND_KO_IMG[s.kind] || s.kind)}</b><span class="pill ${cls}">${label}</span></div><small>${esc(s.what || '')}</small>${bad.map(f => `<small class="warn">${esc(QA_KO[f.type] || '확인')} · ${esc(f.detail)}</small>`).join('')}<div class="ibtns">${s.path ? `<button class="text-btn" data-rv-open="${esc(k)}">크게 보기·수정</button>` : ''}<label class="text-btn up">내 이미지로 교체<input type="file" accept="image/png,image/jpeg,image/webp" data-rv-up="${esc(k)}" hidden></label></div>${makeBox(k, s)}</div></div>`; };
     const canAi = s => AI_KINDS.includes(s.kind) || (!s.path && !['official', 'logo', 'capture'].includes(s.kind));
     function makeBox(k, s) {
-      if (p.status === 'working' && (s.widen || s.upscale || s.status === 'ai')) return '<p class="rv-busy">만드는 중입니다…</p>';
+      if (p.status === 'working' && (s.widen || s.upscale || s.status === 'ai')) return '<p class="rv-busy">생성 중입니다…</p>';
       const ai = canAi(s) && !s.widened;
-      return `<div class="rv-make">${ai ? `<textarea data-mk-prompt="${esc(k)}" rows="3" placeholder="생성 프롬프트 (영문) — 무엇을 어떤 장면·분위기로">${esc(s.prompt || '')}</textarea>
-        <input data-mk-why="${esc(k)}" maxlength="200" placeholder="아쉬운 점 (다시 만들 때)"><button class="button primary small" data-mk-ai="${esc(k)}">${s.status === 'generated' ? 'AI로 다시 만들기' : 'AI로 만들어 넣기'} · 약 $0.01</button>` : ''}
-        ${s.path ? `<button class="button small" data-mk-wide="${esc(k)}" hidden>힉스필드로 넓혀 전체 넣기 · 약 $0.08</button>` : ''}
-        ${s.path && !AI_KINDS.includes(s.kind) ? `<div class="rv-lowres" data-lr="${esc(k)}" hidden><small class="warn"></small><button class="button small" data-mk-hires="${esc(k)}">Aside로 고해상도 찾기</button><button class="button small" data-mk-up="${esc(k)}">힉스필드로 고해상도 보정 · 약 $0.08</button></div>` : ''}</div>`;
+      return `<div class="rv-make">${ai ? `<textarea data-mk-prompt="${esc(k)}" rows="3" placeholder="생성 프롬프트(영문) — 피사체·장면·분위기">${esc(s.prompt || '')}</textarea>
+        <input data-mk-why="${esc(k)}" maxlength="200" placeholder="개선할 점(재생성 시 반영)"><button class="button primary small" data-mk-ai="${esc(k)}">${s.status === 'generated' ? 'AI로 다시 생성' : 'AI로 생성'} · 약 $0.01</button>` : ''}
+        ${s.path ? `<button class="button small" data-mk-wide="${esc(k)}" hidden>힉스필드로 확장해 전체 표시 · 약 $0.08</button>` : ''}
+        ${s.path && !AI_KINDS.includes(s.kind) ? `<div class="rv-lowres" data-lr="${esc(k)}" hidden><small class="warn"></small><button class="button small" data-mk-hires="${esc(k)}">Aside로 고해상도 검색</button><button class="button small" data-mk-up="${esc(k)}">힉스필드로 고해상도 보정 · 약 $0.08</button></div>` : ''}</div>`;
     }
     const loose = fl.filter(f => !f.key || !keys.includes(f.key));
-    $('#rv-side').innerHTML = `${loose.map(f => `<div class="rv-flag"><b>${esc(QA_KO[f.type] || '확인')}</b> ${esc(f.detail)}</div>`).join('')}${keys.length ? keys.map(card).join('') : '<p class="muted-box">이 페이지에는 이미지 자리가 없습니다.</p>'}`;
+    $('#rv-side').innerHTML = `${loose.map(f => `<div class="rv-flag"><b>${esc(QA_KO[f.type] || '확인')}</b> ${esc(f.detail)}</div>`).join('')}${keys.length ? keys.map(card).join('') : '<p class="muted-box">이 페이지에는 이미지가 없습니다.</p>'}`;
     const paths = keys.map(k => S[k].path).filter(Boolean);
     if (paths.length) {
       const { data } = await SB.storage.from('pt-studio').createSignedUrls(paths, 900);
@@ -1064,7 +1064,7 @@ async function pageReview(pid, start) {
     $$('#rv-side .ithumb[data-rk]').forEach(x => x.onclick = () => open(x.dataset.rk));
     $$('#rv-side [data-rv-up]').forEach(inp => inp.onchange = async () => { const f = inp.files[0]; if (f && await replaceSlotImage(p, inp.dataset.rvUp, f)) show(cur); });
     $$('#rv-side [data-mk-ai]').forEach(x => x.onclick = async () => { const k = x.dataset.mkAi, pr = $(`[data-mk-prompt="${CSS.escape(k)}"]`).value.trim();
-      if (!pr) return toast('생성 프롬프트를 적어 주세요.');
+      if (!pr) return toast('생성 프롬프트를 입력해 주세요.');
       x.disabled = true; if (await quickMake(p, k, 'ai', pr, $(`[data-mk-why="${CSS.escape(k)}"]`).value.trim())) show(cur); else x.disabled = false; });
     $$('#rv-side [data-mk-wide]').forEach(x => { const k = x.dataset.mkWide, b = d.build?.boxes?.[k], el = $(`#rv-side [data-rk="${CSS.escape(k)}"]`);
       x.onclick = async () => { x.disabled = true; if (await quickMake(p, k, 'widen', '', '')) show(cur); else x.disabled = false; };
@@ -1095,7 +1095,7 @@ async function openProposal(id, keep) {
   const ent = (eid, name) => eid && byId(eid) ? `<button class="ref" type="button" data-open="${eid}">${esc(name)}</button>` : esc(name || '—');
   const d = p.data || {};
   let action = '';
-  if (p.status === 'waiting' && p.stage === 2) action = `<div class="detail-block"><h3>결정 · 인테이크 확정</h3><p>아래 내용으로 시작합니다. 확정하면 ${p.mode === 'collab' && !p.ip_b_name ? '판테온 봇이 파트너 IP 후보를 추천합니다.' : '판테온 봇이 IP 리서치를 시작합니다.'}</p><div class="drawer-actions"><button class="button primary" id="intake-ok">인테이크 확정</button><button class="button" id="intake-edit">내용 수정</button></div></div>`;
+  if (p.status === 'waiting' && p.stage === 2) action = `<div class="detail-block"><h3>결정 · 기본 정보 확정</h3><p>아래 내용으로 시작합니다. 확정하면 ${p.mode === 'collab' && !p.ip_b_name ? '판테온 봇이 파트너 IP 후보를 추천합니다.' : '판테온 봇이 IP 리서치를 시작합니다.'}</p><div class="drawer-actions"><button class="button primary" id="intake-ok">인테이크 확정</button><button class="button" id="intake-edit">내용 수정</button></div></div>`;
   else if (p.status === 'working' && p.stage >= 7 && job && !['image_plan', 'finalize', 'generate', 'aside'].includes(job.kind)) action = `<div class="detail-block"><h3>진행 중 · ${esc(STAGES[p.stage - 1])}</h3><p>이 단계는 준비 중입니다. 완성되면 여기서 이어서 진행됩니다.</p></div>`;
   else if (p.status === 'working') { const live = liveJobs(id); action = `<div class="detail-block"><h3>진행 중 · ${esc(STAGES[p.stage - 1])}</h3>${jobsProg(live.length ? live : [job])}</div>`; }
   else if (p.status === 'failed') action = `<div class="detail-block"><h3>작업 실패</h3><p>${esc(d.error || '판테온 봇이 작업을 끝내지 못했습니다.')}</p><div class="drawer-actions"><button class="button primary" id="job-retry">다시 시도</button></div></div>`;
@@ -1103,8 +1103,8 @@ async function openProposal(id, keep) {
   else if (p.status === 'waiting' && p.stage === 5 && d.concepts) action = conceptsPanel(p);
   else if (p.status === 'waiting' && p.stage >= 7 && d.images) action = imagesPanel(p);
   else if (p.status === 'waiting') action = `<div class="detail-block"><h3>결정 · ${esc(GATES[p.stage] || '확인')}</h3><p>판테온 봇이 준비한 결과를 확인하고 결정해 주세요.</p></div>`;
-  const done = [d.build && `<div class="detail-block"><h3>제안서 초안 v${d.build.version}</h3><div class="detail-row"><span>분량</span><b>${d.build.slides}페이지 · 이미지 자리 ${d.build.images}개</b></div>${d.images ? '' : '<p>이미지 자리는 회색 상자로 비워 두었습니다. 이미지 수급 단계에서 채웁니다.</p>'}<div class="detail-row"><span>강조색</span><b class="acc-row"><i class="swatch" style="background:${esc(d.build.deck?.theme?.accent || '#285541')}"></i>${esc(d.build.deck?.theme?.accent || '')} ${d.accent ? '(직접 고름)' : '(클로드 추천)'}${p.status === 'waiting' ? ` <input type="color" id="acc-new" value="${esc(d.build.deck?.theme?.accent || '#285541')}" aria-label="강조색 고르기"> <button class="text-btn" id="acc-apply">이 색으로 다시 그리기</button>` : ''}</b></div><div class="drawer-actions">${d.build.pdf ? `<button class="button primary" data-file="${esc(d.build.pdf)}">PDF 보기</button>` : ''}<button class="button" data-file="${esc(d.build.pptx)}" data-dl="1">PPTX 받기</button>${d.build.pdf ? '<button class="button" data-review="1">페이지별 검토</button>' : ''}${p.status === 'waiting' && !d.build.deck?.redesigned ? '<button class="button" id="redesign">새 디자인으로 다시 그리기</button>' : ''}</div>${qaBlock(p)}</div>`, d.concept_selected && `<div class="detail-block"><h3>확정한 컨셉</h3>${conceptCard(d.concept_selected)}</div>`, d.research && researchBlock(d.research), d.social && socialBlock(d.social)].filter(Boolean).join('');
-  showDrawer(`<span class="entity-avatar">${esc(p.ip_a_name.slice(0, 2))}</span><h2>${esc(pTitle(p))}</h2><span class="detail-sub">${p.mode === 'single' ? '단독 제안' : '콜라보 제안'} · ${esc(p.recipient || '수신사 미정')}${propSub(p) ? ' · ' + esc(propSub(p)) : ''}</span>${d.concepts ? `<div class="drawer-actions"><button class="button" id="prop-more">${icon('plus')} 같은 IP로 다른 컨셉 제안서 만들기</button></div>` : ''}
+  const done = [d.build && `<div class="detail-block"><h3>제안서 초안 v${d.build.version}</h3><div class="detail-row"><span>분량</span><b>${d.build.slides}페이지 · 이미지 ${d.build.images}개</b></div>${d.images ? '' : '<p>이미지가 들어갈 위치는 회색 상자로 비워 두었습니다. 이미지 수급 단계에서 채웁니다.</p>'}<div class="detail-row"><span>강조색</span><b class="acc-row"><i class="swatch" style="background:${esc(d.build.deck?.theme?.accent || '#285541')}"></i>${esc(d.build.deck?.theme?.accent || '')} ${d.accent ? '(직접 선택)' : '(클로드 추천)'}${p.status === 'waiting' ? ` <input type="color" id="acc-new" value="${esc(d.build.deck?.theme?.accent || '#285541')}" aria-label="강조색 선택"> <button class="text-btn" id="acc-apply">이 색으로 적용</button>` : ''}</b></div><div class="drawer-actions">${d.build.pdf ? `<button class="button primary" data-file="${esc(d.build.pdf)}">PDF 보기</button>` : ''}<button class="button" data-file="${esc(d.build.pptx)}" data-dl="1">PPTX 다운로드</button>${d.build.pdf ? '<button class="button" data-review="1">페이지별 검토</button>' : ''}${p.status === 'waiting' && !d.build.deck?.redesigned ? '<button class="button" id="redesign">새 디자인 적용</button>' : ''}</div>${qaBlock(p)}</div>`, d.concept_selected && `<div class="detail-block"><h3>확정한 컨셉</h3>${conceptCard(d.concept_selected)}</div>`, d.research && researchBlock(d.research), d.social && socialBlock(d.social)].filter(Boolean).join('');
+  showDrawer(`<span class="entity-avatar">${esc(p.ip_a_name.slice(0, 2))}</span><h2>${esc(pTitle(p))}</h2><span class="detail-sub">${p.mode === 'single' ? '단독 제안' : '콜라보 제안'} · ${esc(p.recipient || '수신사 미정')}${propSub(p) ? ' · ' + esc(propSub(p)) : ''}</span>${d.concepts ? `<div class="drawer-actions"><button class="button" id="prop-more">${icon('plus')} 같은 IP로 다른 컨셉 제안서 생성</button></div>` : ''}
   <div class="detail-block"><h3>기본 정보</h3><div class="detail-row"><span>IP</span><b>${ent(p.ip_a_id, p.ip_a_name)}</b></div>${p.mode === 'collab' ? `<div class="detail-row"><span>파트너 IP</span><b>${p.ip_b_name ? ent(p.ip_b_id, p.ip_b_name) : '판테온 봇 추천 후 선택'}</b></div>` : ''}<div class="detail-row"><span>수신사</span><b>${esc(p.recipient || '—')}</b></div><div class="detail-row"><span>레퍼런스 포맷</span><b>${esc(ref?.title || '—')}</b></div><div class="detail-row"><span>현재 상태</span><b>${pPill(p)}</b></div>${p.note ? `<p>${esc(p.note)}</p>` : ''}</div>
   ${action}${done}<div class="detail-block"><h3>진행 단계</h3><ol class="stage-list">${stages}</ol></div><div class="detail-block"><h3>활동 기록</h3><div id="proposal-events"><p>불러오는 중입니다…</p></div></div>`, keep);
   const go = async (row, nextJob, msg, okMsg) => {
@@ -1118,20 +1118,20 @@ async function openProposal(id, keep) {
   // 같은 IP 조합으로 제안서 하나 더 — 리서치·팬·SNS 조사·컨셉 후보를 이어받아 컨셉 고르기부터
   $('#prop-more')?.addEventListener('click', async ev => {
     const no = propNo(p);
-    if (!confirm(`${pTitle(p)} 제안서를 하나 더 만듭니다. 리서치와 컨셉 후보는 이어받고, 컨셉을 새로 골라 진행합니다.`)) return;
+    if (!confirm(`${pTitle(p)} 제안서를 하나 더 생성합니다. 리서치와 컨셉 후보는 그대로 사용하고, 컨셉을 새로 선택해 진행합니다.`)) return;
     ev.target.disabled = true;
     const keep = Object.fromEntries(['research', 'social', 'concepts', 'accent', 'partners', 'partner_selected'].filter(k => d[k] !== undefined).map(k => [k, d[k]]));
     const row = {mode: p.mode, ip_a_name: p.ip_a_name, ip_a_id: p.ip_a_id, ip_b_name: p.ip_b_name, ip_b_id: p.ip_b_id, recipient: p.recipient, ref_id: p.ref_id,
                  note: p.note, data: {...keep, from_proposal: p.id}, stage: 5, status: 'waiting'};
     const { data: nw, error } = await SB.from('pt_proposal').insert(row).select().single();
-    if (error) { ev.target.disabled = false; return toast('만들지 못했습니다: ' + error.message); }
+    if (error) { ev.target.disabled = false; return toast('생성하지 못했습니다: ' + error.message); }
     await proposalEvent(nw.id, `제안서 ${no ? no.of + 1 : 2}을(를) 만들었습니다 · 리서치·컨셉 후보를 이어받았습니다`);
-    studio.list = null; await loadStudio(); openProposal(nw.id); toast('새 제안서를 만들었습니다. 컨셉을 골라 주세요.');
+    studio.list = null; await loadStudio(); openProposal(nw.id); toast('새 제안서를 생성했습니다. 컨셉을 선택해 주세요.');
   });
   $('#intake-ok')?.addEventListener('click', () => {
     $('#intake-ok').disabled = true;
     const next = p.mode === 'collab' && !p.ip_b_name ? 3 : 4;
-    go({stage: next, status: 'working'}, {kind: JOB_OF[next], input: {}}, `인테이크를 확정했습니다 → ${STAGES[next - 1]} 시작`, '인테이크를 확정했습니다.');
+    go({stage: next, status: 'working'}, {kind: JOB_OF[next], input: {}}, `기본 정보를 확정했습니다 → ${STAGES[next - 1]} 시작`, '기본 정보를 확정했습니다.');
   });
   $('#job-retry')?.addEventListener('click', () => {
     $('#job-retry').disabled = true;
@@ -1145,30 +1145,30 @@ async function openProposal(id, keep) {
   });
   $('#acc-apply')?.addEventListener('click', ev => {
     ev.target.disabled = true; const c = $('#acc-new').value.toUpperCase();
-    go({status: 'working', data: {...d, accent: c}}, {kind: 'finalize', input: {accent: c}}, `강조색을 ${c}(으)로 바꿔 다시 그리기를 요청했습니다`);
+    go({status: 'working', data: {...d, accent: c}}, {kind: 'finalize', input: {accent: c}}, `강조색 ${c} 적용을 요청했습니다`);
   });
-  // 7 이미지 — 내 이미지로 바꾸기 · 다시 그리기 · 완료
+  // 7 이미지 — 내 이미지로 교체 · 다시 그리기 · 완료
   $$('#drawer [data-upimg]').forEach(inp => inp.onchange = async () => {
     const f = inp.files[0]; if (!f) return;
     if (await replaceSlotImage(p, inp.dataset.upimg, f)) openProposal(p.id, true);
   });
   $$('#drawer [data-review]').forEach(x => x.onclick = () => pageReview(p.id, +x.dataset.review || 1));
-  $('#redesign')?.addEventListener('click', ev => { ev.target.disabled = true; go({status: 'working'}, {kind: 'finalize', input: {redesign: true}}, '원본 제안서 디자인으로 다시 그리기를 요청했습니다 (이미지는 그대로)', '새 디자인으로 다시 그립니다. 5분 안팎 걸립니다.'); });
+  $('#redesign')?.addEventListener('click', ev => { ev.target.disabled = true; go({status: 'working'}, {kind: 'finalize', input: {redesign: true}}, '원본 제안서 디자인 적용을 요청했습니다(이미지는 유지)', '새 디자인을 적용합니다. 5분 정도 걸립니다.'); });
   $('#ai-est')?.addEventListener('click', ev => { ev.target.disabled = true; go({status: 'working'}, {kind: 'generate', input: {estimate_only: true}}, 'AI 이미지 견적을 요청했습니다'); });
   $('#ai-go')?.addEventListener('click', ev => {
     const usd = +ev.target.dataset.usd, n = d.images.ai_estimate.count;
-    if (!confirm(`이미지 ${n}장(AI 이미지·좌우 넓히기)을 힉스필드로 만듭니다. 예상 비용 약 $${usd} 가 회사 힉스필드 API 잔액에서 나갑니다. 진행할까요?`)) return;
+    if (!confirm(`이미지 ${n}장(AI 이미지·좌우 확장)을 힉스필드로 생성합니다. 예상 비용 약 $${usd} 가 회사 힉스필드 API 잔액에서 차감됩니다. 진행할까요?`)) return;
     ev.target.disabled = true;
-    go({status: 'working'}, {kind: 'generate', input: {approved_usd: usd}}, `AI 이미지 ${n}장 생성을 승인했습니다 (예상 $${usd})`, '승인했습니다. 판테온 봇이 만들기 시작합니다.');
+    go({status: 'working'}, {kind: 'generate', input: {approved_usd: usd}}, `AI 이미지 ${n}장 생성을 승인했습니다 (예상 $${usd})`, '승인했습니다. 판테온 봇이 생성을 시작합니다.');
   });
   $$('#drawer [data-aside]').forEach(b => b.onclick = () => {
     const k = b.dataset.aside, sl = d.images.slots[k];
     const im = (d.build?.deck?.slides || []).flatMap(x => x.images || []).find(x => x.key === k) || {};
     b.disabled = true;
     go({status: 'working'}, {kind: 'aside', input: {slots: [{key: k, kind: sl.kind, what: sl.what || '', ratio: sl.ratio || '', search: im.search || ''}], ips: [p.ip_a_name, p.ip_b_name].filter(Boolean)}},
-       `${sl.slide}페이지 「${sl.what || k}」 이미지를 Aside 로 다시 찾도록 요청했습니다`, 'Aside 에 맡겼습니다. 한 자리에 몇 분 걸립니다.');
+       `${sl.slide}페이지 「${sl.what || k}」 이미지를 Aside 로 다시 찾도록 요청했습니다`, 'Aside에 요청했습니다. 이미지 한 장에 몇 분 걸립니다.');
   });
-  $('#img-rerender')?.addEventListener('click', ev => { ev.target.disabled = true; go({status: 'working'}, {kind: 'finalize', input: {}}, '바꾼 이미지로 다시 그리기를 요청했습니다'); });
+  $('#img-rerender')?.addEventListener('click', ev => { ev.target.disabled = true; go({status: 'working'}, {kind: 'finalize', input: {}}, '변경 사항 반영을 요청했습니다'); });
   $('#img-done')?.addEventListener('click', ev => {
     ev.target.disabled = true;
     // 완료한 버전에 남은 AI 이미지·좌우 넓힌 이미지 = 사람이 통과시킨 것 → good_images (10-29 · 다음 원고가 이 수준을 따르게)
@@ -1188,10 +1188,10 @@ async function openProposal(id, keep) {
     $$('#drawer [data-pick]').forEach(x => x.disabled = true);
     go({ip_b_name: e?.name || c.ip, ip_b_id: e?.id || null, stage: 4, status: 'working', data: {...d, partner_selected: c}}, {kind: 'research', input: {}}, `파트너 IP 「${c.ip}」를 골랐습니다 → 리서치 시작`, `${c.ip}을(를) 파트너로 골랐습니다.`);
   });
-  // 추천 밖 IP 직접 넣기 (10-28 홍석진 대표님)
+  // 추천 밖 IP 직접 입력 (10-28 홍석진 대표님)
   const own = $('#pb-own');
   if (own) {
-    own.oninput = () => { const v = own.value.trim(), e = entityByName(v); $('#pb-own-note').innerHTML = v ? (e ? `<b>컨택포인트 있음</b> · 판테온 엔티티 「${esc(e.name)}」(${esc(e.type)})와 연결됩니다${contactsOf(e).length ? ` · 등록된 담당자 ${contactsOf(e).length}명` : ''}` : '<span class="err">컨택포인트 없음</span> · 판테온 엔티티에 등록되지 않은 IP입니다. 이름 그대로 진행합니다.') : ''; };
+    own.oninput = () => { const v = own.value.trim(), e = entityByName(v); $('#pb-own-note').innerHTML = v ? (e ? `<b>등록된 연락처 있음</b> · 판테온 엔티티 「${esc(e.name)}」(${esc(e.type)})와 연결됩니다${contactsOf(e).length ? ` · 등록된 담당자 ${contactsOf(e).length}명` : ''}` : '<span class="err">등록된 연락처 없음</span> · 판테온 엔티티에 등록되지 않은 IP입니다. 이름 그대로 진행합니다.') : ''; };
     $('#pb-own-go').onclick = () => {
       const v = own.value.trim(); if (!v) { own.focus(); return; }
       const e = entityByName(v), name = e?.name || v, { partner_selected, ...rest } = d;
@@ -1205,7 +1205,7 @@ async function openProposal(id, keep) {
   });
   $('#recategorize')?.addEventListener('click', ev => {
     ev.target.disabled = true;
-    go({status: 'working'}, {kind: 'partners', input: {mode: 'recategorize', exclude: [...(d.partners.shown || []), ...(d.partners.categories || []).map(c => c.name)]}}, '카테고리를 바꿔 다시 추천을 요청했습니다');
+    go({status: 'working'}, {kind: 'partners', input: {mode: 'recategorize', exclude: [...(d.partners.shown || []), ...(d.partners.categories || []).map(c => c.name)]}}, '카테고리를 변경해 재추천을 요청했습니다');
   });
   // 5 컨셉 확정
   $$('#drawer [data-concept]').forEach(b => b.onclick = () => {
@@ -1223,19 +1223,19 @@ async function openProposal(id, keep) {
 function studioProjectModal(p) {
   const refs = studio.refs || [], def = p?.ref_id || refs.find(r => r.is_default)?.id || refs[0]?.id || '';
   const names = entities().filter(e => !e.hidden).map(e => `<option value="${esc(e.name)}">`).join('');
-  modal(`<form id="sp-form"><h2>${p ? '인테이크 수정' : '새 제안서 프로젝트'}</h2><p>IP 하나로 시작합니다. 판테온에 등록된 엔티티를 고르면 담당자·연락처가 함께 연결됩니다.</p><datalist id="sp-ents">${names}</datalist>
+  modal(`<form id="sp-form"><h2>${p ? '기본 정보 수정' : '새 제안서 프로젝트'}</h2><p>IP 하나로 시작합니다. 판테온에 등록된 엔티티를 선택하면 담당자·연락처도 함께 연결됩니다.</p><datalist id="sp-ents">${names}</datalist>
   <label>IP *<input id="sp-a" list="sp-ents" required maxlength="80" value="${esc(p?.ip_a_name || '')}" placeholder="예: 에스파"></label><small class="atnote" id="sp-a-note"></small>
   <div class="field"><span class="flabel">제안 방식</span><div class="seg-pick"><label><input type="radio" name="sp-mode" value="collab" ${p?.mode !== 'single' ? 'checked' : ''}> 콜라보 제안 <small>IP A × IP B</small></label><label><input type="radio" name="sp-mode" value="single" ${p?.mode === 'single' ? 'checked' : ''}> 단독 제안 <small>IP 하나</small></label></div></div>
   <div id="sp-b-field"><label>파트너 IP<input id="sp-b" list="sp-ents" maxlength="80" value="${esc(p?.ip_b_name || '')}" placeholder="비워 두면 판테온 봇이 후보를 추천합니다"></label><small class="atnote" id="sp-b-note"></small></div>
   <label>수신사<input id="sp-to" list="sp-ents" maxlength="80" value="${esc(p?.recipient || '')}" placeholder="예: SM엔터테인먼트"></label>
   <label>레퍼런스 포맷<select id="sp-ref">${refs.length ? refs.map(r => `<option value="${r.id}" ${r.id === def ? 'selected' : ''}>${esc(r.title)}${r.is_default ? ' (기본)' : ''}</option>`).join('') : '<option value="">등록된 레퍼런스 없음</option>'}</select></label>
-  <div class="field"><span class="flabel">강조색</span><div class="accent-pick"><label><input type="radio" name="sp-acc" value="" ${p?.data?.accent ? '' : 'checked'}> 클로드 추천</label><label><input type="radio" name="sp-acc" value="pick" ${p?.data?.accent ? 'checked' : ''}> 직접 고르기 <input type="color" id="sp-color" value="${esc(p?.data?.accent || '#E0245E')}"></label></div><small class="atnote">클로드 추천은 컨셉과 두 IP의 분위기에 맞춰 판테온 봇이 정합니다. 초안을 만든 뒤에도 바꿀 수 있습니다.</small></div>
+  <div class="field"><span class="flabel">강조색</span><div class="accent-pick"><label><input type="radio" name="sp-acc" value="" ${p?.data?.accent ? '' : 'checked'}> 클로드 추천</label><label><input type="radio" name="sp-acc" value="pick" ${p?.data?.accent ? 'checked' : ''}> 직접 선택 <input type="color" id="sp-color" value="${esc(p?.data?.accent || '#E0245E')}"></label></div><small class="atnote">클로드 추천을 선택하면 컨셉과 두 IP의 분위기에 맞춰 판테온 봇이 정합니다. 초안 생성 후에도 변경할 수 있습니다.</small></div>
   <label>메모<input id="sp-note" maxlength="300" value="${esc(p?.note || '')}" placeholder="예: 최초 제안 · 팝업 중심"></label>
-  <div id="sp-error" style="color:#ba775e;margin-top:14px;font-size:11px" role="alert"></div><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="submit">${p ? '변경 저장' : '프로젝트 만들기'}</button></div></form>`);
+  <div id="sp-error" style="color:#ba775e;margin-top:14px;font-size:11px" role="alert"></div><div class="modal-actions"><button class="button" type="button" data-cancel>취소</button><button class="button primary" type="submit">${p ? '변경 저장' : '프로젝트 생성'}</button></div></form>`);
   const sync = () => { const collab = $('input[name=sp-mode]:checked').value === 'collab'; $('#sp-b-field').hidden = !collab; };
   $$('input[name=sp-mode]').forEach(r => r.onchange = sync); sync();
   $('#sp-color').oninput = () => { $('input[name=sp-acc][value=pick]').checked = true; };
-  const note = (inp, out) => { const e = entityByName($(inp).value); $(out).innerHTML = $(inp).value.trim() ? (e ? `<b>컨택포인트 있음</b> · 판테온 엔티티 「${esc(e.name)}」(${esc(e.type)})와 연결됩니다${contactsOf(e).length ? ` · 등록된 담당자 ${contactsOf(e).length}명` : ''}` : '<span class="err">컨택포인트 없음</span> · 판테온 엔티티에 등록되지 않은 IP입니다. 이름 그대로 진행합니다.') : ''; };
+  const note = (inp, out) => { const e = entityByName($(inp).value); $(out).innerHTML = $(inp).value.trim() ? (e ? `<b>등록된 연락처 있음</b> · 판테온 엔티티 「${esc(e.name)}」(${esc(e.type)})와 연결됩니다${contactsOf(e).length ? ` · 등록된 담당자 ${contactsOf(e).length}명` : ''}` : '<span class="err">등록된 연락처 없음</span> · 판테온 엔티티에 등록되지 않은 IP입니다. 이름 그대로 진행합니다.') : ''; };
   ['#sp-a', '#sp-b'].forEach((s, i) => { $(s).oninput = () => note(s, i ? '#sp-b-note' : '#sp-a-note'); note(s, i ? '#sp-b-note' : '#sp-a-note'); });
   $('#sp-form').onsubmit = async ev => {
     ev.preventDefault();
@@ -1247,13 +1247,13 @@ function studioProjectModal(p) {
     const q = p ? SB.from('pt_proposal').update(row).eq('id', p.id).select().single() : SB.from('pt_proposal').insert({...row, stage: 2, status: 'waiting'}).select().single();
     const { data, error } = await q;
     if (error) { btn.disabled = false; $('#sp-error').textContent = '저장하지 못했습니다: ' + error.message; return; }
-    await proposalEvent(data.id, p ? '인테이크 내용을 수정했습니다' : `프로젝트를 만들었습니다 (${mode === 'single' ? '단독' : '콜라보'} 제안)`);
-    $('#modal').close(); studio.list = null; await loadStudio(); openProposal(data.id); toast(p ? '인테이크를 수정했습니다.' : '프로젝트를 만들었습니다.');
+    await proposalEvent(data.id, p ? '기본 정보를 수정했습니다' : `프로젝트를 만들었습니다 (${mode === 'single' ? '단독' : '콜라보'} 제안)`);
+    $('#modal').close(); studio.list = null; await loadStudio(); openProposal(data.id); toast(p ? '기본 정보를 수정했습니다.' : '프로젝트를 만들었습니다.');
   };
 }
 
 function studioRefModal() {
-  modal(`<form id="sr-form"><h2>레퍼런스 등록</h2><p>팀이 만든 완성 제안서(PDF·PPTX)를 올립니다. 판테온 봇이 페이지 구성과 이미지 배치를 분석해 새 제안서의 포맷으로 씁니다.</p>
+  modal(`<form id="sr-form"><h2>레퍼런스 등록</h2><p>팀이 작성한 완성 제안서(PDF·PPTX)를 업로드합니다. 판테온 봇이 페이지 구성과 이미지 배치를 분석해 새 제안서 포맷으로 사용합니다.</p>
   <label>파일 * (PDF·PPTX, 100MB 이하)<input id="sr-file" type="file" accept=".pdf,.pptx,application/pdf" required></label>
   <label>제안서 이름 *<input id="sr-title" required maxlength="120" placeholder="예: 바비 × 장원영 IP 콜라보레이션 제안서"></label>
   <datalist id="sr-ents">${entities().filter(e => !e.hidden).map(e => `<option value="${esc(e.name)}">`).join('')}</datalist>
@@ -1268,7 +1268,7 @@ function studioRefModal() {
     ev.preventDefault();
     const f = $('#sr-file').files[0]; if (!f) return;
     if (f.size > 100e6) { $('#sr-error').textContent = '100MB 이하 파일을 선택해 주세요.'; return; }
-    const btn = $('#sr-form [type=submit]'); btn.disabled = true; btn.textContent = '업로드하는 중…';
+    const btn = $('#sr-form [type=submit]'); btn.disabled = true; btn.textContent = '업로드 중…';
     const ext = (f.name.match(/\.(pdf|pptx)$/i)?.[1] || 'pdf').toLowerCase(), path = `refs/${today()}/${uid()}.${ext}`;
     const up = await SB.storage.from('pt-studio').upload(path, f, {contentType: f.type || (ext === 'pdf' ? 'application/pdf' : 'application/octet-stream'), upsert: false});
     if (up.error) { btn.disabled = false; btn.textContent = '등록'; $('#sr-error').textContent = '파일을 업로드하지 못했습니다: ' + up.error.message; return; }
