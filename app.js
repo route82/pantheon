@@ -1010,18 +1010,56 @@ async function quickMake(p, key, mode, prompt, why) {
                : mode === 'widen' ? `${cur.slide}페이지 이미지를 힉스필드로 확장해 이미지 전체가 보이게 합니다. 예상 비용은 약 $0.08입니다. 진행할까요?`
                                 : `${cur.slide}페이지에 AI 이미지를 생성해 넣습니다. 예상 비용은 약 $0.01입니다. 진행할까요?`)) return false;
   const prev = [...(cur.prev_paths || []), cur.path].filter(Boolean);
-  const next = mode === 'upscale' ? {...cur, upscale: true, prev_paths: prev, note: '해상도 보정 중'} : mode === 'widen' ? {...cur, path: cur.orig_path || cur.path, widen: true, widened: false, widen_extra: prompt || cur.widen_extra || '', prev_paths: prev, pos: {}, note: '확장 중'}
+  const { before: _b, cand: _c, ...was } = cur;          // 새 이미지는 바로 넣지 않고 미리보기 → 사람이 확정 (10-30)
+  const next0 = mode === 'upscale' ? {...cur, upscale: true, prev_paths: prev, note: '해상도 보정 중'} : mode === 'widen' ? {...cur, path: cur.orig_path || cur.path, widen: true, widened: false, widen_extra: prompt || cur.widen_extra || '', prev_paths: prev, pos: {}, note: '확장 중'}
                                 : {...cur, status: 'ai', prompt, prev_paths: prev, pos: {}, note: 'AI 이미지 생성 중'};
+  const next = {...next0, before: was, cand: undefined};
   const log = mode === 'upscale' || (mode === 'widen' && !prompt && !why) || (mode === 'ai' && prompt === (cur.prompt || '') && !why) ? [] :
     [{at: new Date().toISOString(), key, slide: cur.slide, kind: cur.kind, what: cur.what || '', mode, before: mode === 'widen' ? (cur.widen_extra || '') : (cur.prompt || ''), after: prompt, why, by: myName || ''}];
   const data = {...fresh, images: {...fresh.images, slots: {...fresh.images.slots, [key]: next}}, prompt_log: [...(fresh.prompt_log || []), ...log]};
   const { error } = await SB.from('pt_proposal').update({data, status: 'working'}).eq('id', p.id);
   if (error) { toast('저장하지 못했습니다: ' + error.message); return false; }
-  await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'generate', input: {approved_usd: usd, keys: [key]}});
+  await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'generate', input: {approved_usd: usd, keys: [key], preview: true}});
   await proposalEvent(p.id, `${cur.slide}페이지 ${mode === 'upscale' ? '고해상도 보정' : mode === 'widen' ? '이미지 확장' : 'AI 이미지 생성'}를 승인했습니다 (예상 $${mode === 'ai' ? '0.01' : '0.08'})${why ? ' · ' + why : ''}`);
   studio.list = null; await loadStudio();
-  toast('생성을 시작했습니다. 끝나면 제안서에 반영되고 자동 검수까지 진행됩니다.');
+  toast('생성을 시작했습니다. 끝나면 「이 이미지로 미리보기」로 제안서에 들어간 모습을 보고 확정해 주세요.');
   return true;
+}
+// 새 이미지 미리보기·확정·취소 (10-30 김현우) — 봇이 그 페이지 하나만 새 이미지로 그려 둔 PDF(cand.preview)를 보여 준다
+async function candApply(p, key, ok) {
+  const { data: row, error: e0 } = await SB.from('pt_proposal').select('data').eq('id', p.id).single();
+  if (e0) return toast('불러오지 못했습니다: ' + e0.message);
+  const d = row.data, cur = d.images.slots[key]; if (!cur?.cand) return;
+  const { cand, before, ...base } = cur;
+  const slot = ok ? {...base, ...cand, preview: undefined, prev_paths: [...(base.prev_paths || []), base.path].filter(Boolean), pos: {}, note: ''} : base;
+  delete slot.preview;
+  const { error } = await SB.from('pt_proposal').update({data: {...d, images: {...d.images, slots: {...d.images.slots, [key]: slot}}}, ...(ok ? {status: 'working'} : {})}).eq('id', p.id);
+  if (error) return toast('저장하지 못했습니다: ' + error.message);
+  if (ok) await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'finalize', input: {}});
+  await proposalEvent(p.id, `${cur.slide}페이지 새 이미지를 ${ok ? '확정했습니다 → 제안서에 반영' : '취소했습니다 (원래 이미지 유지)'}`);
+  studio.list = null; await loadStudio(); toast(ok ? '확정했습니다. 제안서에 반영하는 중입니다.' : '취소했습니다. 원래 이미지를 그대로 씁니다.');
+}
+async function candPreview(p, key, after) {
+  const d = studio.list?.find(x => x.id === p.id)?.data || p.data, s = d.images.slots[key], c = s?.cand; if (!c) return;
+  modal(`<h2>${esc(s.slide)}페이지 미리보기 · 새 이미지</h2><div class="pv-box" id="pv-box"><p class="rv-load"><i class="spin" aria-hidden="true"></i><span>미리보기를 불러오는 중입니다</span></p></div>
+    <div class="modal-actions"><button class="button" id="pv-again">다시 만들기</button><button class="button" id="pv-no">취소</button><button class="button primary" id="pv-ok">이 이미지로 확정</button></div>`);
+  $('#modal').classList.add('wide'); $('#modal').addEventListener('close', () => $('#modal').classList.remove('wide'), {once: true});
+  const done = async ok => { $('#pv-ok').disabled = $('#pv-no').disabled = true; await candApply(p, key, ok); $('#modal').close(); after?.(); };
+  $('#pv-ok').onclick = () => done(true); $('#pv-no').onclick = () => done(false);
+  $('#pv-again').onclick = () => { $('#modal').close(); const t = $(`#rv-side [data-mk-prompt="${CSS.escape(key)}"]`); t?.scrollIntoView({block: 'center'}); t?.focus(); };
+  try {
+    if (c.preview) {
+      const { data: su } = await SB.storage.from('pt-studio').createSignedUrl(c.preview, 900);
+      const pg = await (await (await loadPdfjs()).getDocument(su.signedUrl).promise).getPage(1);
+      const box = $('#pv-box'), cv = document.createElement('canvas'), w = box.clientWidth;
+      const vp = pg.getViewport({scale: w / pg.getViewport({scale: 1}).width * (window.devicePixelRatio || 1)});
+      cv.width = vp.width; cv.height = vp.height; cv.style.width = '100%';
+      await pg.render({canvasContext: cv.getContext('2d'), viewport: vp}).promise; box.innerHTML = ''; box.appendChild(cv);
+    } else {
+      const { data: su } = await SB.storage.from('pt-studio').createSignedUrl(c.path, 900);
+      $('#pv-box').innerHTML = `<img src="${esc(su.signedUrl)}" alt="새 이미지" style="width:100%"><small>페이지 미리보기를 만들지 못해 새 이미지만 보여 드립니다.</small>`;
+    }
+  } catch (e) { $('#pv-box').innerHTML = `<p>미리보기를 불러오지 못했습니다: ${esc(e?.message || '')}</p>`; }
 }
 async function pageReview(pid, start) {
   let p = studio.list?.find(x => x.id === pid); if (!p?.data?.build?.pdf) return toast('생성된 제안서가 없습니다.');
@@ -1089,7 +1127,7 @@ async function pageReview(pid, start) {
       return `<button type="button" class="${bad ? 'flag' : ''}${S[k].path ? '' : ' empty'}${big(b) ? ' bg' : ''}" data-hot="${esc(k)}" style="left:${b.x / EW * 100}%;top:${b.y / EH * 100}%;width:${b.w / EW * 100}%;height:${b.h / EH * 100}%" aria-label="${esc(KIND_KO_IMG[S[k].kind] || '')} ${esc(whatText(S[k].what))}"><span>${esc(KIND_KO_IMG[S[k].kind] || '')}</span></button>`; }).join('');
     const okd = k => !!S[k]?.path && (d.qa_ok || {})[k] === S[k].path;          // 사람이 확정한 이미지 (검수 목록에서 빠짐)
     const card = k => { const s = S[k], [cls, label] = SLOT_ST[s.status] || ['', s.status], bad = fl.filter(f => f.key === k);
-      return `<div class="rv-slot${bad.length ? ' flag' : ''}"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-rk="${esc(k)}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}</span>`}</div><div class="rv-info"><div class="ihead"><b>${esc(KIND_KO_IMG[s.kind] || s.kind)}</b><span class="pill ${cls}">${label}</span></div><small>${esc(whatText(s.what))}</small>${bad.map(f => `<small class="warn">${esc(QA_KO[f.type] || '확인')} · ${esc(f.detail)}</small>${[...new Set([...String(f.detail).matchAll(/(\d{1,2})\s*페이지/g)].map(m => +m[1]).filter(n => n !== cur && n >= 1 && n <= N))].map(n => `<button class="text-btn go" data-go-page="${n}">${n}페이지 보기 ▶</button>`).join('')}`).join('')}<div class="ibtns">${s.path && okd(k) ? `<span class="pill good">확정</span><button class="text-btn" data-rv-unok="${esc(k)}">확정 취소</button>` : bad.length && s.path ? `<button class="text-btn ok" data-rv-ok="${esc(k)}">이 이미지로 확정</button>` : ''}${s.path ? `<button class="text-btn" data-rv-open="${esc(k)}">크게 보기·수정</button>` : ''}<label class="text-btn up">내 이미지로 교체<input type="file" accept="image/png,image/jpeg,image/webp" data-rv-up="${esc(k)}" hidden></label></div>${makeBox(k, s)}</div></div>`; };
+      return `<div class="rv-slot${bad.length ? ' flag' : ''}"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-rk="${esc(k)}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}</span>`}</div><div class="rv-info"><div class="ihead"><b>${esc(KIND_KO_IMG[s.kind] || s.kind)}</b><span class="pill ${cls}">${label}</span></div><small>${esc(whatText(s.what))}</small>${bad.map(f => `<small class="warn">${esc(QA_KO[f.type] || '확인')} · ${esc(f.detail)}</small>${[...new Set([...String(f.detail).matchAll(/(\d{1,2})\s*페이지/g)].map(m => +m[1]).filter(n => n !== cur && n >= 1 && n <= N))].map(n => `<button class="text-btn go" data-go-page="${n}">${n}페이지 보기 ▶</button>`).join('')}`).join('')}${s.cand ? `<div class="rv-cand"><div class="ithumb" data-cand-thumb="${esc(s.cand.path)}"></div><div><b>새 이미지</b><small>아직 제안서에 반영되지 않았습니다</small><div class="ibtns"><button class="button small" data-cand-view="${esc(k)}">이 이미지로 미리보기</button><button class="button primary small" data-cand-ok="${esc(k)}">이 이미지로 확정</button><button class="text-btn" data-cand-no="${esc(k)}">취소</button></div></div></div>` : ''}<div class="ibtns">${s.path && okd(k) ? `<span class="pill good">확정</span><button class="text-btn" data-rv-unok="${esc(k)}">확정 취소</button>` : bad.length && s.path ? `<button class="text-btn ok" data-rv-ok="${esc(k)}">이 이미지로 확정</button>` : ''}${s.path ? `<button class="text-btn" data-rv-open="${esc(k)}">크게 보기·수정</button>` : ''}<label class="text-btn up">내 이미지로 교체<input type="file" accept="image/png,image/jpeg,image/webp" data-rv-up="${esc(k)}" hidden></label></div>${makeBox(k, s)}</div></div>`; };
     const canAi = s => AI_KINDS.includes(s.kind) || (!s.path && !['official', 'logo', 'capture'].includes(s.kind));
     function makeBox(k, s) {
       if (p.status === 'working' && (s.widen || s.upscale || s.status === 'ai')) { const live = liveJobs(p.id); return `<div class="rv-busy">${jobsProg(live.length ? live : [null])}</div>`; }
@@ -1145,6 +1183,11 @@ async function pageReview(pid, start) {
       const im = new Image(); im.onload = () => { if (lowRes(im.naturalWidth, im.naturalHeight, need, b.w / b.h) || S[k].lowres) { box.hidden = false;
         box.querySelector('small').textContent = `해상도가 낮아 깨져 보입니다 (지금 ${im.naturalWidth}px · 필요 약 ${need}px)`; } }; im.src = el.dataset.src; });
     $$('#rv-side [data-go-page]').forEach(x => x.onclick = () => show(+x.dataset.goPage));
+    const cps = keys.map(k => S[k].cand?.path).filter(Boolean);
+    if (cps.length) SB.storage.from('pt-studio').createSignedUrls(cps, 900).then(({ data }) => (data || []).forEach(x => { if (x.signedUrl) $$(`#rv-side [data-cand-thumb="${CSS.escape(x.path)}"]`).forEach(el => { el.style.backgroundImage = `url("${x.signedUrl}")`; }); }));
+    $$('#rv-side [data-cand-view]').forEach(x => x.onclick = () => candPreview(p, x.dataset.candView, () => show(cur)));
+    $$('#rv-side [data-cand-ok]').forEach(x => x.onclick = async () => { x.disabled = true; await candApply(p, x.dataset.candOk, true); show(cur); });
+    $$('#rv-side [data-cand-no]').forEach(x => x.onclick = async () => { x.disabled = true; await candApply(p, x.dataset.candNo, false); show(cur); });
     $$('#rv-side [data-mk-other]').forEach(x => x.onclick = async () => { x.disabled = true; await asideOther(p, x.dataset.mkOther); show(cur); });
     $$('#rv-side [data-mk-hires]').forEach(x => x.onclick = async () => { x.disabled = true; await asideHires(p, x.dataset.mkHires); show(cur); });
     $$('#rv-side [data-mk-up]').forEach(x => x.onclick = async () => { x.disabled = true; if (await quickMake(p, x.dataset.mkUp, 'upscale', '', '')) show(cur); else x.disabled = false; });
