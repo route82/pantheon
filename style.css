@@ -265,8 +265,54 @@ dialog .modal-actions .button{flex:1;padding:12px}
 footer{display:none}
 .quality-grid{grid-template-columns:1fr;gap:10px}
 }
+/* ── 프로젝트 화면 (10-30 · 홍석진 대표님 설계대로) — 맨 위 진행 막대 · 왼쪽 지금 할 일 / 오른쪽 기본 정보·활동 기록 */
+.pv-steps{list-style:none;margin:18px 0 6px;padding:0;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px;counter-reset:s}
+.pv-steps li{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;color:#a1aaa4;font-size:11.5px;padding-top:2px}
+.pv-steps li::before{content:"";position:absolute;top:14px;left:-50%;right:50%;height:2px;background:#e3e9e3;z-index:0}
+.pv-steps li:first-child::before{display:none}
+.pv-steps li span{position:relative;z-index:1;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;border:1px solid #dde4d9;background:#fff;font-size:11px}
+.pv-steps li b{font-weight:500;line-height:1.3}
+.pv-steps li .gate{position:absolute;top:0;left:calc(50% + 9px);z-index:2;width:8px;height:8px;border-radius:50%;background:#e0a77c;border:2px solid #fff}
+.pv-steps li.done{color:#5f6b63}.pv-steps li.done span{background:#edf4ef;border-color:#cfe0d4;color:#285541}.pv-steps li.done::before{background:#9fc1ab}
+.pv-steps li.now{color:#1f2d24}.pv-steps li.now b{font-weight:700}.pv-steps li.now span{background:#285541;border-color:#285541;color:#fff;box-shadow:0 0 0 4px #28554122}.pv-steps li.now::before{background:#9fc1ab}
+.pv-steps li.skip{opacity:.45}.pv-steps li.skip b{text-decoration:line-through}
+.pv-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:28px;align-items:start}
+.pv-col{min-width:0}.pv-side .detail-block{background:#f8faf7;border:1px solid #e8ede7;border-radius:10px;padding:14px 16px;margin-top:16px}
+.pv-side .detail-row{flex-wrap:wrap}.pv-side .detail-row b{text-align:right;word-break:keep-all}
+.pv-decide{border:1px solid #cfe0d4;border-left:4px solid #285541;border-radius:10px;padding:16px 18px;background:#fff}
+.pv-decide textarea{width:100%;margin-top:8px}
+.pv-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin:10px 0}
+.pv-stat{display:flex;flex-direction:column;align-items:flex-start;gap:2px;border:1px solid #e4eae4;border-radius:8px;padding:10px 12px;background:#fff;cursor:pointer;text-align:left;font:inherit}
+.pv-stat:hover{border-color:#9fc1ab}.pv-stat b{font-size:22px;line-height:1.1;color:#1f2d24}.pv-stat span{font-size:12px;color:#7d877f}
+.pv-stat.good b{color:#285541}.pv-stat.bad b{color:#b5452b}.pv-stat.wait b{color:#a8691e}
+.pv-main-act{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0 4px}.pv-main-act small{color:#7d877f}
+.pv-main-act .button svg{width:16px;height:16px;margin-right:6px;vertical-align:-3px;fill:none;stroke:currentColor;stroke-width:1.8}
+.pv-final{border-top:1px dashed #e0e6df;padding-top:12px;margin-top:12px}
+.pv-fold{border:1px solid #e8ede7;border-radius:8px;padding:10px 14px;margin-top:8px}.pv-fold>summary{cursor:pointer;font-size:13.5px}.pv-fold>summary small{color:#8c9987;margin-left:4px}
+.pv-fold .detail-block{border:0;padding:0;margin:8px 0 0}.pv-fold .detail-block>h3{display:none}
+.pv-more>summary{cursor:pointer;font-size:12px;color:#7d877f;margin-top:6px}
+@media(max-width:900px){.pv-grid{grid-template-columns:1fr;gap:0}.pv-side{order:2}}
+/* 이미지 확인·수정 — 실제 페이지 위 이미지를 눌러 고친다 · 페이지 띠(빨강 = 검수에서 확인할 곳, 주황 = 미확보·AI 대기) */
+.rv-strip{display:flex;gap:4px;overflow-x:auto;padding:2px 2px 10px;margin-bottom:6px;scrollbar-width:thin}
+.rv-strip button{flex:none;min-width:30px;height:30px;border:1px solid #e0e6df;border-radius:6px;background:#fff;font:inherit;font-size:12px;color:#5f6b63;cursor:pointer}
+.rv-strip button.miss{border-color:#e9c38f;background:#fff7ea;color:#a8691e}
+.rv-strip button.flag{border-color:#e39a86;background:#fdf0ec;color:#b5452b;font-weight:600}
+.rv-strip button.on{background:#285541;border-color:#285541;color:#fff}
+.rv-canvas-wrap{position:relative}
+.rv-hot{position:absolute;inset:0}
+.rv-hot button{position:absolute;border:2px solid transparent;border-radius:4px;background:transparent;cursor:pointer;padding:0}
+.rv-hot button span{position:absolute;left:4px;top:4px;font-size:11px;padding:2px 6px;border-radius:4px;background:#285541;color:#fff;opacity:0;transition:opacity .12s}
+.rv-hot button:hover,.rv-hot button:focus-visible{border-color:#3fbf7f;background:#3fbf7f22}.rv-hot button:hover span,.rv-hot button:focus-visible span{opacity:1}
+.rv-hot button.flag{border-color:#e0573b;background:#e0573b18}.rv-hot button.flag span{opacity:1;background:#c2412a}
+.rv-hot button.empty{border:2px dashed #e0a77c}
+.rv-slot.hl{border-color:#3fbf7f;box-shadow:0 0 0 3px #3fbf7f33}
 /* ── 제안서 스튜디오 폰 (10-30 김현우 「급할 땐 이동하면서 해야 할 수도」) — 누를 곳 40px 안팎 · 글자 12px 이상 · 입력칸 16px(아이폰 확대 방지) */
 @media(max-width:600px){
+.pv-steps{grid-template-columns:repeat(8,minmax(28px,1fr));gap:0}.pv-steps li b{display:none}.pv-steps li.now b{display:block;position:absolute;top:34px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:12px}.pv-steps li:first-child.now b{left:0;transform:none}.pv-steps li:last-child.now b,.pv-steps li:nth-last-child(2).now b{left:auto;right:0;transform:none}
+.pv-steps{padding-bottom:22px}
+.pv-decide{padding:14px 12px}.pv-stat b{font-size:20px}
+.pv-main-act .button{width:100%}
+.rv-strip button{min-width:36px;height:36px}
 .drawer-header span{font-size:11px}
 #close-drawer{min-width:44px;min-height:44px}
 .drawer.big .detail-sub{font-size:12.5px}

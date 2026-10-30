@@ -11,7 +11,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 let RECOVERY = /type=recovery/.test(location.hash || '');
 const SB = createClient('https://dwoiobqucmikbtikfjwk.supabase.co', 'sb_publishable_K6BW26u2jRkTBDwuMqaaFA_3HkfnOc9');
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
-const icons = {studio:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M10 13h6M10 17h4"/>',home:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',entities:'<path d="M12 3 3 8l9 5 9-5-9-5Z M3 12l9 5 9-5 M3 16l9 5 9-5"/>',contacts:'<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="9" r="2.5"/><path d="M8 17c0-4 8-4 8 0 M2 7h3 M2 12h3 M2 17h3"/>',admin:'<path d="m10 3-1 3-3 1-3 3 2 2-1 4 3 3 3-1 2 3 4-1 1-3 3-1 1-4-3-2 1-3-3-3-3 1Z"/><circle cx="12" cy="12" r="3"/>',search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',bell:'<path d="M5 16h14l-2-3V8a5 5 0 0 0-10 0v5l-2 3Z M10 20h4"/>',plus:'<path d="M12 5v14 M5 12h14"/>',download:'<path d="M12 3v12 m-5-5 5 5 5-5 M4 16v5h16v-5"/>',arrow:'<path d="M4 12h16 m-5-5 5 5-5 5"/>',up:'<path d="m3 16 7-7 4 4 7-9 M15 4h6v6"/>',warning:'<path d="M12 3 2 21h20L12 3Z M12 9v5 M12 17v.2"/>',close:'<path d="m6 6 12 12 M6 18 18 6"/>',side:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M14 4v16"/>',big:'<path d="M4 9V4h5 M20 9V4h-5 M4 15v5h5 M20 15v5h-5"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',link:'<path d="m9 15 6-6 M7 14l-2 2a3 3 0 0 0 4 4l4-4 M11 8l4-4a3 3 0 0 1 4 4l-2 2"/>'};
+const icons = {studio:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M10 13h6M10 17h4"/>',home:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',entities:'<path d="M12 3 3 8l9 5 9-5-9-5Z M3 12l9 5 9-5 M3 16l9 5 9-5"/>',contacts:'<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="9" r="2.5"/><path d="M8 17c0-4 8-4 8 0 M2 7h3 M2 12h3 M2 17h3"/>',admin:'<path d="m10 3-1 3-3 1-3 3 2 2-1 4 3 3 3-1 2 3 4-1 1-3 3-1 1-4-3-2 1-3-3-3-3 1Z"/><circle cx="12" cy="12" r="3"/>',search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',bell:'<path d="M5 16h14l-2-3V8a5 5 0 0 0-10 0v5l-2 3Z M10 20h4"/>',plus:'<path d="M12 5v14 M5 12h14"/>',download:'<path d="M12 3v12 m-5-5 5 5 5-5 M4 16v5h16v-5"/>',arrow:'<path d="M4 12h16 m-5-5 5 5-5 5"/>',up:'<path d="m3 16 7-7 4 4 7-9 M15 4h6v6"/>',warning:'<path d="M12 3 2 21h20L12 3Z M12 9v5 M12 17v.2"/>',close:'<path d="m6 6 12 12 M6 18 18 6"/>',side:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M14 4v16"/>',big:'<path d="M4 9V4h5 M20 9V4h-5 M4 15v5h5 M20 15v5h-5"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m3 18 5-5 4 4 3-3 6 6"/>',link:'<path d="m9 15 6-6 M7 14l-2 2a3 3 0 0 0 4 4l4-4 M11 8l4-4a3 3 0 0 1 4 4l-2 2"/>'};
 const icon = n => `<svg viewBox="0 0 24 24" aria-hidden="true">${icons[n]||icons.entities}</svg>`;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const TYPES = ['회사','브랜드','IP·유명인','기관','미디어·매체','미디어·OTT','판매 채널'];
@@ -826,16 +826,18 @@ const SLOT_ST = {found: ['good', '확보'], uploaded: ['good', '직접 업로드
 function imagesPanel(p) {
   const S = p.data.images.slots, keys = Object.keys(S).sort();
   const n = st => keys.filter(k => S[k].status === st).length;
-  const card = k => { const s = S[k], [cls, label] = SLOT_ST[s.status] || ['', s.status];
-    return `<div class="icard"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-key="${esc(k)}" data-ratio="${esc(s.ratio || '')}" data-label="${esc(s.slide)}페이지 · ${esc(KIND_KO_IMG[s.kind] || s.kind)} · ${esc(whatText(s.what))}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}<br>${esc(s.ratio || '')}</span>`}</div><div class="ibody"><div class="ihead"><b>${esc(s.slide)}페이지</b><span class="pill ${cls}">${label}</span></div><small>${esc(KIND_KO_IMG[s.kind] || s.kind)} · ${esc(whatText(s.what))}</small>${s.source_page ? `<a class="src" href="${esc(s.source_page)}" target="_blank" rel="noopener">${s.via === 'aside' ? 'Aside · ' : ''}${esc(host(s.source_page))}</a>` : ''}${s.note ? `<small class="warn">${esc(s.note)}</small>` : ''}${s.status === 'ai' && s.prompt ? `<details><summary>생성 프롬프트</summary><p class="prompt">${esc(s.prompt)}</p></details>` : ''}<div class="ibtns"><label class="text-btn up">내 이미지로 교체<input type="file" accept="image/png,image/jpeg,image/webp" data-upimg="${esc(k)}" hidden></label>${s.status !== 'ai' ? `<button class="text-btn" data-aside="${esc(k)}">Aside로 다시 검색</button>` : ''}</div></div></div>`; };
   const E = p.data.images.ai_estimate, nW = keys.filter(k => S[k].widen && S[k].status === 'found').length, nAi = n('ai') + nW;
   const aiWhat = [n('ai') ? `AI 이미지 ${n('ai')}장` : '', nW ? `세로 사진 좌우 확장 ${nW}장` : ''].filter(Boolean).join(' + ');
   const ai = nAi ? (E && E.count === nAi ? `<div class="ai-box"><b>${aiWhat} · 예상 약 $${E.usd}</b><small>힉스필드 ${esc((E.model || '').replace('higgsfield-ai/', ''))} · 실패하거나 부적절 판정된 이미지는 청구되지 않습니다</small><div class="drawer-actions"><button class="button primary" id="ai-go" data-usd="${E.usd}">승인 후 생성</button><button class="text-btn" id="ai-est">견적 다시 받기</button></div></div>` : `<div class="ai-box"><b>${aiWhat}</b><small>생성 전에 힉스필드 견적을 먼저 받습니다(비용 없음)</small><div class="drawer-actions"><button class="button" id="ai-est">견적 받기</button></div></div>`) : '';
-  return `<div class="detail-block"><h3>결정 · ${p.stage >= 8 ? '최종 확인' : '이미지 수급·AI 이미지 승인'}</h3><p>공식 이미지·로고·참고 사례는 판테온 봇이 찾아 넣었습니다. 잘못 들어갔거나 비어 있으면 「내 이미지로 교체」로 변경한 뒤 「변경 사항 반영」을 클릭해 주세요.${nAi ? ' AI 컨셉 이미지·목업·질감은 견적 확인 후 승인하면 힉스필드로 생성합니다.' : ''}</p>${ai}
-  <div class="detail-row"><span>확보</span><b>${n('found') + n('uploaded') + n('generated')}개</b></div><div class="detail-row"><span>미확보</span><b>${n('missing')}개</b></div><div class="detail-row"><span>AI 생성 대기</span><b>${n('ai')}개</b></div>
-  <div class="drawer-actions"><button class="button" id="img-rerender">변경 사항 반영</button><button class="button primary" id="img-done">이 버전으로 완료</button></div>
-  <div class="iboard" id="img-board">${keys.filter(k => S[k].status !== 'ai').map(card).join('')}</div>
-  <details class="research"><summary><b>AI 생성 대기 ${n('ai')}개</b> <small>프롬프트 보기</small></summary><div class="iboard">${keys.filter(k => S[k].status === 'ai').map(card).join('')}</div></details></div>`;
+  // 대표님 설계(10-30 김현우): 결정 카드에는 숫자·확인할 곳·버튼만 — 이미지는 「이미지 수정」에서 실제 페이지를 보며 누른다
+  const qa = qaOf(p.data), flags = qa?.flags || [], final = p.stage >= 8 || !nAi;
+  const stat = (label, v, cls, go) => `<button class="pv-stat${cls ? ' ' + cls : ''}" type="button" data-review="${go || 1}"><b>${v}</b><span>${label}</span></button>`;
+  const firstMiss = keys.find(k => S[k].status === 'missing'), firstAi = keys.find(k => S[k].status === 'ai');
+  return `<div class="detail-block pv-decide"><h3>지금 할 일 · ${final ? '최종 확인' : '이미지 수급·AI 이미지 승인'}</h3>
+  <div class="pv-stats">${stat('확보', n('found') + n('uploaded') + n('generated'), 'good')}${stat('미확보', n('missing'), n('missing') ? 'bad' : '', firstMiss && S[firstMiss].slide)}${stat('AI 생성 대기', n('ai'), n('ai') ? 'wait' : '', firstAi && S[firstAi].slide)}${qa ? stat('검수에서 확인할 곳', flags.length, flags.length ? 'bad' : 'good', flags[0]?.slide) : ''}</div>
+  ${ai}${qaBlock(p)}
+  <div class="pv-main-act"><button class="button primary" data-review="${flags[0]?.slide || 1}">${icon('image')} 제안서 화면에서 이미지 확인·수정</button><small>페이지에서 이미지를 클릭하면 교체·위치 조정·다시 생성할 수 있습니다</small></div>
+  <div class="drawer-actions pv-final"><button class="button" id="img-rerender">변경 사항 반영</button><button class="button primary" id="img-done">이 버전으로 완료</button></div></div>`;
 }
 // 이미지 설명에 섞여 온 내부 파일 경로(proposals/…/cap_03.jpg)는 화면에 보이지 않게 (10-30)
 const whatText = t => String(t || '').replace(/\s*\(?(?:proposals|social)\/[^\s)]*\)?/g, '').trim();
@@ -1017,8 +1019,8 @@ async function pageReview(pid, start) {
   let dlg = $('#review');
   if (!dlg) { dlg = document.createElement('dialog'); dlg.id = 'review'; dlg.className = 'review'; document.body.appendChild(dlg); }
   const b = p.data.build;
-  dlg.innerHTML = `<div class="rv-head"><div><h2>페이지별 검토 · v${b.version}</h2><small id="rv-qa"></small></div><div class="rv-nav"><button class="button" id="rv-prev">◀ 이전 페이지</button><b id="rv-n"></b><button class="button" id="rv-next">다음 페이지 ▶</button><button class="button" id="rv-close">닫기</button></div></div>
-  <div class="rv-body"><div class="rv-page"><canvas id="rv-canvas"></canvas><p id="rv-load">제안서를 불러오는 중입니다…</p></div><div class="rv-side" id="rv-side"></div></div>`;
+  dlg.innerHTML = `<div class="rv-head"><div><h2>${p.status === 'waiting' ? '이미지 확인·수정' : '페이지별 보기'} · v${b.version}</h2><small id="rv-qa"></small></div><div class="rv-nav"><button class="button" id="rv-prev">◀ 이전 페이지</button><b id="rv-n"></b><button class="button" id="rv-next">다음 페이지 ▶</button><button class="button" id="rv-close">닫기</button></div></div>
+  <div class="rv-strip" id="rv-strip"></div><div class="rv-body"><div class="rv-page"><div class="rv-canvas-wrap"><canvas id="rv-canvas"></canvas><div class="rv-hot" id="rv-hot"></div></div><p id="rv-load">제안서를 불러오는 중입니다…</p></div><div class="rv-side" id="rv-side"></div></div>`;
   dlg.showModal();
   dlg.addEventListener('close', () => { if (activeDetail === 'p:' + pid) openProposal(pid, true); }, {once: true});
   $('#rv-close').onclick = () => dlg.close();
@@ -1033,15 +1035,22 @@ async function pageReview(pid, start) {
     const d = p.data || {}, S = d.images?.slots || {}, qa = qaOf(d), flags = qa?.flags || [];
     cur = Math.min(Math.max(1, n), N);
     $('#rv-n').textContent = `${cur} / ${N}페이지`; $('#rv-prev').disabled = cur <= 1; $('#rv-next').disabled = cur >= N;
-    const fs = [...new Set(flags.map(f => f.slide))];
-    $('#rv-qa').innerHTML = qa ? (fs.length ? `자동 검수 · 확인할 곳 ${flags.length}곳 ${fs.map(s => `<button class="rv-jump${s === cur ? ' on' : ''}" data-go="${s}">${s}페이지</button>`).join('')}` : '자동 검수 · 특이 사항 없음') : '자동 검수 전입니다';
-    $$('#rv-qa [data-go]').forEach(x => x.onclick = () => show(+x.dataset.go));
+    // 이미지가 몇 페이지 어디에 그려졌는지 — 렌더러가 남긴 위치(boxes)가 있으면 그것, 없으면 원고의 페이지 번호 (10-30)
+    const B = d.build?.boxes || {}, pageOf = k => +(B[k]?.page || S[k].slide);
+    const fs = new Set(flags.map(f => +f.slide)), miss = new Set(Object.keys(S).filter(k => ['missing', 'ai'].includes(S[k].status)).map(pageOf));
+    $('#rv-qa').textContent = qa ? (flags.length ? `자동 검수 · 확인할 곳 ${flags.length}곳 (빨간 페이지)` : '자동 검수 · 특이 사항 없음') : '자동 검수 전입니다';
+    $('#rv-strip').innerHTML = Array.from({length: N}, (_, i) => i + 1).map(n => `<button type="button" class="${n === cur ? 'on ' : ''}${fs.has(n) ? 'flag' : miss.has(n) ? 'miss' : ''}" data-go="${n}" aria-label="${n}페이지">${n}</button>`).join('');
+    $$('#rv-strip [data-go]').forEach(x => x.onclick = () => show(+x.dataset.go));
+    $('#rv-strip .on')?.scrollIntoView({block: 'nearest', inline: 'center'});
     // 페이지 그림은 기다리지 않고 그린다 — 그림이 늦어도 오른쪽 이미지 자리는 바로 보이게
     doc.getPage(cur).then(pg => { const c = $('#rv-canvas'); if (!c) return; const w = c.parentElement.clientWidth - 2;
       const vp = pg.getViewport({scale: w / pg.getViewport({scale: 1}).width * (window.devicePixelRatio || 1)});
       c.width = vp.width; c.height = vp.height; return pg.render({canvasContext: c.getContext('2d'), viewport: vp}).promise; })
       .then(() => { if ($('#rv-load')) $('#rv-load').hidden = true; }).catch(() => {});
-    const fl = flags.filter(f => f.slide === cur), keys = Object.keys(S).filter(k => +S[k].slide === cur).sort();
+    const fl = flags.filter(f => +f.slide === cur), keys = Object.keys(S).filter(k => pageOf(k) === cur).sort();
+    const EW = 12192000, EH = 6858000;            // 960×540pt 페이지 (EMU)
+    $('#rv-hot').innerHTML = keys.filter(k => B[k]?.w && B[k].x !== undefined).map(k => { const b = B[k], bad = fl.some(f => f.key === k);
+      return `<button type="button" class="${bad ? 'flag' : ''}${S[k].path ? '' : ' empty'}" data-hot="${esc(k)}" style="left:${b.x / EW * 100}%;top:${b.y / EH * 100}%;width:${b.w / EW * 100}%;height:${b.h / EH * 100}%" aria-label="${esc(KIND_KO_IMG[S[k].kind] || '')} ${esc(whatText(S[k].what))}"><span>${esc(KIND_KO_IMG[S[k].kind] || '')}</span></button>`; }).join('');
     const card = k => { const s = S[k], [cls, label] = SLOT_ST[s.status] || ['', s.status], bad = fl.filter(f => f.key === k);
       return `<div class="rv-slot${bad.length ? ' flag' : ''}"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-rk="${esc(k)}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}</span>`}</div><div class="rv-info"><div class="ihead"><b>${esc(KIND_KO_IMG[s.kind] || s.kind)}</b><span class="pill ${cls}">${label}</span></div><small>${esc(whatText(s.what))}</small>${bad.map(f => `<small class="warn">${esc(QA_KO[f.type] || '확인')} · ${esc(f.detail)}</small>`).join('')}<div class="ibtns">${s.path ? `<button class="text-btn" data-rv-open="${esc(k)}">크게 보기·수정</button>` : ''}<label class="text-btn up">내 이미지로 교체<input type="file" accept="image/png,image/jpeg,image/webp" data-rv-up="${esc(k)}" hidden></label></div>${makeBox(k, s)}</div></div>`; };
     const canAi = s => AI_KINDS.includes(s.kind) || (!s.path && !['official', 'logo', 'capture'].includes(s.kind));
@@ -1064,6 +1073,11 @@ async function pageReview(pid, start) {
       imgViewer({dataset: {src: el.dataset.src, key: k, ratio: s.ratio || '', label: `${s.slide}페이지 · ${KIND_KO_IMG[s.kind] || s.kind} · ${s.what || ''}`}}); };
     $$('#rv-side [data-rv-open]').forEach(x => x.onclick = () => open(x.dataset.rvOpen));
     $$('#rv-side .ithumb[data-rk]').forEach(x => x.onclick = () => open(x.dataset.rk));
+    const card1 = k => $(`#rv-side [data-rk="${CSS.escape(k)}"]`)?.closest('.rv-slot');
+    $$('#rv-hot [data-hot]').forEach(h => { const k = h.dataset.hot;
+      h.onmouseenter = () => card1(k)?.classList.add('hl'); h.onmouseleave = () => card1(k)?.classList.remove('hl');
+      h.onclick = () => { const c = card1(k); if (S[k].path && c?.querySelector('.ithumb')?.dataset.src) return open(k);
+        c?.scrollIntoView({block: 'center', behavior: 'smooth'}); c?.classList.add('hl'); setTimeout(() => c?.classList.remove('hl'), 1600); }; });
     $$('#rv-side [data-rv-up]').forEach(inp => inp.onchange = async () => { const f = inp.files[0]; if (f && await replaceSlotImage(p, inp.dataset.rvUp, f)) show(cur); });
     $$('#rv-side [data-mk-ai]').forEach(x => x.onclick = async () => { const k = x.dataset.mkAi, pr = $(`[data-mk-prompt="${CSS.escape(k)}"]`).value.trim();
       if (!pr) return toast('생성 프롬프트를 입력해 주세요.');
@@ -1091,7 +1105,8 @@ async function proposalEvent(id, message) { await SB.from('pt_proposal_event').i
 async function openProposal(id, keep) {
   const p = studio.list?.find(x => x.id === id); if (!p) return;
   activeDetail = 'p:' + id;
-  const stages = STAGES.map((s, i) => { const n = i + 1, skip = p.mode === 'single' && n === 3, cls = skip ? 'skip' : n < p.stage || p.status === 'done' ? 'done' : n === p.stage ? 'now' : ''; return `<li class="${cls}"><span>${n}</span>${esc(s)}${GATES[n] && !skip ? ` <small>· 결정 ${esc(GATES[n])}</small>` : ''}${skip ? ' <small>· 단독 제안은 건너뜀</small>' : ''}</li>`; }).join('');
+  // 진행 단계는 맨 위 가로 막대로 (10-30 · 대표님 설계) — 사람이 결정하는 단계는 점으로 표시
+  const stages = STAGES.map((s, i) => { const n = i + 1, skip = p.mode === 'single' && n === 3, cls = skip ? 'skip' : n < p.stage || p.status === 'done' ? 'done' : n === p.stage ? 'now' : ''; return `<li class="${cls}" title="${esc(s)}${GATES[n] && !skip ? ' · 결정: ' + esc(GATES[n]) : ''}${skip ? ' · 단독 제안은 건너뜀' : ''}"><span>${n}</span><b>${esc(s)}</b>${GATES[n] && !skip ? '<i class="gate" aria-label="결정 단계"></i>' : ''}</li>`; }).join('');
   const job = studio.jobs.find(j => j.proposal_id === id);
   const ref = studio.refs?.find(r => r.id === p.ref_id);
   const ent = (eid, name) => eid && byId(eid) ? `<button class="ref" type="button" data-open="${eid}">${esc(name)}</button>` : esc(name || '—');
@@ -1105,10 +1120,18 @@ async function openProposal(id, keep) {
   else if (p.status === 'waiting' && p.stage === 5 && d.concepts) action = conceptsPanel(p);
   else if (p.status === 'waiting' && p.stage >= 7 && d.images) action = imagesPanel(p);
   else if (p.status === 'waiting') action = `<div class="detail-block"><h3>결정 · ${esc(GATES[p.stage] || '확인')}</h3><p>판테온 봇이 준비한 결과를 확인하고 결정해 주세요.</p></div>`;
-  const done = [d.build && `<div class="detail-block"><h3>제안서 초안 v${d.build.version}</h3><div class="detail-row"><span>분량</span><b>${d.build.slides}페이지 · 이미지 ${d.build.images}개</b></div>${d.images ? '' : '<p>이미지가 들어갈 위치는 회색 상자로 비워 두었습니다. 이미지 수급 단계에서 채웁니다.</p>'}<div class="detail-row"><span>강조색</span><b class="acc-row"><i class="swatch" style="background:${esc(d.build.deck?.theme?.accent || '#285541')}"></i>${esc(d.build.deck?.theme?.accent || '')} ${d.accent ? '(직접 선택)' : '(클로드 추천)'}${p.status === 'waiting' ? ` <input type="color" id="acc-new" value="${esc(d.build.deck?.theme?.accent || '#285541')}" aria-label="강조색 선택"> <button class="text-btn" id="acc-apply">이 색으로 적용</button>` : ''}</b></div><div class="drawer-actions">${d.build.pdf ? `<button class="button primary" data-file="${esc(d.build.pdf)}">PDF 보기</button>` : ''}<button class="button" data-file="${esc(d.build.pptx)}" data-dl="1">PPTX 다운로드</button>${d.build.pdf ? '<button class="button" data-review="1">페이지별 검토</button>' : ''}${p.status === 'waiting' && !d.build.deck?.redesigned ? '<button class="button" id="redesign">새 디자인 적용</button>' : ''}</div>${qaBlock(p)}</div>`, d.concept_selected && `<div class="detail-block"><h3>확정한 컨셉</h3>${conceptCard(d.concept_selected)}</div>`, d.research && researchBlock(d.research), d.social && socialBlock(d.social)].filter(Boolean).join('');
+  else if (p.status === 'done' && d.build) action = `<div class="detail-block pv-decide"><h3>완료 · v${d.build.version} · 수정 버전 만들기</h3><p>수신사 피드백을 입력하면 원고를 고쳐 다음 버전을 만듭니다. 새로 필요한 이미지만 다시 수급합니다.</p><textarea id="rev-ins" rows="3" maxlength="1500" placeholder="예: Experience 2개 추가, Business 페이지에 금액 삽입, 심화 제안으로 전환"></textarea><div class="drawer-actions"><button class="button primary" id="rev-go">v${d.build.version + 1} 만들기</button></div></div>`;
+  const done = [d.build && `<div class="detail-block"><h3>제안서 초안 v${d.build.version}</h3><div class="detail-row"><span>분량</span><b>${d.build.slides}페이지 · 이미지 ${d.build.images}개</b></div>${d.images ? '' : '<p>이미지가 들어갈 위치는 회색 상자로 비워 두었습니다. 이미지 수급 단계에서 채웁니다.</p>'}<div class="detail-row"><span>강조색</span><b class="acc-row"><i class="swatch" style="background:${esc(d.build.deck?.theme?.accent || '#285541')}"></i>${esc(d.build.deck?.theme?.accent || '')} ${d.accent ? '(직접 선택)' : '(클로드 추천)'}${p.status === 'waiting' ? ` <input type="color" id="acc-new" value="${esc(d.build.deck?.theme?.accent || '#285541')}" aria-label="강조색 선택"> <button class="text-btn" id="acc-apply">이 색으로 적용</button>` : ''}</b></div><div class="drawer-actions">${d.build.pdf ? `<button class="button primary" data-file="${esc(d.build.pdf)}">PDF 보기</button>` : ''}<button class="button" data-file="${esc(d.build.pptx)}" data-dl="1">PPTX 다운로드</button>${d.build.pdf ? `<button class="button" data-review="1">${p.status === 'waiting' ? '이미지 확인·수정' : '페이지별 보기'}</button>` : ''}${p.status === 'waiting' && !d.build.deck?.redesigned ? '<button class="button" id="redesign">새 디자인 적용</button>' : ''}</div>${p.status === 'waiting' && p.stage >= 7 && d.images ? '' : qaBlock(p)}</div>`].filter(Boolean).join('');
+  // 컨셉·리서치·팬·SNS 는 접어 둔 「자료」로 (10-30) — 결정할 것이 먼저 보이게
+  const fold = (t, sub, body) => `<details class="pv-fold"><summary><b>${t}</b>${sub ? ` <small>${esc(sub)}</small>` : ''}</summary>${body}</details>`;
+  const refs = [d.concept_selected && fold('확정한 컨셉', d.concept_selected.name, conceptCard(d.concept_selected)),
+    d.research && fold('리서치', (d.research.ips || []).map(x => x.name).join(' · '), researchBlock(d.research)),
+    d.social?.ips && fold('팬·SNS', `채널 ${d.social.ips.reduce((a, x) => a + x.channels.length, 0)}개`, socialBlock(d.social))].filter(Boolean).join('');
   showDrawer(`<span class="entity-avatar">${esc(p.ip_a_name.slice(0, 2))}</span><h2>${esc(pTitle(p))}</h2><span class="detail-sub">${p.mode === 'single' ? '단독 제안' : '콜라보 제안'} · ${esc(p.recipient || '수신사 미정')}${propSub(p) ? ' · ' + esc(propSub(p)) : ''}</span>${d.concepts ? `<div class="drawer-actions"><button class="button" id="prop-more">${icon('plus')} 같은 IP로 다른 컨셉 제안서 생성</button></div>` : ''}
-  <div class="detail-block"><h3>기본 정보</h3><div class="detail-row"><span>IP</span><b>${ent(p.ip_a_id, p.ip_a_name)}</b></div>${p.mode === 'collab' ? `<div class="detail-row"><span>파트너 IP</span><b>${p.ip_b_name ? ent(p.ip_b_id, p.ip_b_name) : '판테온 봇 추천 후 선택'}</b></div>` : ''}<div class="detail-row"><span>수신사</span><b>${esc(p.recipient || '—')}</b></div><div class="detail-row"><span>레퍼런스 포맷</span><b>${esc(ref?.title || '—')}</b></div><div class="detail-row"><span>현재 상태</span><b>${pPill(p)}</b></div>${p.note ? `<p>${esc(p.note)}</p>` : ''}</div>
-  ${action}${done}<div class="detail-block"><h3>진행 단계</h3><ol class="stage-list">${stages}</ol></div><div class="detail-block"><h3>활동 기록</h3><div id="proposal-events"><p>불러오는 중입니다…</p></div></div>`, keep);
+  <ol class="pv-steps" aria-label="진행 단계">${stages}</ol>
+  <div class="pv-grid"><div class="pv-col">${action}${done}${refs ? `<div class="detail-block pv-refs"><h3>자료</h3>${refs}</div>` : ''}</div>
+  <div class="pv-col pv-side"><div class="detail-block"><h3>기본 정보</h3><div class="detail-row"><span>IP</span><b>${ent(p.ip_a_id, p.ip_a_name)}</b></div>${p.mode === 'collab' ? `<div class="detail-row"><span>파트너 IP</span><b>${p.ip_b_name ? ent(p.ip_b_id, p.ip_b_name) : '판테온 봇 추천 후 선택'}</b></div>` : ''}<div class="detail-row"><span>수신사</span><b>${esc(p.recipient || '—')}</b></div><div class="detail-row"><span>레퍼런스 포맷</span><b>${esc(ref?.title || '—')}</b></div><div class="detail-row"><span>현재 상태</span><b>${pPill(p)}</b></div>${p.note ? `<p>${esc(p.note)}</p>` : ''}</div>
+  <div class="detail-block"><h3>활동 기록</h3><div id="proposal-events"><p>불러오는 중입니다…</p></div></div></div></div>`, keep);
   const go = async (row, nextJob, msg, okMsg) => {
     const { error } = await SB.from('pt_proposal').update(row).eq('id', p.id);
     if (error) return toast('저장하지 못했습니다: ' + error.message);
@@ -1170,6 +1193,11 @@ async function openProposal(id, keep) {
     go({status: 'working'}, {kind: 'aside', input: {slots: [{key: k, kind: sl.kind, what: sl.what || '', ratio: sl.ratio || '', search: im.search || ''}], ips: [p.ip_a_name, p.ip_b_name].filter(Boolean)}},
        `${sl.slide}페이지 「${sl.what || k}」 이미지를 Aside 로 다시 찾도록 요청했습니다`, 'Aside에 요청했습니다. 이미지 한 장에 몇 분 걸립니다.');
   });
+  $('#rev-go')?.addEventListener('click', ev => {
+    const t = $('#rev-ins').value.trim(); if (!t) { $('#rev-ins').focus(); return toast('수정할 내용을 입력해 주세요.'); }
+    ev.target.disabled = true;
+    go({status: 'working'}, {kind: 'finalize', input: {instruction: t}}, `수정 버전을 요청했습니다 · ${t.slice(0, 120)}`, '수정 버전을 만듭니다. 5분 정도 걸립니다.');
+  });
   $('#img-rerender')?.addEventListener('click', ev => { ev.target.disabled = true; go({status: 'working'}, {kind: 'finalize', input: {}}, '변경 사항 반영을 요청했습니다'); });
   $('#img-done')?.addEventListener('click', ev => {
     ev.target.disabled = true;
@@ -1219,7 +1247,8 @@ async function openProposal(id, keep) {
   if (p.status === 'working') propPoll = setTimeout(() => pollProposal(p.id), 3000);      // 작업 중이면 단계와 상관없이 항상
   const { data } = await SB.from('pt_proposal_event').select('at,actor_name,message').eq('proposal_id', id).order('at', {ascending: false}).limit(50);
   const box = $('#proposal-events'); if (!box || activeDetail !== 'p:' + id) return;
-  box.innerHTML = data?.length ? `<ol class="owner-hist">${data.map(e => `<li><time>${esc(kst(e.at))}</time><span>${esc(e.message)}<br><small>${esc(e.actor_name || '판테온 봇')}</small></span></li>`).join('')}</ol>` : '<p>기록이 없습니다.</p>';
+  const li = e => `<li><time>${esc(kst(e.at))}</time><span>${esc(e.message)}<br><small>${esc(e.actor_name || '판테온 봇')}</small></span></li>`;
+  box.innerHTML = data?.length ? `<ol class="owner-hist">${data.slice(0, 6).map(li).join('')}</ol>${data.length > 6 ? `<details class="pv-more"><summary>이전 기록 ${data.length - 6}개</summary><ol class="owner-hist">${data.slice(6).map(li).join('')}</ol></details>` : ''}` : '<p>기록이 없습니다.</p>';
 }
 
 function studioProjectModal(p) {
