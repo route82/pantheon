@@ -674,7 +674,7 @@ function studioProjects() {
 
 function studioRefs() {
   const rs = studio.refs, st = {uploaded: '분석 대기', analyzing: '분석 중', ready: '분석 완료', failed: '분석 실패'};
-  return `<section class="panel"><div class="panel-head"><div><div class="panel-title">레퍼런스 라이브러리 <small>${rs.length}건</small></div><p class="panel-caption">팀이 작성한 완성 제안서입니다. 새 제안서는 선택한 레퍼런스의 구성과 이미지 배치를 따릅니다.</p></div></div>
+  return `<section class="panel"><div class="panel-head"><div><div class="panel-title">레퍼런스 라이브러리 <small>${rs.length}건</small></div><p class="panel-caption">팀이 작성한 완성 제안서입니다. 새 제안서는 선택한 레퍼런스의 문체와 이미지 쓰는 법을 참고합니다. 페이지 구성은 컨셉 확정 때 「제안서 구성」에서 정합니다.</p></div></div>
   ${rs.length ? `<div class="table-wrap"><table class="ct"><thead><tr><th>제안서</th><th>IP</th><th>수신사</th><th>작성</th><th>분석</th><th>기본 포맷</th><th>파일</th></tr></thead><tbody>${rs.map(r => `<tr${r.status === 'ready' ? ` class="clickable" data-ref-view="${r.id}"` : ''}><td class="wrap-cell">${esc(r.title)}</td><td data-label="IP">${esc(r.ip_names || '—')}</td><td data-label="수신사">${esc(r.recipient || '—')}</td><td data-label="작성">${esc(r.author || '—')}</td><td data-label="분석">${r.status === 'ready' ? `<button class="text-btn" data-ref-view="${r.id}"><span class="pill good">분석 완료</span> 보기</button>` : r.status === 'failed' ? `<span class="pill bad" title="${esc(r.profile?.error || '')}">분석 실패</span> <button class="text-btn" data-ref-retry="${r.id}">다시 분석</button>` : refProg(r)}</td><td data-label="기본 포맷">${r.is_default ? '<span class="pill good">기본</span>' : `<button class="text-btn" data-ref-default="${r.id}">기본으로 지정</button>`}</td><td data-label="파일"><button class="text-btn" data-ref-open="${r.id}">열기 ↗</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty"><p>등록된 레퍼런스가 없습니다.<br>오른쪽 위 「레퍼런스 등록」에서 완성 제안서 PDF를 업로드해 주세요.</p></div>'}</section>`;
 }
 
@@ -833,7 +833,23 @@ function partnersPanel(p) {
   return `<div class="detail-block"><h3>결정 · 파트너 IP 선택</h3><p>카드 하나를 선택하면 판테온 봇이 두 IP 리서치를 시작합니다. 점수는 1~5점이며, 리스크 점수가 높을수록 위험합니다.</p>${P.ip_a_card?.summary ? `<p class="muted-box">${esc(p.ip_a_name)} · ${esc(P.ip_a_card.summary)}</p>` : ''}${cats}<div class="pcat"><div class="pcat-head"><div><b>직접 입력</b><small>추천 IP 중 적합한 IP가 없으면 원하는 IP를 직접 입력해 진행합니다.</small></div></div><datalist id="pb-ents">${entities().filter(e => !e.hidden).map(e => `<option value="${esc(e.name)}">`).join('')}</datalist><div class="ask-row"><input id="pb-own" list="pb-ents" maxlength="80" placeholder="예: 산리오" aria-label="파트너 IP"><button class="button primary" id="pb-own-go" type="button">이 IP로 진행</button></div><small class="atnote" id="pb-own-note"></small></div><div class="drawer-actions"><button class="button" id="recategorize">카테고리 변경 후 재추천</button></div></div>`;
 }
 const conceptCard = (c, i) => `<div class="pcard"><div class="pcard-head"><b>${esc(c.name)}</b></div>${c.key_copy ? `<p class="key-copy">“${esc(c.key_copy)}”</p>` : ''}<p>${esc(c.summary || '')}</p>${c.world ? `<details><summary>세계관</summary><p>${esc(c.world)}</p></details>` : ''}${(c.axes || []).length ? `<p class="sub-label">연결 포인트</p><ul class="axes">${c.axes.map(a => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}${(c.formats || []).length ? `<p class="sub-label">실행 포맷</p><ul class="axes">${c.formats.map(f => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}${c.why ? `<small class="why">${esc(c.why)}</small>` : ''}${i !== undefined ? `<div class="pcard-foot"><span></span><button class="button primary small" data-concept="${i}">이 컨셉으로 확정</button></div>` : ''}</div>`;
-const conceptsPanel = p => `<div class="detail-block"><h3>결정 · 컨셉 확정</h3><p>하나를 확정하면 레퍼런스 포맷에 맞춰 제안서를 생성합니다.</p>${p.data.concepts.candidates.map((c, i) => conceptCard(c, i)).join('')}</div>`;
+const DECK_PARTS = [['space', '공간·체험'], ['product', '상품'], ['content', '콘텐츠']];
+// 제안서 구성 — 실행 파트·분량·참고할 레퍼런스(여럿 조합)를 골라 원고를 만든다 (10-30 원태 이사님 「한 템플릿만 따라간다 · 선택해서 조합」)
+function deckStyleBox(p) {
+  const st = p.data.deck_style || {}, parts = st.parts || DECK_PARTS.map(x => x[0]), refs = (studio.refs || []).filter(r => r.status === 'ready');
+  const chosen = st.refs || (p.ref_id ? [p.ref_id] : refs.filter(r => r.is_default).map(r => r.id));
+  return `<details class="pv-fold" open><summary><b>제안서 구성</b> <small>확정 전에 선택</small></summary>
+    <div class="ds-row"><span>실행 파트</span><div>${DECK_PARTS.map(([k, n]) => `<label class="chk"><input type="checkbox" data-ds-part="${k}"${parts.includes(k) ? ' checked' : ''}> ${n}</label>`).join('')}</div></div>
+    <div class="ds-row"><span>분량</span><div>${[['full', '전체 30~45페이지'], ['short', '요약 15~20페이지']].map(([k, n]) => `<label class="chk"><input type="radio" name="ds-len" value="${k}"${(st.length || 'full') === k ? ' checked' : ''}> ${n}</label>`).join('')}</div></div>
+    ${refs.length ? `<div class="ds-row"><span>참고 레퍼런스</span><div>${refs.map(r => `<label class="chk"><input type="checkbox" data-ds-ref="${esc(r.id)}"${chosen.includes(r.id) ? ' checked' : ''}> ${esc(r.title)}</label>`).join('')}<small class="muted">여러 개를 선택하면 문체·이미지 쓰는 법을 섞어 씁니다.</small></div></div>
+    <div class="ds-row"><span>레퍼런스 반영</span><div>${[['tone', '문체·디자인만 참고(구성은 위 선택대로)'], ['follow', '구성까지 그대로 따르기']].map(([k, n]) => `<label class="chk"><input type="radio" name="ds-ref" value="${k}"${(st.ref_mode || 'tone') === k ? ' checked' : ''}> ${n}</label>`).join('')}</div></div>` : ''}
+    <div class="ds-row"><span>추가 요청</span><div><input id="ds-note" maxlength="300" value="${esc(st.note || '')}" placeholder="예: 굿즈 비중을 크게, 팝업은 한 곳만"></div></div>
+  </details>`;
+}
+const readDeckStyle = () => ({parts: $$('[data-ds-part]').filter(x => x.checked).map(x => x.dataset.dsPart), length: $('input[name="ds-len"]:checked')?.value || 'full',
+  refs: $$('[data-ds-ref]').filter(x => x.checked).map(x => x.dataset.dsRef), ref_mode: $('input[name="ds-ref"]:checked')?.value || 'tone', note: ($('#ds-note')?.value || '').trim()});
+const conceptsPanel = p => `<div class="detail-block"><h3>결정 · 컨셉 확정</h3><p>하나를 확정하면 아래 구성으로 제안서를 생성합니다.</p>${deckStyleBox(p)}${p.data.concepts.candidates.map((c, i) => conceptCard(c, i)).join('')}
+  <details class="pv-fold"><summary><b>컨셉 수정 요청</b> <small>마음에 드는 후보가 없을 때</small></summary><textarea id="cc-ins" rows="3" maxlength="1500" placeholder="예: 2번 컨셉을 상품 중심으로, 세계관보다 팬 참여형으로 다시"></textarea><div class="drawer-actions"><button class="button" id="cc-go">이 요청으로 컨셉 다시 받기</button></div></details></div>`;
 // 팬·SNS 조사 — Aside 가 인스타그램·틱톡·X·유튜브·팬 커뮤니티에서 읽은 것 (10-28)
 const PLAT_KO = {instagram: '인스타그램', tiktok: '틱톡', x: 'X', youtube: '유튜브', naver: '네이버', community: '커뮤니티'};
 function socialBlock(S) {
@@ -1413,7 +1429,7 @@ async function openProposal(id, keep) {
   else if (p.status === 'waiting' && p.stage >= 7 && d.images) action = imagesPanel(p);
   else if (p.status === 'waiting') action = `<div class="detail-block"><h3>결정 · ${esc(GATES[p.stage] || '확인')}</h3><p>판테온 봇이 준비한 결과를 확인하고 결정해 주세요.</p></div>`;
   else if (p.status === 'done' && d.build) action = `<div class="detail-block pv-decide"><h3>완료 · v${d.build.version} · 수정 버전 만들기</h3><p>수신사 피드백을 입력하면 원고를 고쳐 다음 버전을 만듭니다. 새로 필요한 이미지만 다시 수급합니다.</p><textarea id="rev-ins" rows="3" maxlength="1500" placeholder="예: Experience 2개 추가, Business 페이지에 금액 삽입, 심화 제안으로 전환"></textarea><div class="drawer-actions"><button class="button primary" id="rev-go">v${d.build.version + 1} 만들기</button></div></div>`;
-  const done = [d.build && `<div class="detail-block"><h3>제안서 초안 v${d.build.version}</h3>${Object.keys(d.build.patches || {}).length ? `<p class="muted-box">수정한 페이지 ${Object.keys(d.build.patches).map(Number).sort((a, b) => a - b).join('·')}은 화면에 바로 반영돼 있습니다. PDF·PPTX를 받거나 완료할 때 전체 파일에 한 번 반영합니다.</p>` : ''}<div class="detail-row"><span>분량</span><b>${d.build.slides}페이지 · 이미지 ${d.build.images}개</b></div>${d.images ? '' : '<p>이미지가 들어갈 위치는 회색 상자로 비워 두었습니다. 이미지 수급 단계에서 채웁니다.</p>'}<div class="detail-row"><span>강조색</span><b class="acc-row"><i class="swatch" style="background:${esc(d.build.deck?.theme?.accent || '#285541')}"></i>${esc(d.build.deck?.theme?.accent || '')} ${d.accent ? '(직접 선택)' : '(클로드 추천)'}${p.status === 'waiting' ? ` <input type="color" id="acc-new" value="${esc(d.build.deck?.theme?.accent || '#285541')}" aria-label="강조색 선택"> <button class="text-btn" id="acc-apply">이 색으로 적용</button>` : ''}</b></div><div class="drawer-actions">${d.build.pdf ? `<button class="button primary" data-file="${esc(d.build.pdf)}">PDF 보기</button>` : ''}<button class="button" data-file="${esc(d.build.pptx)}" data-dl="1">PPTX 다운로드</button>${d.build.pdf ? `<button class="button" data-review="1">${p.status === 'waiting' ? '이미지 확인·수정' : '페이지별 보기'}</button>` : ''}${p.status === 'waiting' && !d.build.deck?.redesigned ? '<button class="button" id="redesign">새 디자인 적용</button>' : ''}</div>${p.status === 'waiting' && p.stage >= 7 && d.images ? '' : qaBlock(p)}</div>`].filter(Boolean).join('');
+  const done = [d.build && `<div class="detail-block"><h3>제안서 초안 v${d.build.version}</h3>${Object.keys(d.build.patches || {}).length ? `<p class="muted-box">수정한 페이지 ${Object.keys(d.build.patches).map(Number).sort((a, b) => a - b).join('·')}은 화면에 바로 반영돼 있습니다. PDF·PPTX를 받거나 완료할 때 전체 파일에 한 번 반영합니다.</p>` : ''}<div class="detail-row"><span>분량</span><b>${d.build.slides}페이지 · 이미지 ${d.build.images}개</b></div>${d.images ? '' : '<p>이미지가 들어갈 위치는 회색 상자로 비워 두었습니다. 이미지 수급 단계에서 채웁니다.</p>'}<div class="detail-row"><span>강조색</span><b class="acc-row"><i class="swatch" style="background:${esc(d.build.deck?.theme?.accent || '#285541')}"></i>${esc(d.build.deck?.theme?.accent || '')} ${d.accent ? '(직접 선택)' : '(클로드 추천)'}${p.status === 'waiting' ? ` <input type="color" id="acc-new" value="${esc(d.build.deck?.theme?.accent || '#285541')}" aria-label="강조색 선택"> <button class="text-btn" id="acc-apply">이 색으로 적용</button>` : ''}</b></div><div class="drawer-actions">${d.build.pdf ? `<button class="button primary" data-file="${esc(d.build.pdf)}">PDF 보기</button>` : ''}<button class="button" data-file="${esc(d.build.pptx)}" data-dl="1">PPTX 다운로드</button>${d.build.pdf ? `<button class="button" data-review="1">${p.status === 'waiting' ? '이미지 확인·수정' : '페이지별 보기'}</button>` : ''}${p.status === 'waiting' && !d.build.deck?.redesigned ? '<button class="button" id="redesign">새 디자인 적용</button>' : ''}</div>${p.status === 'waiting' ? `<details class="pv-fold"><summary><b>원고 수정 요청</b> <small>문장·페이지 구성·순서를 고칠 때</small></summary><textarea id="mid-ins" rows="3" maxlength="1500" placeholder="예: 앞쪽 팬 반응 페이지를 빼고 콜라보 명분을 더 강하게, 상품 페이지 2개 추가"></textarea><div class="drawer-actions"><button class="button" id="mid-go">v${d.build.version + 1} 만들기</button></div></details>` : ''}${p.status === 'waiting' && p.stage >= 7 && d.images ? '' : qaBlock(p)}</div>`].filter(Boolean).join('');
   // 컨셉·리서치·팬·SNS 는 접어 둔 「자료」로 (10-30) — 결정할 것이 먼저 보이게
   const fold = (t, sub, body) => `<details class="pv-fold"><summary><b>${t}</b>${sub ? ` <small>${esc(sub)}</small>` : ''}</summary>${body}</details>`;
   const refs = [d.concept_selected && fold('확정한 컨셉', d.concept_selected.name, conceptCard(d.concept_selected)),
@@ -1495,7 +1511,18 @@ async function openProposal(id, keep) {
   $('#rev-go')?.addEventListener('click', ev => {
     const t = $('#rev-ins').value.trim(); if (!t) { $('#rev-ins').focus(); return toast('수정할 내용을 입력해 주세요.'); }
     ev.target.disabled = true;
-    go({status: 'working'}, {kind: 'finalize', input: {instruction: t}}, `수정 버전을 요청했습니다 · ${t.slice(0, 120)}`, '수정 버전을 만듭니다. 진행률은 화면에서 볼 수 있습니다.');
+    const log = [...(d.revise_log || []), {at: new Date().toISOString(), stage: 'draft', instruction: t, version: d.build?.version, by: myName || ''}];
+    go({status: 'working', data: {...d, revise_log: log}}, {kind: 'finalize', input: {instruction: t}}, `수정 버전을 요청했습니다 · ${t.slice(0, 120)}`, '수정 버전을 만듭니다. 진행률은 화면에서 볼 수 있습니다.');
+  });
+  // 중간 과정에서도 원고 수정 요청 (10-30 대표님 「완성 혹은 중간 과정에 프롬프트로 넣으면 변경」)
+  $('#mid-go')?.addEventListener('click', async ev => {
+    const t = $('#mid-ins').value.trim(); if (!t) { $('#mid-ins').focus(); return toast('수정할 내용을 입력해 주세요.'); }
+    if (!(await confirmBox({title: `원고를 고쳐 v${d.build.version + 1}을 만들까요?`,
+        body: '요청한 부분만 고치고 나머지 페이지와 이미지는 그대로 둡니다. 새로 필요한 이미지 위치만 다시 수급합니다. 요청 내용은 다음 제안서 원고에도 반영되도록 쌓입니다.', ok: `v${d.build.version + 1} 만들기`}))) return;
+    ev.target.disabled = true;
+    const log = [...(d.revise_log || []), {at: new Date().toISOString(), stage: 'draft', instruction: t, version: d.build?.version, by: myName || ''}];
+    $('#mid-ins').value = '';
+    go({status: 'working', data: {...d, revise_log: log}}, {kind: 'finalize', input: {instruction: t}}, `원고 수정을 요청했습니다 · ${t.slice(0, 120)}`, '원고를 고쳐 다음 버전을 만듭니다. 진행률은 화면에서 볼 수 있습니다.');
   });
   $('#img-rerender')?.addEventListener('click', async ev => {
     if (!(await confirmBox({title: '변경 사항을 제안서 전체에 반영할까요?', body: '교체한 이미지와 위치 조정을 넣어 제안서 전체를 다시 그리고, 자동 검수도 처음부터 다시 합니다. 그동안은 수정할 수 없습니다.', ok: '전체에 반영'}))) return;
@@ -1547,7 +1574,17 @@ async function openProposal(id, keep) {
   $$('#drawer [data-concept]').forEach(b => b.onclick = () => {
     const c = d.concepts.candidates[+b.dataset.concept];
     $$('#drawer [data-concept]').forEach(x => x.disabled = true);
-    go({stage: 6, status: 'working', data: {...d, concept_selected: c}}, {kind: 'build', input: {}}, `컨셉 「${c.name}」을(를) 확정했습니다 → 제안서 생성`, '컨셉을 확정했습니다.');
+    const ds = readDeckStyle();
+    if (!ds.parts.length) { $$('#drawer [data-concept]').forEach(x => x.disabled = false); return toast('실행 파트를 하나 이상 선택해 주세요.'); }
+    const pn = ds.parts.map(k => DECK_PARTS.find(x => x[0] === k)[1]).join('·');
+    go({stage: 6, status: 'working', data: {...d, concept_selected: c, deck_style: ds}}, {kind: 'build', input: {}}, `컨셉 「${c.name}」을(를) 확정했습니다 → 제안서 생성 (${pn} · ${ds.length === 'short' ? '요약' : '전체'})`, '컨셉을 확정했습니다.');
+  });
+  $('#cc-go')?.addEventListener('click', async ev => {
+    const t = $('#cc-ins').value.trim(); if (!t) { $('#cc-ins').focus(); return toast('수정 요청을 입력해 주세요.'); }
+    if (!(await confirmBox({title: '이 요청으로 컨셉 후보를 다시 받을까요?', body: '지금 후보 대신 요청을 반영한 새 후보로 바뀝니다. 요청 내용은 다음 제안서 컨셉에도 반영되도록 쌓입니다.', ok: '컨셉 다시 받기'}))) return;
+    ev.target.disabled = true;
+    const log = [...(d.revise_log || []), {at: new Date().toISOString(), stage: 'concept', instruction: t, by: myName || ''}];
+    go({status: 'working', data: {...d, deck_style: readDeckStyle(), revise_log: log}}, {kind: 'concepts', input: {instruction: t}}, `컨셉 수정을 요청했습니다 · ${t.slice(0, 120)}`, '컨셉을 다시 설계합니다. 진행률은 화면에서 볼 수 있습니다.');
   });
   clearTimeout(propPoll);
   if (p.status === 'working') propPoll = setTimeout(() => pollProposal(p.id), 3000);      // 작업 중이면 단계와 상관없이 항상
