@@ -308,7 +308,13 @@ footer{display:none}
 .rv-hot button.empty{border:2px dashed #e0a77c}
 .rv-hot button.bg{border-width:3px}.rv-hot button.bg:hover{background:transparent}.rv-hot button.bg span{left:auto;right:6px;top:auto;bottom:6px}
 .rv-slot.hl{border-color:#3fbf7f;box-shadow:0 0 0 3px #3fbf7f33}
-.rv-slot .ithumb{background-color:#9aa39d}.rv-info .text-btn.go{display:inline-block;margin:4px 6px 0 0;font-size:12px;color:#285541;text-decoration:underline}.rv-info .ibtns .pill{align-self:center}.rv-info .text-btn.ok{font-weight:600;color:#285541;border:1px solid #9fc1ab;border-radius:6px;padding:4px 10px;background:#edf4ef}
+.rv-slot .ithumb{background-color:#9aa39d}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{display:inline-block;width:18px;height:18px;border-radius:50%;border:2px solid #cfe0d4;border-top-color:#285541;animation:spin .8s linear infinite;vertical-align:-4px;flex:none}
+.rv-load{display:flex;align-items:center;gap:10px}.rv-load b{color:#285541}
+.rv-live{border:1px solid #cfe0d4;background:#f4f9f5;border-radius:8px;padding:8px 12px;margin-bottom:8px}.rv-live>b{font-size:12px;color:#285541}
+.rv-busy{margin-top:6px}.qa-line .job-prog,.qa-line .job-wait{margin-top:4px}
+@media (prefers-reduced-motion:reduce){.spin{animation-duration:2.4s}}.rv-info .text-btn.go{display:inline-block;margin:4px 6px 0 0;font-size:12px;color:#285541;text-decoration:underline}.rv-info .ibtns .pill{align-self:center}.rv-info .text-btn.ok{font-weight:600;color:#285541;border:1px solid #9fc1ab;border-radius:6px;padding:4px 10px;background:#edf4ef}
 .rv-side{overflow-x:hidden}.rv-slot,.rv-info{min-width:0}.rv-make .button{white-space:normal;max-width:100%;height:auto}.rv-make textarea,.rv-make input{width:100%;min-width:0}
 /* ── 제안서 스튜디오 폰 (10-30 김현우 「급할 땐 이동하면서 해야 할 수도」) — 누를 곳 40px 안팎 · 글자 12px 이상 · 입력칸 16px(아이폰 확대 방지) */
 @media(max-width:600px){
