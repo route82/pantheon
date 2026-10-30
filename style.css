@@ -310,6 +310,7 @@ footer{display:none}
 .rv-slot.hl{border-color:#3fbf7f;box-shadow:0 0 0 3px #3fbf7f33}
 .rv-slot .ithumb{background-color:#9aa39d}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes indet{0%{left:-35%}100%{left:100%}}.bar.indet{position:relative;overflow:hidden}.bar.indet i{position:absolute;top:0;bottom:0;width:35%!important;animation:indet 1.3s ease-in-out infinite}@media (prefers-reduced-motion:reduce){.bar.indet i{animation-duration:3s}}
 .spin{display:inline-block;width:18px;height:18px;border-radius:50%;border:2px solid #cfe0d4;border-top-color:#285541;animation:spin .8s linear infinite;vertical-align:-4px;flex:none}
 .rv-load{display:flex;align-items:center;gap:10px}.rv-load b{color:#285541}
 .rv-live{border:1px solid #cfe0d4;background:#f4f9f5;border-radius:8px;padding:8px 12px;margin-bottom:8px}.rv-live>b{font-size:12px;color:#285541}

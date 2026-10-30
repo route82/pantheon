@@ -743,8 +743,11 @@ const SCORE_KO = {fandom: '팬덤', world: '세계관', asset: '자산 결합', 
 const host = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return '출처'; } };
 const srcLinks = urls => (urls || []).map(u => `<a class="src" href="${esc(u)}" target="_blank" rel="noopener">${esc(host(u))}</a>`).join('');
 // 단계 작업 진행률 — 판테온 봇이 job.result 에 3초마다 적는 값을 막대로 (레퍼런스 분석과 같은 모양)
+const sinceText = t => { const x = Math.max(0, Math.round((Date.now() - Date.parse(t)) / 1000)); return x >= 60 ? `${Math.floor(x / 60)}분 ${String(x % 60).padStart(2, '0')}초 경과` : `${x}초 경과`; };
 function jobProg(j) {
   const g = j?.result;
+  // 진행률을 남기지 않는 작업(자동 검수·Aside 등)도 돌고 있으면 움직이는 막대 + 경과 시간 (10-30)
+  if (j && j.status === 'work' && !g) return `<div class="ref-prog wide job-prog run" data-since="${esc(j.claimed_at || j.at)}"><span class="row"><span class="bar indet" role="progressbar" aria-label="진행 중"><i></i></span></span><small>${esc(jobName(j) || '작업')} 진행 중</small><small class="since">${sinceText(j.claimed_at || j.at)}</small></div>`;
   if (!j || j.status === 'wait' || !g) return `<p class="job-wait">${j?.kind === 'aside' ? 'Aside 작업 대기 중' : '판테온 봇 작업 대기 중'}<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></p>`;
   const left = Math.max(0, g.eta - (Date.now() - Date.parse(g.at)) / 1000);
   return `<div class="ref-prog wide job-prog" data-eta="${g.eta}" data-at="${esc(g.at)}"><span class="row"><span class="bar" role="progressbar" aria-valuenow="${g.progress}" aria-valuemin="0" aria-valuemax="100"><i style="width:${g.progress}%"></i></span><b>${g.progress}%</b></span><small>${esc(g.step || '진행 중')}</small><small class="eta">${leftText(left)}</small></div>`;
@@ -786,6 +789,7 @@ async function checkVersion() {
 }
 setInterval(checkVersion, 300000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkVersion(); });
+setInterval(() => $$('.job-prog.run').forEach(el => { const t = el.querySelector('.since'); if (t) t.textContent = sinceText(el.dataset.since); }), 1000);
 setInterval(() => $$('.job-prog').forEach(el => { const t = el.querySelector('.eta'); if (t) t.textContent = leftText(Math.max(0, +el.dataset.eta - (Date.now() - Date.parse(el.dataset.at)) / 1000)); }), 1000);
 function partnersPanel(p) {
   const P = p.data.partners;
