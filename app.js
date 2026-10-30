@@ -1073,9 +1073,14 @@ const refOf = (d, key) => { const S = d.images?.slots || {};
     const main = ims.find(i => (i.what || '').includes('메인')) || (sl.layout === 'product' ? ims[0] : null);
     if (main && main.key !== key && S[main.key]?.path) return main.key; }
   return ''; };
+// 붙여 만드는 공식 로고·아티스트 사진 (10-30 굿즈 목업에 IP 로고) — 봇 hf.ref_paths 와 같은 규칙
+const logoRefs = (d, key) => { const S = d.images?.slots || {}, s = S[key] || {};
+  const r = (s.refs || []).filter(k => S[k]?.path).map(k => S[k].what || k);
+  if (r.length || s.kind !== 'mockup' || refOf(d, key)) return r;
+  return Object.values(S).filter(v => v.kind === 'logo' && v.path && !v.ref_only && !/ALMIGHTY|올마이티/i.test(v.what || '')).slice(0, 2).map(v => v.what || '로고'); };
 async function quickMake(p, key, mode, prompt, why) {
   const fresh = studio.list?.find(x => x.id === p.id)?.data || p.data, cur = fresh.images.slots[key];
-  const ref = mode === 'ai' && refOf(fresh, key), usd = mode === 'ai' && !ref ? 0.02 : 0.1;
+  const ref = mode === 'ai' && (refOf(fresh, key) || logoRefs(fresh, key).length), usd = mode === 'ai' && !ref ? 0.02 : 0.1;
   const cost = mode === 'ai' && !ref ? '$0.01' : '$0.08';
   const what = mode === 'upscale' ? '이미지를 고해상도로 보정합니다. 사람 얼굴이 아주 조금 달라질 수 있습니다.'
              : mode === 'widen' ? '이미지 바깥을 확장해 잘리지 않고 전체가 보이게 합니다.'
@@ -1244,7 +1249,7 @@ async function pageReview(pid, start) {
       // 자동 검수가 고친 프롬프트·고칠 점이 있으면 미리 채운다 (10-30 김현우 「개선할 점에 자동으로 개선 프롬프트」)
       const fx = fl.find(f => f.key === k && f.prompt_fix);
       return `<div class="rv-make">${ai ? `${fx ? '<small class="rv-fix">자동 검수가 고친 프롬프트입니다. 확인 후 다시 생성하세요.</small>' : ''}<textarea data-mk-prompt="${esc(k)}" rows="${fx ? 5 : 3}" placeholder="생성 프롬프트(영문) — 피사체·장면·분위기">${esc(fx ? fx.prompt_fix : s.prompt || '')}</textarea>
-        <input data-mk-why="${esc(k)}" maxlength="200" placeholder="개선할 점(재생성 시 반영)" value="${esc(fx ? (fx.why || fx.detail) : '')}">${refOf(d, k) ? `<small class="rv-fix">메인 이미지(「${esc(whatText(S[refOf(d, k)]?.what).slice(0, 20))}」)를 참고해 같은 모델로 만듭니다</small>` : ''}<button class="button primary small" data-mk-ai="${esc(k)}">${s.status === 'generated' ? 'AI로 다시 생성' : 'AI로 생성'} · 약 $${refOf(d, k) ? '0.08' : '0.01'}</button>` : ''}
+        <input data-mk-why="${esc(k)}" maxlength="200" placeholder="개선할 점(재생성 시 반영)" value="${esc(fx ? (fx.why || fx.detail) : '')}">${refOf(d, k) ? `<small class="rv-fix">메인 이미지(「${esc(whatText(S[refOf(d, k)]?.what).slice(0, 20))}」)를 참고해 같은 모델로 만듭니다</small>` : ''}${logoRefs(d, k).length ? `<small class="rv-fix">공식 자료를 붙여 만듭니다: ${esc(logoRefs(d, k).join(' · '))}</small>` : ''}<button class="button primary small" data-mk-ai="${esc(k)}">${s.status === 'generated' ? 'AI로 다시 생성' : 'AI로 생성'} · 약 $${refOf(d, k) || logoRefs(d, k).length ? '0.08' : '0.01'}</button>` : ''}
         ${s.path && !['logo', 'texture'].includes(s.kind) ? `<button class="button small" data-mk-fit="${esc(k)}">힉스필드로 상자에 맞춘 이미지 만들기 · 약 $0.08</button>` : ''}
         ${spots(k).length === 1 && +spots(k)[0].page === cur && !(spots(k)[0].w * spots(k)[0].h / (12192000 * 6858000) > 0.8) ? `<button class="button small" data-rv-size="${esc(k)}">상자 크기 조절</button>` : ''}
         ${['official', 'logo', 'reference', 'capture'].includes(s.kind) ? `<button class="button small" data-mk-other="${esc(k)}">Aside로 다른 이미지 찾기</button>` : ''}
