@@ -265,3 +265,55 @@ dialog .modal-actions .button{flex:1;padding:12px}
 footer{display:none}
 .quality-grid{grid-template-columns:1fr;gap:10px}
 }
+/* ── 제안서 스튜디오 폰 (10-30 김현우 「급할 땐 이동하면서 해야 할 수도」) — 누를 곳 40px 안팎 · 글자 12px 이상 · 입력칸 16px(아이폰 확대 방지) */
+@media(max-width:600px){
+.drawer-header span{font-size:11px}
+#close-drawer{min-width:44px;min-height:44px}
+.drawer.big .detail-sub{font-size:12.5px}
+.drawer.big a.src,.drawer.big li time{font-size:12px}
+.drawer.big a.src{display:inline-block;padding:7px 0}
+.drawer.big .ihead b,.drawer.big .ihead .pill{font-size:13px}
+.drawer.big .ibtns{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.drawer.big .ibtns .text-btn{font-size:13px;min-height:40px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;color:#285541;cursor:pointer}
+.drawer.big .text-btn{font-size:13px;min-height:36px}
+.drawer.big .button{min-height:44px;font-size:13px}
+.drawer.big .drawer-actions .button{flex:1 1 auto}
+.drawer.big input,.drawer.big select,.drawer.big textarea,dialog.review input,dialog.review textarea,dialog.wide input,dialog.wide textarea,.regen input,.regen textarea,.rv-make input,.rv-make textarea{font-size:16px!important}
+.drawer.big input[type=color],dialog input[type=color]{width:52px;height:42px;padding:2px}
+.drawer.big .acc-row .text-btn{font-size:13px}
+.stage-list li{font-size:13px}.stage-list li small{font-size:12px}.stage-list li span{width:26px;height:26px;font-size:12px}
+.qa-line{font-size:13px}.qa-box>small{font-size:12px}.qa-flag{padding:11px 0;font-size:13px}
+dialog.review,dialog.wide{padding:16px 12px calc(16px + env(safe-area-inset-bottom))}
+.rv-head small,.rv-info small,.imgv small{font-size:12px}
+.rv-nav .button{min-width:44px;min-height:42px}
+.rv-slot{grid-template-columns:92px minmax(0,1fr)}
+.rv-jump{font-size:12px;padding:6px 10px}
+.rv-make .button{align-self:stretch}
+.imgv-tools .seg-pick{gap:8px}
+.imgv-tools label{font-size:13px;min-height:42px;padding:0 4px}
+.imgv-zoom input{height:34px}
+.imgv img{max-height:46vh}
+dialog.wide .modal-actions{flex-wrap:wrap}
+.ref-prog small,.row-prog{font-size:12px}
+table.ct .text-btn{font-size:13px;min-height:36px}
+table.ct .cell-sub{display:block;font-size:12px;font-weight:400;color:#8c9987;margin-top:3px}
+table.ct td:first-child{display:block}
+table.ct td:first-child .prop-no{display:table;margin:6px 0 0;white-space:normal;line-height:1.5}
+table.ct td{flex-wrap:wrap}
+table.ct td>div[data-prow]{flex:1 1 100%;padding-left:62px}
+.prop-no{font-size:11px}
+.stat-bottom{font-size:11px}
+.accent-pick label{white-space:nowrap;font-size:14px!important;min-height:40px}
+.accent-pick input[type=radio]{width:auto!important;display:inline!important;margin:0!important}
+dialog small,dialog .atnote{font-size:12px}.flabel{font-size:12px}
+dialog .modal-actions .button{font-size:14px}
+.pcard .scores span,.pcard .scores b{font-size:12px}
+.drawer.big .pill{font-size:12px}
+dialog.review{width:100%;max-width:100%;height:100dvh;max-height:100dvh;margin:0;border-radius:0;padding-top:max(14px,env(safe-area-inset-top))}
+.rv-head{gap:10px;margin-bottom:10px}.rv-head h2{font-size:18px}
+.rv-nav{width:100%;display:grid;grid-template-columns:1fr auto 1fr auto;gap:6px}
+.rv-nav .button{font-size:13px;padding:10px 8px;min-width:0}.rv-nav b{min-width:0;font-size:13px}
+.rv-page{touch-action:pan-y}
+dialog.review .button,dialog.wide .button{font-size:13px;min-height:42px}
+dialog.wide .text-btn,dialog.review .text-btn{font-size:13px;min-height:40px}
+}
