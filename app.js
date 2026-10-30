@@ -959,6 +959,7 @@ document.addEventListener('keydown', ev => { const el = ev.target.closest?.('#dr
 // ── 페이지별 검토 · 자동 검수 표시 (10-29 김현우) — 실제 그려진 페이지(PDF)를 한 페이지씩 보며 그 페이지 이미지 자리를 바로 고친다
 const QA_KO = {wrong: '다른 대상', brand_text: '타사 글자·로고 노출', cropped: '잘림', empty: '비어 있음', quality: '품질', mismatch: '페이지 내용과 불일치', duplicate: '같은 이미지 반복'};
 let PDFJS = null;
+const PATCH_DOCS = {};         // 확정해 갈아 끼운 페이지 PDF (한 장짜리)
 async function loadPdfjs() {
   if (PDFJS) return PDFJS;
   await new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
@@ -1049,11 +1050,15 @@ async function candApply(p, key, ok) {
   const { cand, before, ...base } = cur;
   const slot = ok ? {...base, ...cand, preview: undefined, prev_paths: [...(base.prev_paths || []), base.path].filter(Boolean), pos: {}, note: ''} : base;
   delete slot.preview;
-  const { error } = await SB.from('pt_proposal').update({data: {...d, images: {...d.images, slots: {...d.images.slots, [key]: slot}}}, ...(ok ? {status: 'working'} : {})}).eq('id', p.id);
+  // 확정하면 그 페이지만 미리보기로 그려 둔 것으로 갈아 끼우고 그 페이지만 검수 — 전체는 PDF·PPTX 를 받거나 완료할 때 한 번 (10-30 김현우 「그 부분만 다시 그리면 되잖아」)
+  const at = d.build?.boxes?.[key]?.at || [], page = +(d.build?.boxes?.[key]?.page || cur.slide), one = ok && cand.preview && at.length <= 1;
+  const build = one ? {...d.build, patches: {...(d.build.patches || {}), [page]: cand.preview}} : d.build;
+  const { error } = await SB.from('pt_proposal').update({data: {...d, build, images: {...d.images, slots: {...d.images.slots, [key]: slot}}}, ...(ok && !one ? {status: 'working'} : {})}).eq('id', p.id);
   if (error) return toast('저장하지 못했습니다: ' + error.message);
-  if (ok) await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'finalize', input: {}});
-  await proposalEvent(p.id, `${cur.slide}페이지 새 이미지를 ${ok ? '확정했습니다 → 제안서에 반영' : '취소했습니다 (원래 이미지 유지)'}`);
-  studio.list = null; await loadStudio(); toast(ok ? '확정했습니다. 제안서에 반영하는 중입니다.' : '취소했습니다. 원래 이미지를 그대로 씁니다.');
+  if (one) await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'qa', input: {pdf: cand.preview, version: d.build.version, page}});
+  else if (ok) await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'finalize', input: {}});
+  await proposalEvent(p.id, `${page}페이지 새 이미지를 ${ok ? (one ? '확정했습니다 → 그 페이지만 반영' : '확정했습니다 → 제안서에 반영') : '취소했습니다 (원래 이미지 유지)'}`);
+  studio.list = null; await loadStudio(); toast(ok ? (one ? `확정했습니다. ${page}페이지만 바꿨고, 그 페이지만 다시 검수합니다.` : '확정했습니다. 제안서에 반영하는 중입니다.') : '취소했습니다. 원래 이미지를 그대로 씁니다.');
 }
 async function candPreview(p, key, after) {
   const d = studio.list?.find(x => x.id === p.id)?.data || p.data, s = d.images.slots[key], c = s?.cand; if (!c) return;
@@ -1110,7 +1115,7 @@ async function pageReview(pid, start) {
     $$('#rv-side .rv-busy').forEach(el => { el.innerHTML = jobsProg(live.length ? live : [null]); });
     // 비교는 이 창이 연 버전·상태와 — 뒤의 상세 화면이 먼저 목록을 새로 읽어도 놓치지 않게
     if (row.data?.build?.version !== b.version) { studio.list = null; await loadStudio(); toast(`새 버전 v${row.data.build.version}이 생성되었습니다.`); return pageReview(pid, cur); }
-    const snap = row.status + JSON.stringify(row.data?.images?.slots || {}) + JSON.stringify(row.data?.qa || {}) + JSON.stringify(row.data?.qa_ok || {});
+    const snap = row.status + JSON.stringify(row.data?.images?.slots || {}) + JSON.stringify(row.data?.qa || {}) + JSON.stringify(row.data?.qa_ok || {}) + JSON.stringify(row.data?.build?.patches || {});
     if (seen && snap !== seen) { studio.list = null; await loadStudio(); show(cur); }
     seen = snap;
     setTimeout(tick, 3000);
@@ -1131,7 +1136,9 @@ async function pageReview(pid, start) {
     $('#rv-strip .on')?.scrollIntoView({block: 'nearest', inline: 'center'});
     // 페이지 그림은 기다리지 않고 그린다 — 그림이 늦어도 오른쪽 이미지 자리는 바로 보이게
     if ($('#rv-load')) { $('#rv-load').hidden = false; $('#rv-load span').textContent = `${cur}페이지를 그리는 중입니다`; }
-    doc.getPage(cur).then(pg => { const c = $('#rv-canvas'); if (!c) return; const w = c.parentElement.clientWidth - 2;
+    const patch = d.build?.patches?.[cur];
+    const pageDoc = patch ? (PATCH_DOCS[patch] ||= SB.storage.from('pt-studio').createSignedUrl(patch, 1800).then(r => PDFJS.getDocument(r.data.signedUrl).promise)).then(x => x.getPage(1)) : doc.getPage(cur);
+    pageDoc.then(pg => { const c = $('#rv-canvas'); if (!c) return; const w = c.parentElement.clientWidth - 2;
       const vp = pg.getViewport({scale: w / pg.getViewport({scale: 1}).width * (window.devicePixelRatio || 1)});
       c.width = vp.width; c.height = vp.height; return pg.render({canvasContext: c.getContext('2d'), viewport: vp}).promise; })
       .then(() => { if ($('#rv-load')) $('#rv-load').hidden = true; }).catch(() => {});
@@ -1237,7 +1244,7 @@ async function openProposal(id, keep) {
   else if (p.status === 'waiting' && p.stage >= 7 && d.images) action = imagesPanel(p);
   else if (p.status === 'waiting') action = `<div class="detail-block"><h3>결정 · ${esc(GATES[p.stage] || '확인')}</h3><p>판테온 봇이 준비한 결과를 확인하고 결정해 주세요.</p></div>`;
   else if (p.status === 'done' && d.build) action = `<div class="detail-block pv-decide"><h3>완료 · v${d.build.version} · 수정 버전 만들기</h3><p>수신사 피드백을 입력하면 원고를 고쳐 다음 버전을 만듭니다. 새로 필요한 이미지만 다시 수급합니다.</p><textarea id="rev-ins" rows="3" maxlength="1500" placeholder="예: Experience 2개 추가, Business 페이지에 금액 삽입, 심화 제안으로 전환"></textarea><div class="drawer-actions"><button class="button primary" id="rev-go">v${d.build.version + 1} 만들기</button></div></div>`;
-  const done = [d.build && `<div class="detail-block"><h3>제안서 초안 v${d.build.version}</h3><div class="detail-row"><span>분량</span><b>${d.build.slides}페이지 · 이미지 ${d.build.images}개</b></div>${d.images ? '' : '<p>이미지가 들어갈 위치는 회색 상자로 비워 두었습니다. 이미지 수급 단계에서 채웁니다.</p>'}<div class="detail-row"><span>강조색</span><b class="acc-row"><i class="swatch" style="background:${esc(d.build.deck?.theme?.accent || '#285541')}"></i>${esc(d.build.deck?.theme?.accent || '')} ${d.accent ? '(직접 선택)' : '(클로드 추천)'}${p.status === 'waiting' ? ` <input type="color" id="acc-new" value="${esc(d.build.deck?.theme?.accent || '#285541')}" aria-label="강조색 선택"> <button class="text-btn" id="acc-apply">이 색으로 적용</button>` : ''}</b></div><div class="drawer-actions">${d.build.pdf ? `<button class="button primary" data-file="${esc(d.build.pdf)}">PDF 보기</button>` : ''}<button class="button" data-file="${esc(d.build.pptx)}" data-dl="1">PPTX 다운로드</button>${d.build.pdf ? `<button class="button" data-review="1">${p.status === 'waiting' ? '이미지 확인·수정' : '페이지별 보기'}</button>` : ''}${p.status === 'waiting' && !d.build.deck?.redesigned ? '<button class="button" id="redesign">새 디자인 적용</button>' : ''}</div>${p.status === 'waiting' && p.stage >= 7 && d.images ? '' : qaBlock(p)}</div>`].filter(Boolean).join('');
+  const done = [d.build && `<div class="detail-block"><h3>제안서 초안 v${d.build.version}</h3>${Object.keys(d.build.patches || {}).length ? `<p class="muted-box">수정한 페이지 ${Object.keys(d.build.patches).map(Number).sort((a, b) => a - b).join('·')}은 화면에 바로 반영돼 있습니다. PDF·PPTX를 받거나 완료할 때 전체 파일에 한 번 반영합니다.</p>` : ''}<div class="detail-row"><span>분량</span><b>${d.build.slides}페이지 · 이미지 ${d.build.images}개</b></div>${d.images ? '' : '<p>이미지가 들어갈 위치는 회색 상자로 비워 두었습니다. 이미지 수급 단계에서 채웁니다.</p>'}<div class="detail-row"><span>강조색</span><b class="acc-row"><i class="swatch" style="background:${esc(d.build.deck?.theme?.accent || '#285541')}"></i>${esc(d.build.deck?.theme?.accent || '')} ${d.accent ? '(직접 선택)' : '(클로드 추천)'}${p.status === 'waiting' ? ` <input type="color" id="acc-new" value="${esc(d.build.deck?.theme?.accent || '#285541')}" aria-label="강조색 선택"> <button class="text-btn" id="acc-apply">이 색으로 적용</button>` : ''}</b></div><div class="drawer-actions">${d.build.pdf ? `<button class="button primary" data-file="${esc(d.build.pdf)}">PDF 보기</button>` : ''}<button class="button" data-file="${esc(d.build.pptx)}" data-dl="1">PPTX 다운로드</button>${d.build.pdf ? `<button class="button" data-review="1">${p.status === 'waiting' ? '이미지 확인·수정' : '페이지별 보기'}</button>` : ''}${p.status === 'waiting' && !d.build.deck?.redesigned ? '<button class="button" id="redesign">새 디자인 적용</button>' : ''}</div>${p.status === 'waiting' && p.stage >= 7 && d.images ? '' : qaBlock(p)}</div>`].filter(Boolean).join('');
   // 컨셉·리서치·팬·SNS 는 접어 둔 「자료」로 (10-30) — 결정할 것이 먼저 보이게
   const fold = (t, sub, body) => `<details class="pv-fold"><summary><b>${t}</b>${sub ? ` <small>${esc(sub)}</small>` : ''}</summary>${body}</details>`;
   const refs = [d.concept_selected && fold('확정한 컨셉', d.concept_selected.name, conceptCard(d.concept_selected)),
@@ -1279,7 +1286,12 @@ async function openProposal(id, keep) {
     const kind = d.failed_kind || JOB_OF[p.stage] || 'research';
     go({status: 'working', data: {...d, error: null}}, {kind, input: kind === 'generate' ? {estimate_only: true} : {retry: true}}, `${STAGES[p.stage - 1]} 작업을 다시 요청했습니다`);
   });
+  const patched = Object.keys(d.build?.patches || {}).length;
   $$('#drawer [data-file]').forEach(b => b.onclick = async () => {
+    if (patched) {          // 페이지만 갈아 끼운 상태 — 파일을 받을 때 전체에 한 번 반영
+      b.disabled = true;
+      return go({status: 'working'}, {kind: 'finalize', input: {}}, `수정한 ${patched}개 페이지를 전체 파일에 반영합니다`, `수정한 ${patched}개 페이지를 전체 파일에 반영하는 중입니다. 끝나면 다시 눌러 받으세요.`);
+    }
     const { data: u, error } = await SB.storage.from('pt-studio').createSignedUrl(b.dataset.file, 600, b.dataset.dl ? {download: `${pTitle(p)}_v${d.build.version}.pptx`} : undefined);
     if (error) return toast('파일을 열지 못했습니다.');
     window.open(u.signedUrl, '_blank', 'noopener');
@@ -1324,6 +1336,7 @@ async function openProposal(id, keep) {
                          retried: (s.prev_paths || []).length, path: s.path, version: d.build.version, at, by: myName || ''}));
     const keep = new Set(good.map(g => g.key));
     const log = (d.prompt_log || []).map(x => keep.has(x.key) ? {...x, kept: true} : x);
+    if (patched) return go({status: 'working', data: {...d, good_images: good, prompt_log: log}}, {kind: 'finalize', input: {then_done: true}}, `수정한 ${patched}개 페이지를 전체에 반영한 뒤 완료합니다 (통과한 AI 이미지 ${good.length}장 기록)`, '수정한 페이지를 전체에 반영한 뒤 완료합니다.');
     go({status: 'done', data: {...d, good_images: good, prompt_log: log}}, null, `v${d.build.version} 으로 제안서를 완료했습니다 (통과한 AI 이미지 ${good.length}장 기록)`, '제안서를 완료했습니다.');
   });
   if (d.images && $('#img-board')) loadImgThumbs(d.images.slots);
