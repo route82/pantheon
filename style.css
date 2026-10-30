@@ -307,6 +307,7 @@ footer{display:none}
 .rv-hot button.flag{border-color:#e0573b;background:#e0573b18}.rv-hot button.flag span{opacity:1;background:#c2412a}
 .rv-hot button.empty{border:2px dashed #e0a77c}
 .rv-slot.hl{border-color:#3fbf7f;box-shadow:0 0 0 3px #3fbf7f33}
+.rv-side{overflow-x:hidden}.rv-slot,.rv-info{min-width:0}.rv-make .button{white-space:normal;max-width:100%;height:auto}.rv-make textarea,.rv-make input{width:100%;min-width:0}
 /* ── 제안서 스튜디오 폰 (10-30 김현우 「급할 땐 이동하면서 해야 할 수도」) — 누를 곳 40px 안팎 · 글자 12px 이상 · 입력칸 16px(아이폰 확대 방지) */
 @media(max-width:600px){
 .pv-steps{grid-template-columns:repeat(8,minmax(28px,1fr));gap:0}.pv-steps li b{display:none}.pv-steps li.now b{display:block;position:absolute;top:34px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:12px}.pv-steps li:first-child.now b{left:0;transform:none}.pv-steps li:last-child.now b,.pv-steps li:nth-last-child(2).now b{left:auto;right:0;transform:none}
