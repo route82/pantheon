@@ -745,8 +745,15 @@ function jobProg(j) {
 }
 // 한 단계에 작업이 둘일 때(리서치 = 공개 웹 + 팬·SNS) 막대를 이름과 함께 나란히 (10-28)
 const JOB_KO = {qa: '자동 검수', partners: '파트너 추천', research: '공개 웹 리서치', concepts: '컨셉 설계', build: '제안서 생성', image_plan: '이미지 수급', finalize: '제안서 다시 생성', generate: 'AI 이미지 생성'};
-const jobName = j => j.kind === 'aside' ? (j.input?.task === 'social' ? '팬·SNS 조사 · Aside' : '이미지 검색 · Aside') : (JOB_KO[j.kind] || '');
-const jobsProg = list => `<div id="job-progs">${list.length > 1 ? list.map(j => `<p class="sub-label">${esc(jobName(j))}</p>${jobProg(j)}`).join('') : jobProg(list[0])}</div>`;
+// 이미지 한두 자리만 다루는 작업은 「26페이지 2번째 이미지 · 무엇」까지 보인다 (10-30 김현우 「몇 페이지 몇 번째 이미지인지」)
+const jobWhere = j => { const keys = j.input?.keys || (j.input?.slots || []).map(x => x.key); if (!keys?.length || keys.length > 3) return '';
+  const d = studio.list?.find(x => x.id === j.proposal_id)?.data || {}, S = d.images?.slots || {}, B = d.build?.boxes || {};
+  return keys.map(k => { const s = S[k]; if (!s) return ''; const pg = +(B[k]?.page || s.slide);
+    const same = Object.keys(S).filter(x => +(B[x]?.page || S[x].slide) === pg).sort((a, b) => (B[a]?.y ?? 0) - (B[b]?.y ?? 0) || (B[a]?.x ?? 0) - (B[b]?.x ?? 0) || a.localeCompare(b));
+    return `${pg}페이지${same.length > 1 ? ` ${same.indexOf(k) + 1}번째` : ''} 이미지 「${whatText(s.what).slice(0, 24)}」`; }).filter(Boolean).join(', '); };
+const jobName = j => { const base = j.kind === 'aside' ? (j.input?.task === 'social' ? '팬·SNS 조사 · Aside' : '이미지 검색 · Aside') : (JOB_KO[j.kind] || ''), w = j.kind === 'aside' && j.input?.task ? '' : jobWhere(j);
+  return w ? `${base} · ${w}` : base; };
+const jobsProg = list => `<div id="job-progs">${list.length > 1 || (list[0] && jobWhere(list[0])) ? list.map(j => `<p class="sub-label">${esc(j ? jobName(j) : '')}</p>${jobProg(j)}`).join('') : jobProg(list[0])}</div>`;
 const liveJobs = id => studio.jobs.filter(j => j.proposal_id === id && ['wait', 'work'].includes(j.status)).sort((a, b) => a.id - b.id);
 let propPoll;
 async function pollProposal(id) {
