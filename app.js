@@ -750,6 +750,8 @@ const jobWhere = j => { const keys = j.input?.keys || (j.input?.slots || []).map
   const d = studio.list?.find(x => x.id === j.proposal_id)?.data || {}, S = d.images?.slots || {}, B = d.build?.boxes || {};
   return keys.map(k => { const s = S[k]; if (!s) return ''; const pg = +(B[k]?.page || s.slide);
     const same = Object.keys(S).filter(x => +(B[x]?.page || S[x].slide) === pg).sort((a, b) => (B[a]?.y ?? 0) - (B[b]?.y ?? 0) || (B[a]?.x ?? 0) - (B[b]?.x ?? 0) || a.localeCompare(b));
+    const pgs = [...new Set((B[k]?.at || []).map(a => +a.page))].sort((a, b) => a - b);
+    if (pgs.length > 1) return `${pgs.join('·')}페이지 이미지 「${whatText(s.what).slice(0, 24)}」`;      // 여러 페이지에 쓴 이미지
     return `${pg}페이지${same.length > 1 ? ` ${same.indexOf(k) + 1}번째` : ''} 이미지 「${whatText(s.what).slice(0, 24)}」`; }).filter(Boolean).join(', '); };
 const jobName = j => { const base = j.kind === 'aside' ? (j.input?.task === 'social' ? '팬·SNS 조사 · Aside' : '이미지 검색 · Aside') : (JOB_KO[j.kind] || ''), w = j.kind === 'aside' && j.input?.task ? '' : jobWhere(j);
   return w ? `${base} · ${w}` : base; };
