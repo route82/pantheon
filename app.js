@@ -989,7 +989,7 @@ async function asideHires(p, key) {
   await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'aside', input: {slots: [{key, kind: s.kind, what: s.what || '', ratio: s.ratio || '', search: im.search || '',
     min_px: needPx(d, key), have_px: s.w || 0}], ips: [p.ip_a_name, p.ip_b_name].filter(Boolean)}});
   await proposalEvent(p.id, `${s.slide}페이지 「${s.what || key}」 고해상도 원본을 Aside 로 다시 찾도록 요청했습니다`);
-  studio.list = null; await loadStudio(); toast('Aside에 요청했습니다. 몇 분 걸립니다. 찾지 못하면 힉스필드로 보정할 수 있습니다.');
+  studio.list = null; await loadStudio(); toast('Aside에 요청했습니다. 찾지 못하면 힉스필드로 보정할 수 있습니다.');
 }
 // Aside로 다른 이미지 찾기 (10-30 김현우) — 공식 이미지·로고·참고 사례·캡처를 지금 것과 다른 실제 이미지로
 async function asideOther(p, key) {
@@ -997,9 +997,10 @@ async function asideOther(p, key) {
   const im = (d.build?.deck?.slides || []).flatMap(x => x.images || []).find(x => x.key === key) || {};
   const avoid = [s.source_page, s.image_url].filter(Boolean);
   await SB.from('pt_proposal').update({status: 'working'}).eq('id', p.id);
-  await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'aside', input: {slots: [{key, kind: s.kind, what: s.what || '', ratio: s.ratio || '', search: im.search || '', avoid}], ips: [p.ip_a_name, p.ip_b_name].filter(Boolean)}});
+  const { data: nj } = await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'aside', input: {slots: [{key, kind: s.kind, what: s.what || '', ratio: s.ratio || '', search: im.search || '', avoid}], ips: [p.ip_a_name, p.ip_b_name].filter(Boolean)}}).select('id,proposal_id,ref_id,kind,status,at,error,result,input').single();
+  if (nj) studio.jobs = [...studio.jobs, nj];
   await proposalEvent(p.id, `${s.slide}페이지 「${whatText(s.what) || key}」 다른 이미지를 Aside에 요청했습니다`);
-  studio.list = null; await loadStudio(); toast('Aside에 요청했습니다. 몇 분 걸립니다. 찾으면 제안서에 자동 반영됩니다.');
+  studio.list = null; await loadStudio(); toast('Aside에 요청했습니다. 찾으면 제안서에 자동 반영됩니다.');
 }
 const shapeOff = (w, h, ar) => ar && w && h && (w / h < ar / 1.3 || w / h > ar * 1.3);
 async function quickMake(p, key, mode, prompt, why) {
@@ -1019,7 +1020,7 @@ async function quickMake(p, key, mode, prompt, why) {
   await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'generate', input: {approved_usd: usd, keys: [key]}});
   await proposalEvent(p.id, `${cur.slide}페이지 ${mode === 'upscale' ? '고해상도 보정' : mode === 'widen' ? '이미지 확장' : 'AI 이미지 생성'}를 승인했습니다 (예상 $${mode === 'ai' ? '0.01' : '0.08'})${why ? ' · ' + why : ''}`);
   studio.list = null; await loadStudio();
-  toast('생성을 시작했습니다. 3~5분 뒤 제안서에 반영되고 자동 검수까지 진행됩니다.');
+  toast('생성을 시작했습니다. 끝나면 제안서에 반영되고 자동 검수까지 진행됩니다.');
   return true;
 }
 async function pageReview(pid, start) {
@@ -1092,6 +1093,9 @@ async function pageReview(pid, start) {
     const canAi = s => AI_KINDS.includes(s.kind) || (!s.path && !['official', 'logo', 'capture'].includes(s.kind));
     function makeBox(k, s) {
       if (p.status === 'working' && (s.widen || s.upscale || s.status === 'ai')) { const live = liveJobs(p.id); return `<div class="rv-busy">${jobsProg(live.length ? live : [null])}</div>`; }
+      // 이 이미지를 Aside 가 찾는 중이면 단추 대신 진행 표시 — 두 번 눌러 같은 요청이 두 번 가는 것 막기 (10-30)
+      const hunt = liveJobs(p.id).find(j => j.kind === 'aside' && (j.input?.slots || []).some(x => x.key === k));
+      if (hunt) return `<div class="rv-busy">${jobsProg([hunt])}</div>`;
       const ai = canAi(s) && !s.widened;
       return `<div class="rv-make">${ai ? `<textarea data-mk-prompt="${esc(k)}" rows="3" placeholder="생성 프롬프트(영문) — 피사체·장면·분위기">${esc(s.prompt || '')}</textarea>
         <input data-mk-why="${esc(k)}" maxlength="200" placeholder="개선할 점(재생성 시 반영)"><button class="button primary small" data-mk-ai="${esc(k)}">${s.status === 'generated' ? 'AI로 다시 생성' : 'AI로 생성'} · 약 $0.01</button>` : ''}
@@ -1229,7 +1233,7 @@ async function openProposal(id, keep) {
     if (await replaceSlotImage(p, inp.dataset.upimg, f)) openProposal(p.id, true);
   });
   $$('#drawer [data-review]').forEach(x => x.onclick = () => pageReview(p.id, +x.dataset.review || 1));
-  $('#redesign')?.addEventListener('click', ev => { ev.target.disabled = true; go({status: 'working'}, {kind: 'finalize', input: {redesign: true}}, '원본 제안서 디자인 적용을 요청했습니다(이미지는 유지)', '새 디자인을 적용합니다. 5분 정도 걸립니다.'); });
+  $('#redesign')?.addEventListener('click', ev => { ev.target.disabled = true; go({status: 'working'}, {kind: 'finalize', input: {redesign: true}}, '원본 제안서 디자인 적용을 요청했습니다(이미지는 유지)', '새 디자인을 적용합니다. 진행률은 화면에서 볼 수 있습니다.'); });
   $('#ai-est')?.addEventListener('click', ev => { ev.target.disabled = true; go({status: 'working'}, {kind: 'generate', input: {estimate_only: true}}, 'AI 이미지 견적을 요청했습니다'); });
   $('#ai-go')?.addEventListener('click', ev => {
     const usd = +ev.target.dataset.usd, n = d.images.ai_estimate.count;
@@ -1242,12 +1246,12 @@ async function openProposal(id, keep) {
     const im = (d.build?.deck?.slides || []).flatMap(x => x.images || []).find(x => x.key === k) || {};
     b.disabled = true;
     go({status: 'working'}, {kind: 'aside', input: {slots: [{key: k, kind: sl.kind, what: sl.what || '', ratio: sl.ratio || '', search: im.search || ''}], ips: [p.ip_a_name, p.ip_b_name].filter(Boolean)}},
-       `${sl.slide}페이지 「${sl.what || k}」 이미지를 Aside 로 다시 찾도록 요청했습니다`, 'Aside에 요청했습니다. 이미지 한 장에 몇 분 걸립니다.');
+       `${sl.slide}페이지 「${sl.what || k}」 이미지를 Aside 로 다시 찾도록 요청했습니다`, 'Aside에 요청했습니다. 진행률은 화면에서 볼 수 있습니다.');
   });
   $('#rev-go')?.addEventListener('click', ev => {
     const t = $('#rev-ins').value.trim(); if (!t) { $('#rev-ins').focus(); return toast('수정할 내용을 입력해 주세요.'); }
     ev.target.disabled = true;
-    go({status: 'working'}, {kind: 'finalize', input: {instruction: t}}, `수정 버전을 요청했습니다 · ${t.slice(0, 120)}`, '수정 버전을 만듭니다. 5분 정도 걸립니다.');
+    go({status: 'working'}, {kind: 'finalize', input: {instruction: t}}, `수정 버전을 요청했습니다 · ${t.slice(0, 120)}`, '수정 버전을 만듭니다. 진행률은 화면에서 볼 수 있습니다.');
   });
   $('#img-rerender')?.addEventListener('click', ev => { ev.target.disabled = true; go({status: 'working'}, {kind: 'finalize', input: {}}, '변경 사항 반영을 요청했습니다'); });
   $('#img-done')?.addEventListener('click', ev => {
