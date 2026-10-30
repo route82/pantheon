@@ -1056,9 +1056,9 @@ async function candApply(p, key, ok) {
   const { error } = await SB.from('pt_proposal').update({data: {...d, build, images: {...d.images, slots: {...d.images.slots, [key]: slot}}}, ...(ok && !one ? {status: 'working'} : {})}).eq('id', p.id);
   if (error) return toast('저장하지 못했습니다: ' + error.message);
   if (one) await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'qa', input: {pdf: cand.preview, version: d.build.version, page}});
-  else if (ok) await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'finalize', input: {}});
-  await proposalEvent(p.id, `${page}페이지 새 이미지를 ${ok ? (one ? '확정했습니다 → 그 페이지만 반영' : '확정했습니다 → 제안서에 반영') : '취소했습니다 (원래 이미지 유지)'}`);
-  studio.list = null; await loadStudio(); toast(ok ? (one ? `확정했습니다. ${page}페이지만 바꿨고, 그 페이지만 다시 검수합니다.` : '확정했습니다. 제안서에 반영하는 중입니다.') : '취소했습니다. 원래 이미지를 그대로 씁니다.');
+  else if (ok) await SB.from('pt_proposal_job').insert({proposal_id: p.id, kind: 'finalize', input: {keys: [key]}});      // 여러 페이지에 쓴 이미지 — 그 페이지들만
+  await proposalEvent(p.id, `${page}페이지 새 이미지를 ${ok ? (one ? '확정했습니다 → 그 페이지만 반영' : '확정했습니다 → 이 이미지가 든 페이지들만 다시 그립니다') : '취소했습니다 (원래 이미지 유지)'}`);
+  studio.list = null; await loadStudio(); toast(ok ? (one ? `확정했습니다. ${page}페이지만 바꿨고, 그 페이지만 다시 검수합니다.` : '확정했습니다. 이 이미지가 든 페이지들만 다시 그립니다.') : '취소했습니다. 원래 이미지를 그대로 씁니다.');
 }
 async function candPreview(p, key, after) {
   const d = studio.list?.find(x => x.id === p.id)?.data || p.data, s = d.images.slots[key], c = s?.cand; if (!c) return;
@@ -1136,8 +1136,8 @@ async function pageReview(pid, start) {
     $('#rv-strip .on')?.scrollIntoView({block: 'nearest', inline: 'center'});
     // 페이지 그림은 기다리지 않고 그린다 — 그림이 늦어도 오른쪽 이미지 자리는 바로 보이게
     if ($('#rv-load')) { $('#rv-load').hidden = false; $('#rv-load span').textContent = `${cur}페이지를 그리는 중입니다`; }
-    const patch = d.build?.patches?.[cur];
-    const pageDoc = patch ? (PATCH_DOCS[patch] ||= SB.storage.from('pt-studio').createSignedUrl(patch, 1800).then(r => PDFJS.getDocument(r.data.signedUrl).promise)).then(x => x.getPage(1)) : doc.getPage(cur);
+    const patch = d.build?.patches?.[cur], ppath = typeof patch === 'string' ? patch : patch?.pdf, pn = typeof patch === 'object' && patch ? patch.n || 1 : 1;
+    const pageDoc = ppath ? (PATCH_DOCS[ppath] ||= SB.storage.from('pt-studio').createSignedUrl(ppath, 1800).then(r => PDFJS.getDocument(r.data.signedUrl).promise)).then(x => x.getPage(pn)) : doc.getPage(cur);
     pageDoc.then(pg => { const c = $('#rv-canvas'); if (!c) return; const w = c.parentElement.clientWidth - 2;
       const vp = pg.getViewport({scale: w / pg.getViewport({scale: 1}).width * (window.devicePixelRatio || 1)});
       c.width = vp.width; c.height = vp.height; return pg.render({canvasContext: c.getContext('2d'), viewport: vp}).promise; })
