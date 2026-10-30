@@ -1231,10 +1231,12 @@ async function pageReview(pid, start) {
     // 상자 크기 조절 — 페이지 위 상자 가장자리·모서리를 끌어 늘리고 줄인다 → 그 페이지만 다시 그림 (10-30 김현우)
     function sizeBox(k) {
       const h = $(`#rv-hot [data-hot="${CSS.escape(k)}"]`), wrap = $('.rv-canvas-wrap'); if (!h) return;
+      if (h.classList.contains('edit')) return h.scrollIntoView({block: 'center', behavior: 'smooth'});     // 이미 조절 중이면 끌어 둔 크기 그대로
       $$('#rv-hot [data-hot]').forEach(o => { if (o !== h) o.style.pointerEvents = 'none'; });
       h.classList.add('edit'); h.onclick = null; dlg.dataset.dirty = '1';
       h.insertAdjacentHTML('beforeend', ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].map(d => `<i class="hd ${d}" data-hd="${d}"></i>`).join(''));
-      const r0 = ['left', 'top', 'width', 'height'].map(z => parseFloat(h.style[z]));
+      // 비교 기준은 저장된 상자 — 화면 상자(끌어 둔 뒤 다시 누르면 이미 바뀐 크기)가 아니라 (10-30 「늘려도 그대로라고 나온다」)
+      const a0 = spots(k)[0], r0 = [a0.x / 12192000 * 100, a0.y / 6858000 * 100, a0.w / 12192000 * 100, a0.h / 6858000 * 100];
       h.querySelectorAll('[data-hd]').forEach(hd => {
         hd.ontouchstart = ev => ev.stopPropagation();
         hd.onpointerdown = ev => { ev.preventDefault(); ev.stopPropagation(); hd.setPointerCapture(ev.pointerId);
