@@ -66,7 +66,7 @@ function toast(s, undo) {
   window.tt = setTimeout(() => { t.classList.remove('visible'); setTimeout(() => { try { if (!t.classList.contains('visible')) t.hidePopover?.(); } catch {} }, 300); }, undo ? 8000 : 2800);
 }
 // 확인 창 — 단추에 실제 행동을 적는다(「확인」 금지). 돌려주는 값: true(ok) · false(cancel 단추) · null(Esc·바깥)
-function ask({title, body = '', ok, cancel = '취소', danger = false}) {
+function confirmBox({title, body = '', ok, cancel = '취소', danger = false}) {
   return new Promise(res => {
     let d = $('#ask'); if (!d) { d = document.createElement('dialog'); d.id = 'ask'; d.className = 'ask'; document.body.appendChild(d); }
     d.innerHTML = `<h2>${esc(title)}</h2>${body ? `<p>${body}</p>` : ''}<div class="modal-actions"><button class="button" type="button" data-a="0">${esc(cancel)}</button><button class="button ${danger ? 'danger' : 'primary'}" type="button" data-a="1">${esc(ok)}</button></div>`;
@@ -77,7 +77,7 @@ function ask({title, body = '', ok, cancel = '취소', danger = false}) {
   });
 }
 // 작성 중인 내용이 있으면 닫기 전에 묻는다 — 「계속 작성」이 기본, 「닫기」를 골라야 닫힌다
-const askLeave = () => ask({title: '작성 중인 내용이 있어요', body: '저장하지 않고 닫으면 입력한 내용이 사라집니다.', ok: '계속 작성', cancel: '저장하지 않고 닫기'}).then(v => v === false);
+const askLeave = () => confirmBox({title: '작성 중인 내용이 있어요', body: '저장하지 않고 닫으면 입력한 내용이 사라집니다.', ok: '계속 작성', cancel: '저장하지 않고 닫기'}).then(v => v === false);
 
 /* ---------- 이미지 (비공개 저장소 → 잠깐 쓰는 주소) ---------- */
 const imgUrl = {}, imgLoading = new Set();
@@ -793,7 +793,7 @@ let propPoll;
 async function pollProposal(id) {
   if (activeDetail !== 'p:' + id) return;
   const [p, j] = await Promise.all([SB.from('pt_proposal').select('*').eq('id', id).single(), SB.from('pt_proposal_job').select('id,proposal_id,ref_id,kind,status,at,error,result,input').eq('proposal_id', id).order('id', {ascending: false}).limit(4)]);
-  if (activeDetail !== 'p:' + id || p.error) return;
+  if (activeDetail !== 'p:' + id || p.error || !studio.list) { if (activeDetail === 'p:' + id) propPoll = setTimeout(() => pollProposal(id), 3000); return; }
   const old = studio.list.find(x => x.id === id);
   if (old && (p.data.status !== old.status || p.data.stage !== old.stage)) { studio.list = null; await loadStudio(); return openProposal(id, true); }
   const got = j.data || [];
@@ -1064,7 +1064,7 @@ async function quickMake(p, key, mode, prompt, why) {
   const what = mode === 'upscale' ? '이미지를 고해상도로 보정합니다. 사람 얼굴이 아주 조금 달라질 수 있습니다.'
              : mode === 'widen' ? '이미지 바깥을 확장해 잘리지 않고 전체가 보이게 합니다.'
              : ref ? `메인 이미지(${esc(fresh.images.slots[ref]?.slide)}페이지 「${esc(whatText(fresh.images.slots[ref]?.what).slice(0, 20))}」)를 참고해 같은 모델로 만듭니다.` : 'AI 이미지를 새로 만듭니다.';
-  if (!(await ask({title: `${cur.slide}페이지 이미지를 새로 만들까요?`,
+  if (!(await confirmBox({title: `${cur.slide}페이지 이미지를 새로 만들까요?`,
       body: `${what}<br>새 이미지는 바로 들어가지 않고 미리보기로 먼저 보여 드립니다. 마음에 들 때만 확정하세요.<br><b>비용 약 ${cost}</b>가 회사 힉스필드 잔액에서 나갑니다.`,
       ok: `${mode === 'upscale' ? '고해상도 보정' : mode === 'widen' ? '확장' : '새로 만들기'} · 약 ${cost}`}))) return false;
   const prev = [...(cur.prev_paths || []), cur.path].filter(Boolean);
@@ -1325,7 +1325,7 @@ async function openProposal(id, keep) {
   // 같은 IP 조합으로 제안서 하나 더 — 리서치·팬·SNS 조사·컨셉 후보를 이어받아 컨셉 고르기부터
   $('#prop-more')?.addEventListener('click', async ev => {
     const no = propNo(p);
-    if (!(await ask({title: '같은 IP로 제안서를 하나 더 만들까요?', body: `${esc(pTitle(p))}의 리서치와 컨셉 후보를 그대로 가져와 새 제안서를 만들고, 컨셉 선택부터 시작합니다. 지금 제안서는 그대로 남습니다.`, ok: '새 제안서 만들기'}))) return;
+    if (!(await confirmBox({title: '같은 IP로 제안서를 하나 더 만들까요?', body: `${esc(pTitle(p))}의 리서치와 컨셉 후보를 그대로 가져와 새 제안서를 만들고, 컨셉 선택부터 시작합니다. 지금 제안서는 그대로 남습니다.`, ok: '새 제안서 만들기'}))) return;
     ev.target.disabled = true;
     const keep = Object.fromEntries(['research', 'social', 'concepts', 'accent', 'partners', 'partner_selected'].filter(k => d[k] !== undefined).map(k => [k, d[k]]));
     const row = {mode: p.mode, ip_a_name: p.ip_a_name, ip_a_id: p.ip_a_id, ip_b_name: p.ip_b_name, ip_b_id: p.ip_b_id, recipient: p.recipient, ref_id: p.ref_id,
@@ -1366,12 +1366,12 @@ async function openProposal(id, keep) {
   });
   $$('#drawer [data-review]').forEach(x => x.onclick = () => pageReview(p.id, +x.dataset.review || 1));
   $('#redesign')?.addEventListener('click', async ev => {
-    if (!(await ask({title: '새 디자인을 적용할까요?', body: '원고를 원본 제안서 디자인 레이아웃으로 다시 씁니다. 이미지는 그대로 쓰지만 페이지 구성과 문장 배치가 바뀔 수 있습니다. 지금 버전은 기록에 남습니다.', ok: '새 디자인 적용'}))) return;
+    if (!(await confirmBox({title: '새 디자인을 적용할까요?', body: '원고를 원본 제안서 디자인 레이아웃으로 다시 씁니다. 이미지는 그대로 쓰지만 페이지 구성과 문장 배치가 바뀔 수 있습니다. 지금 버전은 기록에 남습니다.', ok: '새 디자인 적용'}))) return;
     ev.target.disabled = true; go({status: 'working'}, {kind: 'finalize', input: {redesign: true}}, '원본 제안서 디자인 적용을 요청했습니다(이미지는 유지)', '새 디자인을 적용합니다. 진행률은 화면에서 볼 수 있습니다.'); });
   $('#ai-est')?.addEventListener('click', ev => { ev.target.disabled = true; go({status: 'working'}, {kind: 'generate', input: {estimate_only: true}}, 'AI 이미지 견적을 요청했습니다'); });
   $('#ai-go')?.addEventListener('click', async ev => {
     const usd = +ev.target.dataset.usd, n = d.images.ai_estimate.count;
-    if (!(await ask({title: `이미지 ${n}장을 만들까요?`, body: `<b>예상 비용 약 $${usd}</b>가 회사 힉스필드 잔액에서 나갑니다. 실패하거나 부적절 판정된 이미지는 청구되지 않습니다. 만든 이미지는 들어갈 페이지만 다시 그립니다.`, ok: `${n}장 만들기 · 약 $${usd}`}))) return;
+    if (!(await confirmBox({title: `이미지 ${n}장을 만들까요?`, body: `<b>예상 비용 약 $${usd}</b>가 회사 힉스필드 잔액에서 나갑니다. 실패하거나 부적절 판정된 이미지는 청구되지 않습니다. 만든 이미지는 들어갈 페이지만 다시 그립니다.`, ok: `${n}장 만들기 · 약 $${usd}`}))) return;
     ev.target.disabled = true;
     go({status: 'working'}, {kind: 'generate', input: {approved_usd: usd}}, `AI 이미지 ${n}장 생성을 승인했습니다 (예상 $${usd})`, '승인했습니다. 판테온 봇이 생성을 시작합니다.');
   });
@@ -1388,10 +1388,10 @@ async function openProposal(id, keep) {
     go({status: 'working'}, {kind: 'finalize', input: {instruction: t}}, `수정 버전을 요청했습니다 · ${t.slice(0, 120)}`, '수정 버전을 만듭니다. 진행률은 화면에서 볼 수 있습니다.');
   });
   $('#img-rerender')?.addEventListener('click', async ev => {
-    if (!(await ask({title: '변경 사항을 제안서 전체에 반영할까요?', body: '교체한 이미지와 위치 조정을 넣어 제안서 전체를 다시 그리고, 자동 검수도 처음부터 다시 합니다. 그동안은 수정할 수 없습니다.', ok: '전체에 반영'}))) return;
+    if (!(await confirmBox({title: '변경 사항을 제안서 전체에 반영할까요?', body: '교체한 이미지와 위치 조정을 넣어 제안서 전체를 다시 그리고, 자동 검수도 처음부터 다시 합니다. 그동안은 수정할 수 없습니다.', ok: '전체에 반영'}))) return;
     ev.target.disabled = true; go({status: 'working'}, {kind: 'finalize', input: {}}, '변경 사항 반영을 요청했습니다'); });
   $('#img-done')?.addEventListener('click', async ev => {
-    if (!(await ask({title: `v${d.build.version}으로 제안서를 완료할까요?`,
+    if (!(await confirmBox({title: `v${d.build.version}으로 제안서를 완료할까요?`,
         body: `완료하면 상태가 「완료」로 바뀌고 이미지 수정 단계가 닫힙니다.${patched ? ` 수정한 ${patched}개 페이지를 전체 파일에 반영한 뒤 완료합니다.` : ''} 이후 고칠 일이 생기면 「수정 버전 만들기」로 다음 버전을 만듭니다.`,
         ok: `v${d.build.version}으로 완료`}))) return;
     ev.target.disabled = true;
