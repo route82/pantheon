@@ -822,9 +822,12 @@ function researchBlock(R) {
   return `<div class="detail-block"><h3>리서치</h3>${(R.ips || []).map(x => `<details class="research"><summary><b>${esc(x.name)}</b> <small>출처가 확인된 사실 ${x.facts.length}개</small></summary><p>${esc(x.summary || '')}</p>${x.fandom ? `<p><b>팬덤</b> ${esc(x.fandom)}</p>` : ''}${x.world ? `<p><b>세계관·정서</b> ${esc(x.world)}</p>` : ''}<ul class="facts">${x.facts.map(fact).join('')}</ul>${(x.collabs || []).length ? `<p><b>지난 협업</b></p><ul class="facts">${x.collabs.map(fact).join('')}</ul>` : ''}${(x.hooks || []).length ? `<p><b>도입에 쓸 장면</b></p><ul class="facts">${x.hooks.map(h => fact({...h, text: h.text + (h.note ? ` (${h.note})` : '')})).join('')}</ul>` : ''}${(x.risks || []).length ? `<p><b>유의 사항</b> ${x.risks.map(esc).join(' · ')}</p>` : ''}</details>`).join('')}${(R.common_ground || []).length ? `<p><b>공통점</b></p><ul class="facts">${R.common_ground.map(c => `<li>${esc(c)}</li>`).join('')}</ul>` : ''}</div>`;
 }
 
+// 지금 원고에 쓰인 이미지만 — 새 디자인 적용·수정 버전에서 빠진 이미지는 숫자·목록에 넣지 않는다 (10-30 에스파 SIGNAL 21개)
+const liveSlots = d => { const S = d.images?.slots || {}, ks = new Set((d.build?.deck?.slides || []).flatMap(x => (x.images || []).map(i => i.key)));
+  return ks.size ? Object.fromEntries(Object.entries(S).filter(([k]) => ks.has(k))) : S; };
 const SLOT_ST = {found: ['good', '확보'], uploaded: ['good', '직접 업로드'], generated: ['good', 'AI 생성'], missing: ['bad', '미확보'], ai: ['wait', 'AI 생성 대기']};
 function imagesPanel(p) {
-  const S = p.data.images.slots, keys = Object.keys(S).sort();
+  const S = liveSlots(p.data), keys = Object.keys(S).sort();
   const n = st => keys.filter(k => S[k].status === st).length;
   const E = p.data.images.ai_estimate, nW = keys.filter(k => S[k].widen && S[k].status === 'found').length, nAi = n('ai') + nW;
   const aiWhat = [n('ai') ? `AI 이미지 ${n('ai')}장` : '', nW ? `세로 사진 좌우 확장 ${nW}장` : ''].filter(Boolean).join(' + ');
@@ -1032,7 +1035,7 @@ async function pageReview(pid, start) {
   const N = doc.numPages;
   const show = async n => {
     p = studio.list?.find(x => x.id === pid) || p;
-    const d = p.data || {}, S = d.images?.slots || {}, qa = qaOf(d), flags = qa?.flags || [];
+    const d = p.data || {}, S = liveSlots(d), qa = qaOf(d), flags = qa?.flags || [];
     cur = Math.min(Math.max(1, n), N);
     $('#rv-n').textContent = `${cur} / ${N}페이지`; $('#rv-prev').disabled = cur <= 1; $('#rv-next').disabled = cur >= N;
     // 이미지가 몇 페이지 어디에 그려졌는지 — 렌더러가 남긴 위치(boxes)가 있으면 그것, 없으면 원고의 페이지 번호 (10-30)
