@@ -1372,17 +1372,17 @@ async function pageReview(pid, start) {
       imgViewer({dataset: {src: el.dataset.src, key: k, ratio: s.ratio || '', label: `${s.slide}페이지 · ${KIND_KO_IMG[s.kind] || s.kind} · ${s.what || ''}`}}); };
     $$('#rv-side [data-rv-open]').forEach(x => x.onclick = () => open(x.dataset.rvOpen));
     // 이 이미지로 확정 / 확정 취소 (10-30 김현우) — 확정하면 검수 「확인할 곳」에서 빠지고, 같은 이미지인 동안 다음 검수에서도 다시 뜨지 않는다
-    const setOk = async (k, on, x) => { x.disabled = true;
-      const { data: row, error: e0 } = await SB.from('pt_proposal').select('data').eq('id', p.id).single();
-      if (e0) { x.disabled = false; return toast('불러오지 못했습니다: ' + e0.message); }
-      const fresh = row.data || d, ok = {...(fresh.qa_ok || {})};
-      if (on) ok[k] = S[k].path; else delete ok[k];
-      const { error } = await SB.from('pt_proposal').update({data: {...fresh, qa_ok: ok}}).eq('id', p.id);
-      if (error) { x.disabled = false; return toast('저장하지 못했습니다: ' + error.message); }
-      await proposalEvent(p.id, `${cur}페이지 「${whatText(S[k].what) || k}」 이미지를 ${on ? '확정했습니다' : '확정 취소했습니다'}`);
-      studio.list = null; await loadStudio(); toast(on ? '이 이미지로 확정했습니다. 확인할 곳에서 빠집니다.' : '확정을 취소했습니다.'); show(cur); };
-    $$('#rv-side [data-rv-ok]').forEach(x => x.onclick = () => setOk(x.dataset.rvOk, true, x));
-    $$('#rv-side [data-rv-unok]').forEach(x => x.onclick = () => setOk(x.dataset.rvUnok, false, x));
+    const setOk = async (k, on) => {
+      const lp = studio.list?.find(z => z.id === p.id) || p, before = {...(lp.data?.qa_ok || {})}, path = S[k].path, page = cur;
+      const flip = ok => { if (on) ok[k] = path; else delete ok[k]; return ok; };
+      const done = await optimistic(
+        () => { lp.data = {...lp.data, qa_ok: flip({...before})}; show(page); toast(on ? '이 이미지로 확정했습니다. 확인할 곳에서 빠집니다.' : '확정을 취소했습니다.'); },
+        async () => { const { data: row, error: e0 } = await SB.from('pt_proposal').select('data').eq('id', p.id).single(); if (e0) throw e0;
+          return SB.from('pt_proposal').update({data: {...row.data, qa_ok: flip({...(row.data.qa_ok || {})})}}).eq('id', p.id); },
+        () => { lp.data = {...lp.data, qa_ok: before}; show(page); }, '확정을 저장하지 못해 되돌렸습니다');
+      if (done) proposalEvent(p.id, `${page}페이지 「${whatText(S[k].what) || k}」 이미지를 ${on ? '확정했습니다' : '확정 취소했습니다'}`); };
+    $$('#rv-side [data-rv-ok]').forEach(x => x.onclick = () => setOk(x.dataset.rvOk, true));
+    $$('#rv-side [data-rv-unok]').forEach(x => x.onclick = () => setOk(x.dataset.rvUnok, false));
     $$('#rv-side .ithumb[data-rk]').forEach(x => x.onclick = () => open(x.dataset.rk));
     const card1 = k => $(`#rv-side [data-rk="${CSS.escape(k)}"]`)?.closest('.rv-slot');
     $$('#rv-hot [data-hot]').forEach(h => { const k = h.dataset.hot;
@@ -1419,6 +1419,12 @@ async function pageReview(pid, start) {
   pg.ontouchend = ev => { if (sx === null) return; const dx = ev.changedTouches[0].clientX - sx, dy = ev.changedTouches[0].clientY - sy; sx = null; if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) nav(cur + (dx < 0 ? 1 : -1)); };
   await show(start || 1);
 }
+// 낙관적 업데이트 (10-31 김현우 「누르는 순간 화면부터」) — 화면을 먼저 바꾸고 저장은 뒤에서. 실패하면 저장해 둔 값으로 되돌리고 알린다
+async function optimistic(apply, save, revert, failMsg) {
+  apply();
+  try { const r = await save(); if (r?.error) throw r.error; return true; }
+  catch (e) { revert(); toast(`${failMsg || '저장하지 못해 원래대로 되돌렸습니다'}${e?.message ? ' · ' + e.message : ''}`); return false; }
+}
 async function proposalEvent(id, message) { await SB.from('pt_proposal_event').insert({proposal_id: id, message}); }
 
 async function openProposal(id, keep) {
@@ -1452,11 +1458,17 @@ async function openProposal(id, keep) {
   <div class="pv-col pv-side"><div class="detail-block"><h3>기본 정보</h3><div class="detail-row"><span>IP</span><b>${ent(p.ip_a_id, p.ip_a_name)}</b></div>${p.mode === 'collab' ? `<div class="detail-row"><span>파트너 IP</span><b>${p.ip_b_name ? ent(p.ip_b_id, p.ip_b_name) : '판테온 봇 추천 후 선택'}</b></div>` : ''}<div class="detail-row"><span>수신사</span><b>${esc(p.recipient || '—')}</b></div><div class="detail-row"><span>레퍼런스 포맷</span><b>${esc(ref?.title || '—')}</b></div><div class="detail-row"><span>현재 상태</span><b>${pPill(p)}</b></div>${p.note ? `<p>${esc(p.note)}</p>` : ''}</div>
   <div class="detail-block"><h3>활동 기록</h3><div id="proposal-events"><p>불러오는 중입니다<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></p></div></div></div></div>`, keep);
   const go = async (row, nextJob, msg, okMsg) => {
-    const { error } = await SB.from('pt_proposal').update(row).eq('id', p.id);
-    if (error) return toast('저장하지 못했습니다: ' + error.message);
-    if (nextJob) await SB.from('pt_proposal_job').insert({proposal_id: p.id, ...nextJob});
+    const lp = studio.list?.find(z => z.id === p.id), before = lp && {...lp}, jobs0 = studio.jobs;
+    const done = await optimistic(
+      () => { if (!lp) return; Object.assign(lp, row);
+        if (nextJob) studio.jobs = [...studio.jobs, {id: -Date.now(), proposal_id: p.id, kind: nextJob.kind, status: 'wait', input: nextJob.input || {}, at: new Date().toISOString()}];
+        openProposal(p.id, true); if (okMsg) toast(okMsg); },
+      async () => { const r = await SB.from('pt_proposal').update(row).eq('id', p.id); if (r.error) throw r.error;
+        if (nextJob) { const j = await SB.from('pt_proposal_job').insert({proposal_id: p.id, ...nextJob}); if (j.error) throw j.error; } },
+      () => { if (lp) { Object.keys(lp).forEach(x => delete lp[x]); Object.assign(lp, before); } studio.jobs = jobs0; openProposal(p.id, true); }, '저장하지 못해 원래대로 되돌렸습니다');
+    if (!done) return;
     await proposalEvent(p.id, msg);
-    studio.list = null; await loadStudio(); openProposal(p.id, true); if (okMsg) toast(okMsg);
+    studio.list = null; await loadStudio(); if (activeDetail === 'p:' + p.id) openProposal(p.id, true);
   };
   $('#intake-edit')?.addEventListener('click', () => studioProjectModal(p));
   // 작업 취소 (10-30 김현우) — 8초 안에 「되돌리기」를 누르면 취소하지 않는다. 봇은 apply_at(8초 뒤)이 지나야 멈춘다 → 화면을 나가도 그대로 적용
