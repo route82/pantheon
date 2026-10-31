@@ -654,9 +654,9 @@ async function loadStudio() {
 
 function studioView() {
   if (!studio.list && !studio.err) { setTimeout(loadStudio); return '<div class="empty"><p>불러오는 중입니다<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></p></div>'; }
-  const tabs = `<div class="tabs" style="margin-bottom:16px">${[['projects', '프로젝트', studio.list?.length], ['refs', '레퍼런스 라이브러리', studio.refs?.length]].map(([k, t, n]) => `<button class="tab ${studio.tab === k ? 'active' : ''}" data-studio-tab="${k}">${t}${n ? ` <span class="nav-count">${n}</span>` : ''}</button>`).join('')}</div>`;
+  const tabs = `<div class="tabs" style="margin-bottom:16px">${[['projects', '프로젝트', studio.list?.length], ['refs', '레퍼런스 라이브러리', studio.refs?.length], ['archive', '이미지 아카이브', studio.arch?.length]].map(([k, t, n]) => `<button class="tab ${studio.tab === k ? 'active' : ''}" data-studio-tab="${k}">${t}${n ? ` <span class="nav-count">${n}</span>` : ''}</button>`).join('')}</div>`;
   if (studio.err) return tabs + `<div class="notice">${esc(studio.err)}</div>`;
-  return tabs + (studio.tab === 'refs' ? studioRefs() : studioProjects());
+  return tabs + (studio.tab === 'refs' ? studioRefs() : studio.tab === 'archive' ? studioArchive() : studioProjects());
 }
 
 function studioProjects() {
@@ -678,6 +678,126 @@ function studioRefs() {
   ${rs.length ? `<div class="table-wrap"><table class="ct"><thead><tr><th>제안서</th><th>IP</th><th>수신사</th><th>작성</th><th>분석</th><th>기본 포맷</th><th>파일</th></tr></thead><tbody>${rs.map(r => `<tr${r.status === 'ready' ? ` class="clickable" data-ref-view="${r.id}"` : ''}><td class="wrap-cell">${esc(r.title)}</td><td data-label="IP">${esc(r.ip_names || '—')}</td><td data-label="수신사">${esc(r.recipient || '—')}</td><td data-label="작성">${esc(r.author || '—')}</td><td data-label="분석">${r.status === 'ready' ? `<button class="text-btn" data-ref-view="${r.id}"><span class="pill good">분석 완료</span> 보기</button>` : r.status === 'failed' ? `<span class="pill bad" title="${esc(r.profile?.error || '')}">분석 실패</span> <button class="text-btn" data-ref-retry="${r.id}">다시 분석</button>` : refProg(r)}</td><td data-label="기본 포맷">${r.is_default ? '<span class="pill good">기본</span>' : `<button class="text-btn" data-ref-default="${r.id}">기본으로 지정</button>`}</td><td data-label="파일"><button class="text-btn" data-ref-open="${r.id}">열기 ↗</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty"><p>등록된 레퍼런스가 없습니다.<br>오른쪽 위 「레퍼런스 등록」에서 완성 제안서 PDF를 업로드해 주세요.</p></div>'}</section>`;
 }
 
+// 이미지 아카이브 (10-31 김현우 「Aside로 찾거나 힉스필드로 만든 이미지를 종류별로 정리해 나중에도 쓰게」)
+// 판테온 봇이 이미지 작업이 끝날 때마다 pt_image_archive 에 복사본을 쌓는다(bot/src/archive.py). 여기선 보고·내려받고·다른 제안서에 넣는다
+const AR_KIND = [['logo', '로고'], ['symbol', '심볼'], ['artist', '아티스트 사진'], ['official', '공식 이미지'], ['capture', '캡처'], ['reference', '참고 사례'], ['ai_concept', 'AI 컨셉'], ['mockup', '굿즈·목업'], ['texture', '배경·질감']];
+const AR_KO = Object.fromEntries(AR_KIND), AR_SRC = {aside: 'Aside', higgsfield: '힉스필드', search: '자동 검색'};
+const arF = {kind: '', source: '', ip: '', q: ''};
+async function loadArchive() {
+  if (studio.archLoading) return; studio.archLoading = true;
+  const { data, error } = await SB.from('pt_image_archive').select('*').eq('hidden', false).order('created_at', {ascending: false}).limit(3000);
+  studio.archLoading = false;
+  if (error) { studio.archErr = '이미지 아카이브를 불러오지 못했습니다: ' + error.message; studio.arch = []; } else { studio.archErr = ''; studio.arch = data; }
+  if (page === 'studio' && studio.tab === 'archive') render();
+  window.dispatchEvent(new Event('pt-arch'));
+}
+const arIps = () => [...new Set((studio.arch || []).flatMap(a => a.ips || []))].sort((a, b) => a.localeCompare(b, 'ko'));
+const arMatch = (a, f) => (!f.kind || a.kind === f.kind) && (!f.source || a.source === f.source) && (!f.ip || (a.ips || []).includes(f.ip))
+  && (!f.q || [a.what, a.prompt, ...(a.ips || [])].join(' ').toLowerCase().includes(f.q.toLowerCase()));
+const arProp = a => { const p = studio.list?.find(x => x.id === a.proposal_id); return p ? `${pTitle(p)}${propSub(p) ? ' · ' + propSub(p) : ''}` : ''; };
+// 거르기 줄 + 사진 격자 — 탭 화면과 「아카이브에서 선택」 창이 같이 쓴다
+function arFilters(f, id) {
+  const all = studio.arch || [], n = k => all.filter(a => arMatch(a, {...f, kind: k})).length;
+  return `<div class="ar-tools" id="${id}"><div class="ar-kinds" role="group" aria-label="종류">${[['', '전체'], ...AR_KIND].map(([k, t]) => `<button type="button" class="ar-chip${f.kind === k ? ' on' : ''}" data-ar-kind="${k}" aria-pressed="${f.kind === k}">${t} <small>${n(k)}</small></button>`).join('')}</div>
+  <div class="ar-row"><select data-ar-src aria-label="출처" data-nodirty><option value="">모든 출처</option>${Object.entries(AR_SRC).map(([k, t]) => `<option value="${k}"${f.source === k ? ' selected' : ''}>${t}</option>`).join('')}</select><select data-ar-ip aria-label="IP" data-nodirty><option value="">모든 IP</option>${arIps().map(x => `<option${f.ip === x ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select><input type="search" data-ar-q placeholder="설명·IP·프롬프트 검색" value="${esc(f.q)}" aria-label="아카이브 검색"></div></div>`;
+}
+function arGrid(f, pick) {
+  const xs = (studio.arch || []).filter(a => arMatch(a, f));
+  if (!xs.length) return `<div class="empty"><p>${(studio.arch || []).length ? '조건에 맞는 이미지가 없습니다.' : '아직 보관된 이미지가 없습니다.<br>제안서 이미지를 확보하거나 생성하면 여기에 자동으로 모입니다.'}</p></div>`;
+  return `<div class="ar-grid">${xs.slice(0, 300).map(a => `<button type="button" class="ar-card" data-ar="${a.id}"${pick ? ' data-ar-pick="1"' : ''}><div class="ithumb" data-ar-thumb="${esc(a.path)}"></div><span class="ar-meta"><b>${esc(AR_KO[a.kind] || a.kind)}</b><span class="pill">${esc(AR_SRC[a.source] || a.source)}</span></span><small>${esc(whatText(a.what) || '설명 없음')}</small><small class="ar-ip">${esc((a.ips || []).join(' · '))}</small></button>`).join('')}</div>${xs.length > 300 ? `<p class="panel-caption">${xs.length}장 중 300장만 보입니다. 종류·IP로 좁혀 주세요.</p>` : ''}`;
+}
+async function arThumbs(root) {
+  const els = [...root.querySelectorAll('[data-ar-thumb]')], paths = [...new Set(els.map(e => e.dataset.arThumb))];
+  for (let i = 0; i < paths.length; i += 100) {
+    const { data } = await SB.storage.from('pt-studio').createSignedUrls(paths.slice(i, i + 100), 3600);
+    (data || []).forEach(x => { if (x.signedUrl) root.querySelectorAll(`[data-ar-thumb="${CSS.escape(x.path)}"]`).forEach(el => { el.style.backgroundImage = `url("${x.signedUrl}")`; }); });
+  }
+}
+// 거르기 묶기 — 바뀌면 redraw()
+function arBind(root, f, redraw) {
+  root.querySelectorAll('[data-ar-kind]').forEach(b => b.onclick = () => { f.kind = b.dataset.arKind; redraw(); });
+  const s = root.querySelector('[data-ar-src]'), ip = root.querySelector('[data-ar-ip]'), q = root.querySelector('[data-ar-q]');
+  if (s) s.onchange = () => { f.source = s.value; redraw(); };
+  if (ip) ip.onchange = () => { f.ip = ip.value; redraw(); };
+  if (q) { let t; q.oninput = () => { clearTimeout(t); t = setTimeout(() => { f.q = q.value.trim(); redraw(true); }, 250); }; }
+}
+function studioArchive() {
+  if (!studio.arch) { setTimeout(loadArchive); return '<div class="empty"><p>이미지 아카이브를 불러오는 중입니다<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></p></div>'; }
+  if (studio.archErr) return `<div class="notice">${esc(studio.archErr)}</div>`;
+  return `<section class="panel"><div class="panel-head"><div><div class="panel-title">이미지 아카이브 <small>${studio.arch.length}장</small></div><p class="panel-caption">제안서를 만들며 Aside로 찾거나 힉스필드로 생성한 이미지입니다. 이미지를 누르면 크게 보고 내려받을 수 있고, 제안서 이미지 확인·수정 화면의 「아카이브에서 선택」으로 다른 제안서에 넣을 수 있습니다.</p></div></div>
+  ${arFilters(arF, 'ar-tools')}<div id="ar-body">${arGrid(arF)}</div></section>`;
+}
+function bindArchive() {
+  const host = $('#ar-tools'); if (!host) return;
+  const redraw = keepInput => {
+    if (keepInput) { $('#ar-body').innerHTML = arGrid(arF); } else { host.outerHTML = arFilters(arF, 'ar-tools'); $('#ar-body').innerHTML = arGrid(arF); bindArchive(); return; }
+    arCards($('#ar-body')); arThumbs($('#ar-body'));
+  };
+  arBind(host, arF, redraw); arCards($('#ar-body')); arThumbs($('#ar-body'));
+}
+function arCards(root) { root.querySelectorAll('[data-ar]:not([data-ar-pick])').forEach(b => b.onclick = () => arView(b.dataset.ar)); }
+async function arView(id) {
+  const a = studio.arch.find(x => x.id === id); if (!a) return;
+  const from = arProp(a);
+  modal(`<div class="ar-view"><h2>${esc(AR_KO[a.kind] || a.kind)} <span class="pill">${esc(AR_SRC[a.source] || a.source)}</span></h2><div class="ar-big"><img id="ar-img" alt="${esc(whatText(a.what))}"></div>
+  <div class="detail-row"><span>설명</span><b>${esc(whatText(a.what) || '—')}</b></div><div class="detail-row"><span>IP</span><b>${esc((a.ips || []).join(' · ') || '—')}</b></div>
+  ${a.w && a.h ? `<div class="detail-row"><span>크기</span><b>${a.w} × ${a.h}</b></div>` : ''}${from ? `<div class="detail-row"><span>처음 쓴 제안서</span><b>${esc(from)}${a.slide ? ` · ${a.slide}페이지` : ''}</b></div>` : ''}
+  <div class="detail-row"><span>보관한 날</span><b>${esc(kst(a.created_at))}</b></div>
+  ${a.source_page ? `<div class="detail-row"><span>출처</span><b><a href="${esc(a.source_page)}" target="_blank" rel="noopener">${esc(a.source_page.replace(/^https?:\/\//, '').slice(0, 60))} ↗</a></b></div>` : ''}
+  ${a.prompt ? `<details class="ar-prompt"><summary>생성 프롬프트</summary><p>${esc(a.prompt)}</p><button class="text-btn" type="button" id="ar-copy">프롬프트 복사</button></details>` : ''}
+  <label>종류<select id="ar-kind" data-nodirty>${AR_KIND.map(([k, t]) => `<option value="${k}"${a.kind === k ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
+  <div class="modal-actions"><button class="button" type="button" id="ar-hide">아카이브에서 빼기</button><button class="button" type="button" data-cancel>닫기</button><button class="button primary" type="button" id="ar-down">${icon('download')} 원본 내려받기</button></div></div>`);
+  $('#modal').classList.add('wide'); $('#modal').addEventListener('close', () => $('#modal').classList.remove('wide'), {once: true});
+  SB.storage.from('pt-studio').createSignedUrl(a.path, 3600).then(({ data }) => { if (data && $('#ar-img')) $('#ar-img').src = data.signedUrl; });
+  $('#ar-copy')?.addEventListener('click', async () => { try { await navigator.clipboard.writeText(a.prompt); toast('프롬프트를 복사했습니다.'); } catch { toast('복사하지 못했습니다.'); } });
+  $('#ar-down').onclick = async () => {
+    const ext = a.path.split('.').pop(), name = `${(a.ips || []).join('_') || 'image'}_${AR_KO[a.kind] || a.kind}_${a.id.slice(0, 6)}.${ext}`.replace(/[\\/:*?"<>|\s]+/g, '_');
+    const { data, error } = await SB.storage.from('pt-studio').createSignedUrl(a.path, 600, {download: name});
+    if (error) return toast('내려받지 못했습니다: ' + error.message);
+    const l = document.createElement('a'); l.href = data.signedUrl; l.download = name; document.body.appendChild(l); l.click(); l.remove();
+  };
+  $('#ar-kind').onchange = async ev => { const old = a.kind, k = ev.target.value;
+    await optimistic(() => { a.kind = k; render(); }, () => SB.from('pt_image_archive').update({kind: k}).eq('id', a.id), () => { a.kind = old; ev.target.value = old; render(); });
+    toast(`「${AR_KO[k]}」(으)로 옮겼습니다.`); };
+  $('#ar-hide').onclick = async () => { const i = studio.arch.indexOf(a);
+    $('#modal').close();
+    const done = await optimistic(() => { studio.arch.splice(i, 1); render(); }, () => SB.from('pt_image_archive').update({hidden: true}).eq('id', a.id), () => { studio.arch.splice(i, 0, a); render(); }, '빼지 못해 원래대로 되돌렸습니다');
+    if (done) toast('아카이브에서 뺐습니다.', {fn: async () => { const r = await SB.from('pt_image_archive').update({hidden: false}).eq('id', a.id); if (r.error) throw r.error; studio.arch.splice(i, 0, a); render(); toast('되돌렸습니다.'); }}); };
+}
+// 제안서 이미지 확인·수정 카드 「아카이브에서 선택」 — 고른 이미지를 그 자리에 넣는다(복사본 그대로 · 내 이미지로 교체와 같은 흐름)
+const AR_NEAR = {official: 'official', logo: 'logo', capture: 'capture', reference: 'reference', ai_concept: 'ai_concept', mockup: 'mockup', texture: 'texture'};
+function arPick(p, key, done) {
+  const S = (studio.list?.find(x => x.id === p.id)?.data || p.data).images.slots, s = S[key];
+  const ip = [p.ip_a_name, p.ip_b_name].filter(Boolean);
+  const f = {kind: AR_NEAR[s.kind] || '', source: '', ip: '', q: ''};
+  const draw = () => {
+    const box = $('#arp'); if (!box) return;
+    if (!studio.arch) { box.innerHTML = '<div class="empty"><p>이미지 아카이브를 불러오는 중입니다<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></p></div>'; return; }
+    box.innerHTML = arFilters(f, 'arp-tools') + `<div id="arp-body">${arGrid(f, true)}</div>`;
+    arBind($('#arp-tools'), f, keep => { if (keep) { $('#arp-body').innerHTML = arGrid(f, true); bindPick(); } else draw(); });
+    bindPick();
+  };
+  const bindPick = () => { const b = $('#arp-body'); arThumbs(b); b.querySelectorAll('[data-ar-pick]').forEach(c => c.onclick = async () => {
+    const a = studio.arch.find(x => x.id === c.dataset.ar); if (!a) return;
+    $('#modal').close(); if (await useArchive(p, key, a)) done?.(); }); };
+  modal(`<div><h2>아카이브에서 선택</h2><p>${esc(whatText(s.what))} 위치에 넣을 이미지를 선택하세요. ${ip.length ? `${esc(ip.join(' · '))} 이미지만 보려면 IP를 선택하세요.` : ''}</p><div id="arp"></div><div class="modal-actions"><button class="button" type="button" data-cancel>닫기</button></div></div>`);
+  $('#modal').classList.add('wide'); $('#modal').addEventListener('close', () => { $('#modal').classList.remove('wide'); window.removeEventListener('pt-arch', draw); }, {once: true});
+  window.addEventListener('pt-arch', draw); draw(); if (!studio.arch) loadArchive();
+}
+async function useArchive(p, key, a) {
+  const { data: row, error: e0 } = await SB.from('pt_proposal').select('data').eq('id', p.id).single();
+  if (e0) return toast('불러오지 못했습니다: ' + e0.message);
+  const d = row.data, was = d.images.slots[key];
+  const slots = {...d.images.slots, [key]: {...was, status: 'found', via: 'archive', archive_id: a.id, path: a.path, source_page: a.source_page || '', image_url: a.image_url || '', w: a.w, h: a.h, pos: {}, cand: undefined, before: undefined}};
+  const { error } = await SB.from('pt_proposal').update({data: {...d, images: {...d.images, slots}}}).eq('id', p.id);
+  if (error) return toast('저장하지 못했습니다: ' + error.message);
+  await proposalEvent(p.id, `이미지 ${key} 을(를) 아카이브 이미지로 교체했습니다`);
+  studio.list = null; await loadStudio(); toast('아카이브 이미지로 교체했습니다. 「변경 사항 반영」을 누르면 제안서에 들어갑니다.', {fn: async () => {
+    const { data: r2 } = await SB.from('pt_proposal').select('data').eq('id', p.id).single(); const d2 = r2.data;
+    await SB.from('pt_proposal').update({data: {...d2, images: {...d2.images, slots: {...d2.images.slots, [key]: was}}}}).eq('id', p.id);
+    await proposalEvent(p.id, `이미지 ${key} 교체를 되돌렸습니다`); studio.list = null; await loadStudio(); toast('원래 이미지로 되돌렸습니다.'); window.dispatchEvent(new Event('pt-refresh')); }});
+  return true;
+}
 // 레퍼런스 분석 진행률 — 판테온 봇이 pt_proposal_job.result 에 3초마다 적는 값(1~100% · 남은 초)을 읽어 막대로
 const refJob = r => studio.jobs.find(j => j.ref_id === r.id && j.kind === 'analyze_reference');
 function refProg(r) {
@@ -712,7 +832,7 @@ function rowProg(p) {
 }
 let listPoll;
 async function pollProjects() {
-  if (page !== 'studio' || studio.tab === 'refs') return;
+  if (page !== 'studio' || studio.tab !== 'projects') return;
   const ids = (studio.list || []).filter(p => p.status === 'working').map(p => p.id);
   if (!ids.length) return;
   const [ps, js] = await Promise.all([SB.from('pt_proposal').select('id,status,stage').in('id', ids),
@@ -738,7 +858,8 @@ function bindStudio() {
     await SB.from('pt_proposal_job').insert({ref_id: r.id, kind: 'analyze_reference', input: {file_path: r.file_path, retry: true}});
     await loadStudio(); toast('다시 분석을 요청했습니다.');
   });
-  $$('[data-studio-tab]').forEach(b => b.onclick = () => { studio.tab = b.dataset.studioTab; render(); });
+  $$('[data-studio-tab]').forEach(b => b.onclick = () => { studio.tab = b.dataset.studioTab; if (studio.tab === 'archive') studio.arch = null; render(); });
+  if (studio.tab === 'archive') bindArchive();
   $$('[data-pfilter]').forEach(b => { const pick = () => { const v = b.dataset.pfilter; studio.filter = studio.filter === v ? 'all' : v; render(); }; b.onclick = pick; b.onkeydown = ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pick(); } }; });
   $$('[data-proposal]').forEach(b => { b.onclick = () => openProposal(b.dataset.proposal); b.onkeydown = e => { if (e.key === 'Enter') openProposal(b.dataset.proposal); }; });
   $$('[data-ref-open]').forEach(b => b.onclick = async () => { const r = studio.refs.find(x => x.id === b.dataset.refOpen); const { data, error } = await SB.storage.from('pt-studio').createSignedUrl(r.file_path, 600); if (error) return toast('파일을 열지 못했습니다.'); window.open(data.signedUrl, '_blank', 'noopener'); });
@@ -1244,7 +1365,7 @@ async function pageReview(pid, start) {
       return `<button type="button" class="${bad ? 'flag' : ''}${S[k].path ? '' : ' empty'}${big(b) ? ' bg' : ''}" data-hot="${esc(k)}" style="left:${b.x / EW * 100}%;top:${b.y / EH * 100}%;width:${b.w / EW * 100}%;height:${b.h / EH * 100}%" aria-label="${esc(KIND_KO_IMG[S[k].kind] || '')} ${esc(whatText(S[k].what))}"><span>${esc(KIND_KO_IMG[S[k].kind] || '')}</span></button>`; }).join('');
     const okd = k => !!S[k]?.path && (d.qa_ok || {})[k] === S[k].path;          // 사람이 확정한 이미지 (검수 목록에서 빠짐)
     const card = k => { const s = S[k], [cls, label] = SLOT_ST[s.status] || ['', s.status], bad = fl.filter(f => f.key === k);
-      return `<div class="rv-slot${bad.length ? ' flag' : ''}"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-rk="${esc(k)}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}</span>`}</div><div class="rv-info"><div class="ihead"><b>${esc(KIND_KO_IMG[s.kind] || s.kind)}</b><span class="pill ${cls}">${label}</span></div><small>${esc(whatText(s.what))}</small>${(s.cand ? [] : bad).map(f => `<small class="warn">${esc(QA_KO[f.type] || '확인')} · ${esc(f.detail)}</small>${[...new Set([...String(f.detail).matchAll(/(\d{1,2})\s*페이지/g)].map(m => +m[1]).filter(n => n !== cur && n >= 1 && n <= N))].map(n => `<button class="text-btn go" data-go-page="${n}">${n}페이지 보기 ▶</button>`).join('')}`).join('')}${s.cand ? `<div class="rv-cand"><div class="ithumb" data-cand-thumb="${esc(s.cand.path)}"></div><div><b>새 이미지</b><small>아직 제안서에 반영되지 않았습니다</small><div class="ibtns"><button class="button small" data-cand-view="${esc(k)}">이 이미지로 미리보기</button><button class="button primary small" data-cand-ok="${esc(k)}">이 이미지로 확정</button><button class="text-btn" data-cand-no="${esc(k)}">새 이미지 버리기</button></div></div></div>` : ''}<div class="ibtns">${s.path && okd(k) ? `<span class="pill good">확정</span><button class="text-btn" data-rv-unok="${esc(k)}">확정 취소</button>` : bad.length && s.path && !s.cand ? `<button class="text-btn ok" data-rv-ok="${esc(k)}">이 이미지로 확정</button>` : ''}${s.path ? `<button class="text-btn" data-rv-open="${esc(k)}">크게 보기·수정</button>` : ''}<label class="text-btn up">내 이미지로 교체<input type="file" accept="image/png,image/jpeg,image/webp" data-rv-up="${esc(k)}" hidden></label></div>${makeBox(k, s)}</div></div>`; };
+      return `<div class="rv-slot${bad.length ? ' flag' : ''}"><div class="ithumb" data-thumb="${esc(s.path || '')}" data-rk="${esc(k)}">${s.path ? '' : `<span>${esc(KIND_KO_IMG[s.kind] || s.kind)}</span>`}</div><div class="rv-info"><div class="ihead"><b>${esc(KIND_KO_IMG[s.kind] || s.kind)}</b><span class="pill ${cls}">${label}</span></div><small>${esc(whatText(s.what))}</small>${(s.cand ? [] : bad).map(f => `<small class="warn">${esc(QA_KO[f.type] || '확인')} · ${esc(f.detail)}</small>${[...new Set([...String(f.detail).matchAll(/(\d{1,2})\s*페이지/g)].map(m => +m[1]).filter(n => n !== cur && n >= 1 && n <= N))].map(n => `<button class="text-btn go" data-go-page="${n}">${n}페이지 보기 ▶</button>`).join('')}`).join('')}${s.cand ? `<div class="rv-cand"><div class="ithumb" data-cand-thumb="${esc(s.cand.path)}"></div><div><b>새 이미지</b><small>아직 제안서에 반영되지 않았습니다</small><div class="ibtns"><button class="button small" data-cand-view="${esc(k)}">이 이미지로 미리보기</button><button class="button primary small" data-cand-ok="${esc(k)}">이 이미지로 확정</button><button class="text-btn" data-cand-no="${esc(k)}">새 이미지 버리기</button></div></div></div>` : ''}<div class="ibtns">${s.path && okd(k) ? `<span class="pill good">확정</span><button class="text-btn" data-rv-unok="${esc(k)}">확정 취소</button>` : bad.length && s.path && !s.cand ? `<button class="text-btn ok" data-rv-ok="${esc(k)}">이 이미지로 확정</button>` : ''}${s.path ? `<button class="text-btn" data-rv-open="${esc(k)}">크게 보기·수정</button>` : ''}<button class="text-btn" data-rv-arch="${esc(k)}">아카이브에서 선택</button><label class="text-btn up">내 이미지로 교체<input type="file" accept="image/png,image/jpeg,image/webp" data-rv-up="${esc(k)}" hidden></label></div>${makeBox(k, s)}</div></div>`; };
     const canAi = s => AI_KINDS.includes(s.kind) || (!s.path && !['official', 'logo', 'capture'].includes(s.kind));
     function makeBox(k, s) {
       if (p.status === 'working' && (s.widen || s.upscale || s.status === 'ai')) { const live = liveJobs(p.id); return `<div class="rv-busy">${jobsProg(live.length ? live : [null])}</div>`; }
@@ -1389,6 +1510,7 @@ async function pageReview(pid, start) {
       h.onmouseenter = () => card1(k)?.classList.add('hl'); h.onmouseleave = () => card1(k)?.classList.remove('hl');
       h.onclick = () => { const c = card1(k); if (S[k].path && c?.querySelector('.ithumb')?.dataset.src) return open(k);
         c?.scrollIntoView({block: 'center', behavior: 'smooth'}); c?.classList.add('hl'); setTimeout(() => c?.classList.remove('hl'), 1600); }; });
+    $$('#rv-side [data-rv-arch]').forEach(x => x.onclick = () => arPick(p, x.dataset.rvArch, () => show(cur)));
     $$('#rv-side [data-rv-up]').forEach(inp => inp.onchange = async () => { const f = inp.files[0]; if (f && await replaceSlotImage(p, inp.dataset.rvUp, f)) show(cur); });
     $$('#rv-side [data-mk-ai]').forEach(x => x.onclick = async () => { const k = x.dataset.mkAi, pr = $(`[data-mk-prompt="${CSS.escape(k)}"]`).value.trim();
       if (!pr) return toast('생성 프롬프트를 입력해 주세요.');
