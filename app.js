@@ -1878,7 +1878,7 @@ function ipRange() {
 const IP_RUN = 'id,at,status,progress,step,done_at';
 // 순위 기준 — 봇 ipchart.py 의 score()·SEGS·POOL_HOURS·DECAY 와 같은 내용 (바꾸면 둘 다)
 const IP_HOW = `<details class="ipc-how"><summary>순위 기준 — 어떻게 매기나요?</summary><div class="ipc-how-body">
-  <h4>무엇을 모으나</h4><p>하루 4번(오전 2·8시, 오후 2·8시) 웹에서 최근 7일 안팎의 기사·음원 차트·OTT 순위·SNS 화제·조회수를 찾아, 7갈래(K-POP 신인 · K-POP · 캐릭터 · 애니메이션 · 영화 · OTT·TV 프로그램 · 인플루언서)에서 IP 300여 개를 모읍니다. 지난 3일 사이 나온 IP도 후보로 남겨 두고, 이번에 다시 나오지 않으면 갱신마다 점수가 15%씩 줄어듭니다.</p>
+  <h4>무엇을 모으나</h4><p>하루 4번(오전 2·8시, 오후 2·8시) 웹에서 최근 7일 안팎의 기사·음원 차트·OTT 순위·SNS 화제·조회수를 찾아, 11갈래(K-POP 신인 보이그룹·걸그룹 · K-POP · 국내 캐릭터 · 해외·게임 캐릭터 · 애니메이션 · 영화 · 드라마 · 예능 · 유튜버 · SNS 크리에이터)에서 IP 330여 개를 모읍니다. 지난 3일 사이 나온 IP도 후보로 남겨 두고, 이번에 다시 나오지 않으면 갱신마다 점수가 15%씩 줄어듭니다.</p>
   <h4>점수 (100점 만점)</h4><table class="ipc-how-t"><thead><tr><th>항목</th><th>뜻</th><th>신규 IP</th><th>전체 IP</th></tr></thead><tbody>
   <tr><td>상승 속도</td><td>최근 7일 사이 얼마나 빨리 떴는지 (갑자기 뜰수록 높음)</td><td>40%</td><td>25%</td></tr>
   <tr><td>화제 크기</td><td>지금 기사·차트·SNS 에서 다루는 규모</td><td>25%</td><td>50%</td></tr>
