@@ -26,7 +26,7 @@ let me = null, myName = '', isAdmin = false;
 let all = [];
 let page = 'home', filter = '전체', query = '', activeDetail = null, lastAnswer = '';
 const menus = [['home','대시보드'],['entities','엔티티 DB'],['contacts','연락처'],['chart','IP 차트'],['studio','제안서 스튜디오'],['admin','DB 관리']];
-const navMenus = () => menus.filter(m => (m[0] !== 'admin' || isAdmin) && (m[0] !== 'studio' || studioCan));
+const navMenus = () => menus.filter(m => (m[0] !== 'admin' || isAdmin) && (m[0] !== 'studio' || studioCan) && (m[0] !== 'chart' || ipcCan));
 const byId = id => all.find(e => e.id === id);
 const isContact = e => e.type === '거래처 담당자';
 const entities = () => all.filter(e => !isContact(e)), contacts = () => all.filter(isContact);
@@ -651,7 +651,7 @@ function bindAdmin() {
 /* ---------- 제안서 스튜디오 (2026-10-27 · 시험 기간: 홍석진·김현우·류성열만 — DB 가 pt_studio_can 으로 막음) ----------
    대표님 almighty-proposal-studio 의 흐름: IP 입력 → 인테이크 → (콜라보) 파트너 추천 → 리서치 → 컨셉 → 제안서 생성 → 이미지 계획 → 생성·삽입·QA
    사람은 게이트에서만 결정하고, 단계 작업은 pt_proposal_job 대기열에 넣어 판테온 봇(서버 PC)이 처리한다. 엔티티는 판테온 pt_entity 를 쓴다 */
-let studioCan = false;
+let studioCan = false, ipcCan = false;         // IP 차트 — 우선 김현우만 (10-31 · sql/013 pt_ipchart_can)
 const studio = {tab: 'projects', filter: 'all', list: null, refs: null, jobs: [], loading: false, err: ''};
 const STAGES = ['IP 입력', '기본 정보', '파트너 IP 추천', '리서치', '컨셉 설계', '제안서 생성', '이미지 계획', '생성·삽입·검수'];
 const GATES = {2: '기본 정보 확정', 3: '파트너 IP 선택', 5: '컨셉 확정', 7: '이미지 수급·크레딧 승인', 8: '반려 이미지 최종 판단'};
@@ -1876,6 +1876,18 @@ function ipRange() {
   return {};
 }
 const IP_RUN = 'id,at,status,progress,step,done_at';
+// 순위 기준 — 봇 ipchart.py 의 score()·SEGS·POOL_HOURS·DECAY 와 같은 내용 (바꾸면 둘 다)
+const IP_HOW = `<details class="ipc-how"><summary>순위 기준 — 어떻게 매기나요?</summary><div class="ipc-how-body">
+  <h4>무엇을 모으나</h4><p>하루 4번(오전 2·8시, 오후 2·8시) 웹에서 최근 7일 안팎의 기사·음원 차트·OTT 순위·SNS 화제·조회수를 찾아, 7갈래(K-POP 신인 · K-POP · 캐릭터 · 애니메이션 · 영화 · OTT·TV 프로그램 · 인플루언서)에서 IP 300여 개를 모읍니다. 지난 3일 사이 나온 IP도 후보로 남겨 두고, 이번에 다시 나오지 않으면 갱신마다 점수가 15%씩 줄어듭니다.</p>
+  <h4>점수 (100점 만점)</h4><table class="ipc-how-t"><thead><tr><th>항목</th><th>뜻</th><th>신규 IP</th><th>전체 IP</th></tr></thead><tbody>
+  <tr><td>상승 속도</td><td>최근 7일 사이 얼마나 빨리 떴는지 (갑자기 뜰수록 높음)</td><td>40%</td><td>25%</td></tr>
+  <tr><td>화제 크기</td><td>지금 기사·차트·SNS 에서 다루는 규모</td><td>25%</td><td>50%</td></tr>
+  <tr><td>네이버 검색 추이</td><td>네이버 데이터랩 최근 7일 평균 ÷ 그 앞 7일 평균 (같으면 50점, 4배면 100점)</td><td>20%</td><td>15%</td></tr>
+  <tr><td>유튜브 구독자 증가</td><td>공식 채널 하루 구독자 증가율 (하루 +5%면 100점)</td><td>15%</td><td>10%</td></tr></tbody></table>
+  <p>상승 속도와 화제 크기는 검색한 근거를 보고 0~100점으로 매기고, 네이버·유튜브는 실제 수치로 계산합니다. 수치를 아직 확인하지 못한 항목은 빼고 나머지 비중으로 나눠 계산합니다. 네이버 검색 추이는 순위를 매긴 뒤 위쪽 IP부터 확인해 점수에 다시 반영합니다.</p>
+  <h4>두 차트</h4><p><b>신규 IP</b>는 최근 2년 안에 데뷔·공개했거나 최근 갑자기 뜬 IP만 모아 상승 속도에 무게를 둡니다. <b>전체 IP</b>는 신규·기존을 모두 넣고 지금 화제 크기에 무게를 둡니다. 차트마다 1~200위까지 보여 줍니다.</p>
+  <h4>기간과 변동</h4><p>실시간은 마지막 갱신 순위이고, 하루 전 갱신과 비교해 ▲▼를 표시합니다. 일간(24시간)·주간(7일)·월간(30일)·연간(365일)·기간 설정은 그 기간 갱신들의 평균 점수로 다시 매기며, 이번에 나오지 않은 갱신은 0점으로 셉니다. 변동은 바로 앞 같은 길이 기간과 비교합니다. NEW는 비교 기간에 순위에 없던 IP입니다.</p>
+</div></details>`;
 async function loadChart() {
   const key = [ipc.chart, ipc.period, ipc.from, ipc.to].join('|'); ipc.key = key;
   if (ipc.period === 'range' && !(ipc.from && ipc.to)) { ipc.rows = []; if (page === 'chart') render(); return; }
@@ -1923,12 +1935,12 @@ function chartView() {
   const rows = ipc.rows.filter(r => ipc.ips[r.ip] && !ipc.ips[r.ip].hidden && (ipc.kind === 'all' || ipc.ips[r.ip].kind === ipc.kind));
   const kinds = ['all', ...Object.keys(IPK).filter(k => k !== 'other' && ipc.rows.some(r => ipc.ips[r.ip]?.kind === k))];
   const basis = ipc.rows[0]?.basis, busy = ['wait', 'work'].includes(ipc.run?.status);
-  const head = `<div class="ipc-head"><div class="tabs">${[['new', '신규 IP'], ['all', '전체 IP']].map(([k, t]) => `<button class="tab ${ipc.chart === k ? 'active' : ''}" data-ipc-chart="${k}">${t}</button>`).join('')}</div>${isAdmin ? `<button class="button" id="ipc-refresh" ${busy ? 'disabled' : ''}>${icon('clock')} 지금 갱신</button>` : ''}</div>
+  const head = `<div class="ipc-head"><div class="tabs">${[['new', '신규 IP'], ['all', '전체 IP']].map(([k, t]) => `<button class="tab ${ipc.chart === k ? 'active' : ''}" data-ipc-chart="${k}">${t}</button>`).join('')}</div><button class="button" id="ipc-refresh" ${busy ? 'disabled' : ''}>${icon('clock')} 지금 갱신</button></div>
     <div class="ipc-periods">${IPP.map(([k, t]) => `<button class="ar-chip ${ipc.period === k ? 'on' : ''}" data-ipc-period="${k}">${t}</button>`).join('')}</div>${ipc.period === 'range' ? `<div class="ipc-range"><input type="date" id="ipc-from" value="${esc(ipc.from)}" aria-label="시작일"><span>~</span><input type="date" id="ipc-to" value="${esc(ipc.to)}" aria-label="종료일"><button class="button primary" id="ipc-range-go">보기</button></div>` : ''}
     <div class="ar-kinds ipc-kinds">${kinds.map(k => `<button class="ar-chip ${ipc.kind === k ? 'on' : ''}" data-ipc-kind="${k}">${k === 'all' ? '전체' : IPK[k]}</button>`).join('')}</div>`;
   const list = rows.length ? `<ol class="ipc-list">${rows.map(r => { const ip = ipc.ips[r.ip]; return `<li class="ipc-row" data-ip="${ip.id}" tabindex="0" role="button" aria-label="${esc(ip.name)} 상세보기"><div class="ipc-rank"><b>${r.pos}</b>${ipChg(r)}</div>${ipArt(ip)}<div class="ipc-main"><div class="ipc-name"><b>${esc(ip.name)}</b><span class="pill">${esc(IPK[ip.kind] || '기타')}</span></div><p>${esc(ip.summary)}</p><small>${esc([ip.owner, ip.since].filter(Boolean).join(' · '))}</small></div><span class="button ipc-more">상세보기</span></li>`; }).join('')}</ol>`
     : `<div class="empty"><p>${ipc.period === 'range' && !(ipc.from && ipc.to) ? '시작일과 종료일을 고른 뒤 「보기」를 눌러 주세요.' : ipc.rows.length ? '이 종류의 IP가 아직 없습니다.' : busy ? '첫 순위를 매기고 있습니다. 끝나면 자동으로 나타납니다.' : '이 기간에 쌓인 순위가 없습니다. 순위는 하루 4번 새로 매기며, 기록이 쌓일수록 긴 기간 순위를 볼 수 있습니다.'}</p></div>`;
-  return `${ipc.err ? `<div class="notice">${esc(ipc.err)}</div>` : ''}${ipProg()}<section class="panel"><div class="panel-head"><div class="panel-title">${ipc.chart === 'new' ? '신규 IP 차트' : '전체 IP 차트'} <small>${esc(per[1])}${basis ? ' · ' + ipKst(basis) + ' 기준' : ''}</small></div><span class="ipc-note">순위 변동 · ${esc(per[2])}</span></div>${head}${list}</section>`;
+  return `${ipc.err ? `<div class="notice">${esc(ipc.err)}</div>` : ''}${ipProg()}${IP_HOW}<section class="panel"><div class="panel-head"><div class="panel-title">${ipc.chart === 'new' ? '신규 IP 차트' : '전체 IP 차트'} <small>${esc(per[1])}${basis ? ' · ' + ipKst(basis) + ' 기준' : ''}</small></div><span class="ipc-note">순위 변동 · ${esc(per[2])}</span></div>${head}${list}</section>`;
 }
 function bindChart() {
   $$('[data-ipc-chart]').forEach(b => b.onclick = () => { ipc.chart = b.dataset.ipcChart; ipc.rows = null; render(); });
@@ -2058,8 +2070,8 @@ async function start() {
   if (!session) return loginScreen();
   if (RECOVERY) return recoveryScreen();
   me = session.user;
-  const [can, adm, mem, sc] = await Promise.all([SB.rpc('pt_can_use'), SB.rpc('pt_is_admin'), SB.from('hd_member').select('name,role').eq('id', me.id).maybeSingle(), SB.rpc('pt_studio_can')]);
-  studioCan = !sc.error && !!sc.data;            // 제안서 스튜디오 — 시험 기간 3명만 (함수가 없거나 거절이면 숨김)
+  const [can, adm, mem, sc, ic] = await Promise.all([SB.rpc('pt_can_use'), SB.rpc('pt_is_admin'), SB.from('hd_member').select('name,role').eq('id', me.id).maybeSingle(), SB.rpc('pt_studio_can'), SB.rpc('pt_ipchart_can')]);
+  studioCan = !sc.error && !!sc.data; ipcCan = !ic.error && !!ic.data;            // 제안서 스튜디오 — 시험 기간 3명만 (함수가 없거나 거절이면 숨김)
   if (!can.data) { await SB.auth.signOut(); return loginScreen('헤임달에서 아직 승인되지 않은 계정입니다. 승인 후 다시 로그인해 주세요.'); }
   isAdmin = !!adm.data; myName = mem.data?.name || me.email;
   $('#login').hidden = true;
