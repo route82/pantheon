@@ -11,7 +11,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 let RECOVERY = /type=recovery/.test(location.hash || '');
 const SB = createClient('https://dwoiobqucmikbtikfjwk.supabase.co', 'sb_publishable_K6BW26u2jRkTBDwuMqaaFA_3HkfnOc9');
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
-const icons = {studio:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M10 13h6M10 17h4"/>',home:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',entities:'<path d="M12 3 3 8l9 5 9-5-9-5Z M3 12l9 5 9-5 M3 16l9 5 9-5"/>',contacts:'<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="9" r="2.5"/><path d="M8 17c0-4 8-4 8 0 M2 7h3 M2 12h3 M2 17h3"/>',admin:'<path d="m10 3-1 3-3 1-3 3 2 2-1 4 3 3 3-1 2 3 4-1 1-3 3-1 1-4-3-2 1-3-3-3-3 1Z"/><circle cx="12" cy="12" r="3"/>',search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',bell:'<path d="M5 16h14l-2-3V8a5 5 0 0 0-10 0v5l-2 3Z M10 20h4"/>',plus:'<path d="M12 5v14 M5 12h14"/>',download:'<path d="M12 3v12 m-5-5 5 5 5-5 M4 16v5h16v-5"/>',arrow:'<path d="M4 12h16 m-5-5 5 5-5 5"/>',up:'<path d="m3 16 7-7 4 4 7-9 M15 4h6v6"/>',warning:'<path d="M12 3 2 21h20L12 3Z M12 9v5 M12 17v.2"/>',close:'<path d="m6 6 12 12 M6 18 18 6"/>',side:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M14 4v16"/>',big:'<path d="M4 9V4h5 M20 9V4h-5 M4 15v5h5 M20 15v5h-5"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m3 18 5-5 4 4 3-3 6 6"/>',link:'<path d="m9 15 6-6 M7 14l-2 2a3 3 0 0 0 4 4l4-4 M11 8l4-4a3 3 0 0 1 4 4l-2 2"/>'};
+const icons = {chart:'<path d="M4 20V10 M10 20V4 M16 20v-7 M22 20H2"/>',studio:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M10 13h6M10 17h4"/>',home:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',entities:'<path d="M12 3 3 8l9 5 9-5-9-5Z M3 12l9 5 9-5 M3 16l9 5 9-5"/>',contacts:'<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="9" r="2.5"/><path d="M8 17c0-4 8-4 8 0 M2 7h3 M2 12h3 M2 17h3"/>',admin:'<path d="m10 3-1 3-3 1-3 3 2 2-1 4 3 3 3-1 2 3 4-1 1-3 3-1 1-4-3-2 1-3-3-3-3 1Z"/><circle cx="12" cy="12" r="3"/>',search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',bell:'<path d="M5 16h14l-2-3V8a5 5 0 0 0-10 0v5l-2 3Z M10 20h4"/>',plus:'<path d="M12 5v14 M5 12h14"/>',download:'<path d="M12 3v12 m-5-5 5 5 5-5 M4 16v5h16v-5"/>',arrow:'<path d="M4 12h16 m-5-5 5 5-5 5"/>',up:'<path d="m3 16 7-7 4 4 7-9 M15 4h6v6"/>',warning:'<path d="M12 3 2 21h20L12 3Z M12 9v5 M12 17v.2"/>',close:'<path d="m6 6 12 12 M6 18 18 6"/>',side:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M14 4v16"/>',big:'<path d="M4 9V4h5 M20 9V4h-5 M4 15v5h5 M20 15v5h-5"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m3 18 5-5 4 4 3-3 6 6"/>',link:'<path d="m9 15 6-6 M7 14l-2 2a3 3 0 0 0 4 4l4-4 M11 8l4-4a3 3 0 0 1 4 4l-2 2"/>'};
 const icon = n => `<svg viewBox="0 0 24 24" aria-hidden="true">${icons[n]||icons.entities}</svg>`;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const TYPES = ['회사','브랜드','IP·유명인','기관','미디어·매체','미디어·OTT','판매 채널'];
@@ -25,7 +25,7 @@ const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) 
 let me = null, myName = '', isAdmin = false;
 let all = [];
 let page = 'home', filter = '전체', query = '', activeDetail = null, lastAnswer = '';
-const menus = [['home','대시보드'],['entities','엔티티 DB'],['contacts','연락처'],['studio','제안서 스튜디오'],['admin','DB 관리']];
+const menus = [['home','대시보드'],['entities','엔티티 DB'],['contacts','연락처'],['chart','IP 차트'],['studio','제안서 스튜디오'],['admin','DB 관리']];
 const navMenus = () => menus.filter(m => (m[0] !== 'admin' || isAdmin) && (m[0] !== 'studio' || studioCan));
 const byId = id => all.find(e => e.id === id);
 const isContact = e => e.type === '거래처 담당자';
@@ -160,19 +160,21 @@ function searchView() {
 function render() {
   if (page !== 'search' && !navMenus().some(m => m[0] === page)) page = 'home';
   $('#nav').innerHTML = navMenus().map(([key, title]) => `<button class="nav-item ${page === key ? 'active' : ''}" data-page="${key}">${icon(key)}<span>${title}</span>${key === 'contacts' ? `<span class="nav-count">${contacts().length}</span>` : ''}</button>`).join('');
-  const title = {home:['대시보드','거래처·IP·담당자 정보를 한곳에서 확인하세요.'], entities:['엔티티 DB','더올마이티·골포스트·사운드스루의 거래처·브랜드·기관·IP 목록입니다.'], contacts:['연락처','거래처 담당자의 연락처를 확인하고 바로 연락할 수 있습니다.'], studio:['제안서 스튜디오','IP를 입력하면 리서치·제안서·이미지는 판테온 봇이 진행하고, 담당자는 결정 단계에서만 확인합니다.'], search:['검색 결과', `「${query.trim()}」 검색 결과 ${searchHits(query).length}건입니다. 하나만 나오면 Enter로 바로 상세를 엽니다.`], admin:['DB 관리','누가 언제 무엇을 수정했는지 확인하고, 필요하면 이전 내용으로 복원할 수 있습니다.']}[page];
+  const title = {home:['대시보드','거래처·IP·담당자 정보를 한곳에서 확인하세요.'], entities:['엔티티 DB','더올마이티·골포스트·사운드스루의 거래처·브랜드·기관·IP 목록입니다.'], contacts:['연락처','거래처 담당자의 연락처를 확인하고 바로 연락할 수 있습니다.'], chart:['IP 차트','요즘 뜨는 신규 IP와 전체 IP 순위입니다. 하루 4번 새로 매깁니다.'], studio:['제안서 스튜디오','IP를 입력하면 리서치·제안서·이미지는 판테온 봇이 진행하고, 담당자는 결정 단계에서만 확인합니다.'], search:['검색 결과', `「${query.trim()}」 검색 결과 ${searchHits(query).length}건입니다. 하나만 나오면 Enter로 바로 상세를 엽니다.`], admin:['DB 관리','누가 언제 무엇을 수정했는지 확인하고, 필요하면 이전 내용으로 복원할 수 있습니다.']}[page];
   $('#crumb').textContent = page === 'search' ? '검색 결과' : menus.find(m => m[0] === page)?.[1];
   $('#page-title').innerHTML = title[0] + '<span class="title-dot">.</span>';
   $('#page-subtitle').textContent = title[1];
   $('#export-btn').innerHTML = icon('download') + '내보내기';
   $('#add-btn').innerHTML = icon('plus') + (page === 'contacts' ? '연락처 등록' : page === 'studio' ? (studio.tab === 'refs' ? '레퍼런스 등록' : '새 프로젝트') : '엔티티 등록');
-  $('#export-btn').hidden = page === 'studio';
+  $('#export-btn').hidden = page === 'studio' || page === 'chart';
+  $('#add-btn').hidden = page === 'chart';
   let html = '';
   if (page === 'home') html = stats() + `<div class="main-grid">${askPanel()}${alerts()}</div>`;
   if (page === 'entities') { const arr = entities().filter(match); html = `<div class="notice">엔티티 ${entities().length}개가 등록되어 있습니다. 등록·수정한 내용은 전 직원에게 공유되며 변경 이력이 기록됩니다.</div><section class="panel"><div class="panel-head"><div class="panel-title">엔티티 목록 <small>${arr.length} ENTITIES</small></div></div><div class="watch-toolbar">${filters()}</div><form class="table-tools local-form" id="local-form" role="search"><input class="local-search" id="local-q" type="search" placeholder="${page === 'contacts' ? '이름·회사·직함·연락처' : '이름·영문 이름·별칭·브랜드명'} 검색" value="${esc(query)}" aria-label="이 목록에서 검색"><button class="button primary" type="submit">${icon('search')} 검색</button>${query ? '<button class="button" type="button" id="local-clear">초기화</button>' : ''}</form><div class="entity-grid">${arr.map(entityCard).join('') || `<div class="empty">${NOT_FOUND}</div>`}</div></section>`; }
   if (page === 'contacts') { const arr = contacts().filter(c => hay(c).includes(query.toLowerCase())); html = `<div class="notice">「연락처 등록」에서 명함 사진을 업로드하면 판테온 봇이 내용을 자동으로 입력하고, 명함 이미지도 함께 저장합니다. 거래처 담당자는 회사에 연결되어 회사 상세의 「등록된 담당자」에도 표시됩니다.</div><section class="panel"><div class="panel-head"><div class="panel-title">연락처 <small>CONTACTS</small></div><span class="nav-count">${query ? arr.length + ' / ' : ''}${contacts().length}</span></div><form class="table-tools local-form" id="local-form" role="search"><input class="local-search" id="local-q" type="search" placeholder="${page === 'contacts' ? '이름·회사·직함·연락처' : '이름·영문 이름·별칭·브랜드명'} 검색" value="${esc(query)}" aria-label="이 목록에서 검색"><button class="button primary" type="submit">${icon('search')} 검색</button>${query ? '<button class="button" type="button" id="local-clear">초기화</button>' : ''}</form>${contactTable(arr)}</section>`; }
   if (page === 'admin') html = adminView();
   if (page === 'studio') html = studioView();
+  if (page === 'chart') html = chartView();
   if (page === 'search') html = searchView();
   $('#content').innerHTML = html;
   bindContent();
@@ -1828,6 +1830,135 @@ function exportCSV() {
   download(page === 'contacts' ? 'pantheon-contacts.csv' : 'pantheon-entities.csv', [['이름', '영문 이름', '유형', '소속 / 회사 연결', '직함', '관계 근거', '등록된 담당자', '내부 담당자', '연락처(업무)'], ...arr.map(e => [e.name, e.en, e.type, agencyOf(e), e.role, e.rel, contactsOf(e).map(c => c.name).join(' / '), e.owners.join(' / '), e.points.join(' / ')])]);
 }
 function go(p) { page = p; filter = '전체'; query = ''; $('#global-search').value = ''; try { history.replaceState(null, '', '#' + p); } catch {} render(); window.scrollTo(0, 0); }
+/* ---------- IP 차트 (10-31) — 요즘 뜨는 신규 IP · 전체 IP 순위 (sql/012 · 봇 ipchart.py 가 하루 4번 갱신) ---------- */
+const IPK = {kpop: 'K-POP', character: '캐릭터', animation: '애니메이션', movie: '영화', ott: 'OTT', influencer: '인플루언서', other: '기타'};
+const IPP = [['rt', '실시간', '전일 대비'], ['day', '일간', '전일 대비'], ['week', '주간', '전주 대비'], ['month', '월간', '전월 대비'], ['year', '연간', '전년 대비'], ['range', '기간 설정', '직전 같은 기간 대비']];
+const ipc = {chart: 'new', period: 'rt', kind: 'all', from: '', to: '', rows: null, ips: {}, run: null, err: '', key: '', poll: null, open: null, openChart: ''};
+const ipKst = iso => { try { const d = new Date(new Date(iso).getTime() + 9 * 3600e3); return `${d.getUTCMonth() + 1}.${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`; } catch { return ''; } };
+function ipRange() {
+  const now = Date.now(), day = 864e5, len = {day: 1, week: 7, month: 30, year: 365}[ipc.period];
+  if (len) return {p_from: new Date(now - len * day).toISOString(), p_to: new Date(now).toISOString()};
+  if (ipc.period === 'range' && ipc.from && ipc.to) return {p_from: new Date(ipc.from + 'T00:00:00+09:00').toISOString(), p_to: new Date(new Date(ipc.to + 'T00:00:00+09:00').getTime() + day).toISOString()};
+  return {};
+}
+const IP_RUN = 'id,at,status,progress,step,done_at';
+async function loadChart() {
+  const key = [ipc.chart, ipc.period, ipc.from, ipc.to].join('|'); ipc.key = key;
+  if (ipc.period === 'range' && !(ipc.from && ipc.to)) { ipc.rows = []; if (page === 'chart') render(); return; }
+  const [ch, run] = await Promise.all([SB.rpc('pt_ip_chart', {p_chart: ipc.chart, ...ipRange()}), SB.from('pt_ip_run').select(IP_RUN).order('at', {ascending: false}).limit(1)]);
+  if (key !== ipc.key) return;
+  if (ch.error) { ipc.err = '차트를 불러오지 못했습니다: ' + ch.error.message; ipc.rows = []; if (page === 'chart') render(); return; }
+  const ids = ch.data.map(r => r.ip).filter(id => !ipc.ips[id]);
+  for (let i = 0; i < ids.length; i += 100) { const { data } = await SB.from('pt_ip').select('*').in('id', ids.slice(i, i + 100)); (data || []).forEach(x => ipc.ips[x.id] = x); }
+  if (key !== ipc.key) return;
+  ipc.rows = ch.data; ipc.run = run.data?.[0] || null; ipc.err = '';
+  if (page === 'chart') render();
+  ipPoll();
+}
+// 갱신 중이면 3초마다 진행 상황, 아니면 1분마다 새 갱신이 끝났는지 — 끝나면 차트와 열린 상세를 다시 읽는다
+function ipPoll() {
+  clearTimeout(ipc.poll);
+  const busy = ['wait', 'work'].includes(ipc.run?.status);
+  ipc.poll = setTimeout(async () => {
+    if (page !== 'chart') return;
+    const { data } = await SB.from('pt_ip_run').select(IP_RUN).order('at', {ascending: false}).limit(1);
+    const r = data?.[0], o = ipc.run;
+    ipc.run = r || null;
+    if (r && r.status === 'done' && (!o || r.id !== o.id || o.status !== 'done')) { ipc.ips = {}; await loadChart(); if (ipc.open && !$('#drawer').hidden) openIp(ipc.open, true); return; }
+    const el = $('#ipc-prog'), rb = $('#ipc-refresh');
+    if (el) el.outerHTML = ipProg();
+    if (rb) rb.disabled = ['wait', 'work'].includes(r?.status);
+    ipPoll();
+  }, busy ? 3000 : 60000);
+}
+function ipProg() {
+  const r = ipc.run;
+  if (!r || !['wait', 'work'].includes(r.status)) return '<div id="ipc-prog" hidden></div>';
+  if (r.status === 'wait' || !r.progress) return `<div id="ipc-prog" class="ipc-prog"><span class="bar indet"><i></i></span><small>순위를 새로 매길 준비를 하는 중<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></small></div>`;
+  return `<div id="ipc-prog" class="ipc-prog"><span class="row"><span class="bar"><i style="width:${r.progress}%"></i></span><b>${r.progress}%</b></span><small>순위 갱신 중 · ${esc(r.step || '')}<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></small></div>`;
+}
+const ipArt = (ip, cls = '') => { const s = imgSrc(ip.img_path); return `<span class="ipc-art ${cls}">${s ? `<img src="${s}" alt="" loading="lazy">` : `<b>${esc((ip.name_en || ip.name).slice(0, 2).toUpperCase())}</b>`}</span>`; };
+function ipChg(r) {
+  if (r.prev_pos == null) return r.has_prev ? '<span class="ipc-chg new">NEW</span>' : '<span class="ipc-chg">–</span>';
+  const d = r.prev_pos - r.pos;
+  return d > 0 ? `<span class="ipc-chg up" aria-label="${d}단계 상승">▲${d}</span>` : d < 0 ? `<span class="ipc-chg down" aria-label="${-d}단계 하락">▼${-d}</span>` : '<span class="ipc-chg">–</span>';
+}
+function chartView() {
+  if (!ipc.rows) { setTimeout(loadChart); return '<div class="empty"><p>불러오는 중입니다<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></p></div>'; }
+  const per = IPP.find(p => p[0] === ipc.period);
+  const rows = ipc.rows.filter(r => ipc.ips[r.ip] && !ipc.ips[r.ip].hidden && (ipc.kind === 'all' || ipc.ips[r.ip].kind === ipc.kind));
+  const kinds = ['all', ...Object.keys(IPK).filter(k => k !== 'other' && ipc.rows.some(r => ipc.ips[r.ip]?.kind === k))];
+  const basis = ipc.rows[0]?.basis, busy = ['wait', 'work'].includes(ipc.run?.status);
+  const head = `<div class="ipc-head"><div class="tabs">${[['new', '신규 IP'], ['all', '전체 IP']].map(([k, t]) => `<button class="tab ${ipc.chart === k ? 'active' : ''}" data-ipc-chart="${k}">${t}</button>`).join('')}</div>${isAdmin ? `<button class="button" id="ipc-refresh" ${busy ? 'disabled' : ''}>${icon('clock')} 지금 갱신</button>` : ''}</div>
+    <div class="ipc-periods">${IPP.map(([k, t]) => `<button class="ar-chip ${ipc.period === k ? 'on' : ''}" data-ipc-period="${k}">${t}</button>`).join('')}</div>${ipc.period === 'range' ? `<div class="ipc-range"><input type="date" id="ipc-from" value="${esc(ipc.from)}" aria-label="시작일"><span>~</span><input type="date" id="ipc-to" value="${esc(ipc.to)}" aria-label="종료일"><button class="button primary" id="ipc-range-go">보기</button></div>` : ''}
+    <div class="ar-kinds ipc-kinds">${kinds.map(k => `<button class="ar-chip ${ipc.kind === k ? 'on' : ''}" data-ipc-kind="${k}">${k === 'all' ? '전체' : IPK[k]}</button>`).join('')}</div>`;
+  const list = rows.length ? `<ol class="ipc-list">${rows.map(r => { const ip = ipc.ips[r.ip]; return `<li class="ipc-row" data-ip="${ip.id}" tabindex="0" role="button" aria-label="${esc(ip.name)} 상세보기"><div class="ipc-rank"><b>${r.pos}</b>${ipChg(r)}</div>${ipArt(ip)}<div class="ipc-main"><div class="ipc-name"><b>${esc(ip.name)}</b><span class="pill">${esc(IPK[ip.kind] || '기타')}</span></div><p>${esc(ip.summary)}</p><small>${esc([ip.owner, ip.since].filter(Boolean).join(' · '))}</small></div><span class="button ipc-more">상세보기</span></li>`; }).join('')}</ol>`
+    : `<div class="empty"><p>${ipc.period === 'range' && !(ipc.from && ipc.to) ? '시작일과 종료일을 고른 뒤 「보기」를 눌러 주세요.' : ipc.rows.length ? '이 종류의 IP가 아직 없습니다.' : busy ? '첫 순위를 매기고 있습니다. 끝나면 자동으로 나타납니다.' : '이 기간에 쌓인 순위가 없습니다. 순위는 하루 4번 새로 매기며, 기록이 쌓일수록 긴 기간 순위를 볼 수 있습니다.'}</p></div>`;
+  return `${ipc.err ? `<div class="notice">${esc(ipc.err)}</div>` : ''}${ipProg()}<section class="panel"><div class="panel-head"><div class="panel-title">${ipc.chart === 'new' ? '신규 IP 차트' : '전체 IP 차트'} <small>${esc(per[1])}${basis ? ' · ' + ipKst(basis) + ' 기준' : ''}</small></div><span class="ipc-note">순위 변동 · ${esc(per[2])}</span></div>${head}${list}</section>`;
+}
+function bindChart() {
+  $$('[data-ipc-chart]').forEach(b => b.onclick = () => { ipc.chart = b.dataset.ipcChart; ipc.rows = null; render(); });
+  $$('[data-ipc-period]').forEach(b => b.onclick = () => { ipc.period = b.dataset.ipcPeriod; if (ipc.period === 'range' && !ipc.to) { ipc.to = today(); ipc.from = new Date(Date.now() + 9 * 3600e3 - 6 * 864e5).toISOString().slice(0, 10); } ipc.rows = null; render(); });
+  $('#ipc-range-go')?.addEventListener('click', () => { const f = $('#ipc-from').value, t = $('#ipc-to').value; if (!f || !t || f > t) return toast('시작일이 종료일보다 늦지 않게 골라 주세요.'); ipc.from = f; ipc.to = t; ipc.rows = null; render(); });
+  $$('[data-ipc-kind]').forEach(b => b.onclick = () => { ipc.kind = b.dataset.ipcKind; render(); });
+  $$('[data-ip]').forEach(b => { b.onclick = () => openIp(b.dataset.ip); b.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openIp(b.dataset.ip); } }; });
+  $('#ipc-refresh')?.addEventListener('click', async () => {
+    const prev = ipc.run; ipc.run = {status: 'wait'}; render();
+    const { error } = await SB.from('pt_ip_run').insert({status: 'wait'});
+    if (error) { ipc.run = prev; render(); return toast('갱신을 요청하지 못했습니다: ' + error.message); }
+    const { data } = await SB.from('pt_ip_run').select(IP_RUN).order('at', {ascending: false}).limit(1); ipc.run = data?.[0] || ipc.run;
+    toast('순위 갱신을 요청했습니다. 판테온 봇이 바로 시작합니다.'); ipPoll();
+  });
+}
+// 순위 기록 그래프 — 1위가 위 · 점에 마우스를 올리면 그때 순위
+function ipRankSvg(log) {
+  if (log.length < 2) return '<p class="ipc-muted">기록이 두 번 이상 쌓이면 순위 그래프가 나옵니다.</p>';
+  const W = 640, H = 180, L = 40, R = 14, T = 14, B = 26, t0 = new Date(log[0].at).getTime(), t1 = new Date(log.at(-1).at).getTime();
+  const maxR = Math.max(10, ...log.map(x => x.rank)), x = t => L + (W - L - R) * ((new Date(t).getTime() - t0) / Math.max(t1 - t0, 1)), y = r => T + (H - T - B) * ((r - 1) / (maxR - 1));
+  const ticks = [1, Math.ceil(maxR / 2), maxR];
+  const pts = log.map(p => `${x(p.at).toFixed(1)},${y(p.rank).toFixed(1)}`).join(' ');
+  return `<svg class="ipc-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="순위 기록 그래프">${ticks.map(r => `<line x1="${L}" x2="${W - R}" y1="${y(r)}" y2="${y(r)}" class="g"/><text x="${L - 8}" y="${y(r) + 4}" text-anchor="end">${r}위</text>`).join('')}<text x="${L}" y="${H - 6}">${ipKst(log[0].at)}</text><text x="${W - R}" y="${H - 6}" text-anchor="end">${ipKst(log.at(-1).at)}</text><polyline points="${pts}" class="l"/>${log.map(p => `<g class="pt"><circle cx="${x(p.at)}" cy="${y(p.rank)}" r="11" class="hit"/><circle cx="${x(p.at)}" cy="${y(p.rank)}" r="4" class="d"/><title>${ipKst(p.at)} · ${p.rank}위</title></g>`).join('')}</svg>`;
+}
+const ipNorm = s => String(s || '').toLowerCase().replace(/\(주\)|주식회사|㈜|inc\.?|co\.?,?\s*ltd\.?|corp\.?|entertainment|엔터테인먼트|[\s\W_]+/g, '');
+function ipEntities(ip) {
+  const hay = [ip.owner, ip.manager].map(ipNorm).filter(x => x.length >= 2);
+  if (!hay.length) return [];
+  return entities().filter(e => !e.hidden && [e.name, e.en, ...e.aliases].map(ipNorm).some(n => n.length >= 2 && hay.some(h => h.includes(n) || n.includes(h)))).slice(0, 4);
+}
+async function openIp(id, keep) {
+  ipc.open = id;
+  const ip = ipc.ips[id] || (await SB.from('pt_ip').select('*').eq('id', id).maybeSingle()).data;
+  if (!ip) return toast('IP 정보를 찾지 못했습니다.');
+  ipc.ips[id] = ip;
+  const { data: log } = await SB.from('pt_ip_rank').select('at,rank,chart').eq('ip_id', id).gte('at', new Date(Date.now() - 30 * 864e5).toISOString()).order('at');
+  if (ipc.open !== id) return;
+  const by = k => (log || []).filter(x => x.chart === k), cur = k => by(k).at(-1);
+  const tabC = [ipc.openChart, ipc.chart, 'new', 'all'].find(k => k && by(k).length) || 'new';
+  const c = ip.contact || {}, L = ip.links || {}, s = ip.signals || {};
+  const ents = ipEntities(ip), people = ents.flatMap(e => contactsOf(e).map(p => ({p, e})));
+  const url = (u, base, at) => !u ? '' : /^https?:/.test(u) ? u : base ? base + (at ? '@' : '') + String(u).replace(/^@/, '') : 'https://' + u;
+  const linkA = (u, t) => u ? `<a class="ar-chip" href="${esc(u)}" target="_blank" rel="noopener">${t}</a>` : '';
+  const nv = Array.isArray(s.naver) ? s.naver : null;
+  const lg = by(tabC), table = lg.slice().reverse().slice(0, 12).map((p, i, a) => { const o = a[i + 1], d = o ? o.rank - p.rank : 0; return `<tr><td>${ipKst(p.at)}</td><td><b>${p.rank}위</b></td><td>${!o || !d ? '–' : d > 0 ? `<span class="ipc-chg up">▲${d}</span>` : `<span class="ipc-chg down">▼${-d}</span>`}</td></tr>`; }).join('');
+  const html = `<div class="ipc-detail">
+    <div class="ipc-top">${ipArt(ip, 'big')}<div><span class="pill">${esc(IPK[ip.kind] || '기타')}</span>${ip.is_new ? ' <span class="pill good">신규</span>' : ''}<h2>${esc(ip.name)}</h2><small>${esc([ip.name_en, ip.since && ip.since + ' 데뷔·공개'].filter(Boolean).join(' · '))}</small>
+      <div class="ipc-now">${[['new', '신규 IP'], ['all', '전체 IP']].map(([k, t]) => { const x = cur(k); return x ? `<span><small>${t}</small><b>${x.rank}위</b></span>` : ''; }).join('')}</div></div></div>
+    <section><h3>왜 뜨고 있나</h3><p class="ipc-why">${esc(ip.summary || '—')}</p></section>
+    <section><h3>지금 트렌드</h3><p>${esc(ip.trend || '—')}</p>${ip.updated_at ? `<small class="ipc-muted">${ipKst(ip.updated_at)} 갱신</small>` : ''}</section>
+    <section><div class="ipc-sec-head"><h3>순위 기록 <small>최근 30일</small></h3><div class="tabs">${[['new', '신규'], ['all', '전체']].filter(([k]) => by(k).length).map(([k, t]) => `<button class="tab ${tabC === k ? 'active' : ''}" data-ipo-chart="${k}">${t}</button>`).join('')}</div></div>${ipRankSvg(lg)}${table ? `<div class="table-wrap"><table class="ipc-log"><thead><tr><th>갱신</th><th>순위</th><th>변동</th></tr></thead><tbody>${table}</tbody></table></div>` : ''}</section>
+    ${(ip.issues || []).length ? `<section><h3>최근 이슈</h3><ul class="ipc-issues">${ip.issues.map(x => `<li><small>${esc(x.date || '')}</small> ${/^https?:/.test(x.url || '') ? `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title || x.url)}</a>` : esc(x.title || '')}</li>`).join('')}</ul></section>` : ''}
+    <section><h3>수치</h3><div class="ipc-stats">${s.buzz != null ? `<span><small>화제 크기</small><b>${s.buzz}</b></span>` : ''}${s.momentum != null ? `<span><small>상승 속도</small><b>${s.momentum}</b></span>` : ''}${s.yt_subs ? `<span><small>유튜브 구독자</small><b>${Number(s.yt_subs).toLocaleString('ko-KR')}</b></span>` : ''}${s.naver_x ? `<span><small>네이버 검색 (지난주 대비)</small><b>${s.naver_x}배</b></span>` : ''}</div>${nv ? `<div class="ipc-spark" role="img" aria-label="최근 14일 네이버 검색 추이">${nv.map(v => `<i style="height:${Math.max(3, v)}%" title="${v}"></i>`).join('')}</div><small class="ipc-muted">최근 14일 네이버 검색 추이</small>` : ''}</section>
+    <section><h3>소유사·관리사</h3><dl class="ipc-dl"><dt>소유사</dt><dd>${esc(ip.owner || '—')}</dd>${ip.manager ? `<dt>관리사</dt><dd>${esc(ip.manager)}</dd>` : ''}</dl>
+      <h4>공식 문의처</h4>${c.email || c.phone || c.url ? `<dl class="ipc-dl">${c.email ? `<dt>이메일</dt><dd><span id="ipc-mail">${esc(c.email)}</span> <a class="point-go" href="mailto:${esc(c.email)}">메일</a> <button class="point-go" data-copy="ipc-mail" type="button">복사</button></dd>` : ''}${c.phone ? `<dt>전화</dt><dd>${esc(c.phone)} <a class="point-go" href="tel:${esc(String(c.phone).replace(/[^\d+]/g, ''))}">전화</a></dd>` : ''}${/^https?:/.test(c.url || '') ? `<dt>문의 페이지</dt><dd><a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.url)}</a></dd>` : ''}${c.note ? `<dt>비고</dt><dd>${esc(c.note)}</dd>` : ''}</dl>${/^https?:/.test(c.source || '') ? `<small class="ipc-muted">출처 <a href="${esc(c.source)}" target="_blank" rel="noopener">${esc(c.source)}</a></small>` : ''}` : '<p class="ipc-muted">공개된 문의처를 아직 찾지 못했습니다.</p>'}
+      <h4>등록된 담당자</h4>${people.length ? linkList(people.map(x => ({id: x.p.id, name: x.p.name, role: [x.e.name, x.p.role, x.p.points[0]].filter(Boolean).join(' · ')}))) : ents.length ? `${linkList(ents)}<p class="ipc-muted">이 회사에 등록된 담당자가 없습니다.</p>` : '<p class="ipc-muted">판테온에 등록된 담당자가 없습니다.</p>'}</section>
+    ${[L.site, L.youtube, L.instagram, L.x, L.tiktok].some(Boolean) ? `<section><h3>공식 채널</h3><div class="ar-kinds">${linkA(url(L.site), '공식 사이트')}${linkA(url(L.youtube, 'https://www.youtube.com/', 1), '유튜브')}${linkA(url(L.instagram, 'https://www.instagram.com/'), '인스타그램')}${linkA(url(L.x, 'https://x.com/'), 'X')}${linkA(url(L.tiktok, 'https://www.tiktok.com/', 1), '틱톡')}</div></section>` : ''}
+  </div>`;
+  showDrawer(html, keep);
+  $$('#drawer [data-ipo-chart]').forEach(b => b.onclick = () => { ipc.openChart = b.dataset.ipoChart; openIp(id, true); });
+  const cl = $('#close-drawer'); if (cl) cl.onclick = () => { ipc.open = null; closeDrawer(); };
+  if (ip.img_path && !imgSrc(ip.img_path)) setTimeout(() => ipc.open === id && !$('#drawer').hidden && openIp(id, true), 900);
+}
+
 function bindContent() {
   $$('[data-page]').forEach(b => b.onclick = () => go(b.dataset.page));
   $$('[data-filter]').forEach(b => b.onclick = () => { filter = b.dataset.filter; render(); });
@@ -1838,7 +1969,7 @@ function bindContent() {
   $$('[data-stat]').forEach(b => { const open = () => { const v = b.dataset.stat; if (v === 'contacts') return go('contacts'); go('entities'); filter = v; render(); }; b.onclick = open; b.onkeydown = ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); open(); } }; });
   $$('[data-detail]').forEach(b => { b.onclick = () => openDetail(b.dataset.detail); b.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(b.dataset.detail); } }; });
   $('#admin-export')?.addEventListener('click', exportCSV);
-  bindAsk(); if (page === 'admin') bindAdmin(); if (page === 'studio') bindStudio();
+  bindAsk(); if (page === 'admin') bindAdmin(); if (page === 'studio') bindStudio(); if (page === 'chart') bindChart();
 }
 
 /* ---------- 로그인 ---------- */
